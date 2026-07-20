@@ -30,9 +30,26 @@ export default function AdminPage() {
     }
   }, []);
 
+  // 관리자 모드는 진입할 때마다 PIN 을 다시 확인한다.
+  // 남아 있는 관리자 세션을 먼저 비우고 항상 PIN 화면부터 시작.
   useEffect(() => {
-    load();
-  }, [load]);
+    let alive = true;
+    fetch("/api/admin/logout", { method: "POST" })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setAuthed(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 페이지를 벗어나면 관리자 세션을 정리한다.
+  useEffect(() => {
+    return () => {
+      navigator.sendBeacon?.("/api/admin/logout");
+    };
+  }, []);
 
   return (
     <div className="flex flex-col gap-4">

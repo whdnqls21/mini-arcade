@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { ADMIN_COOKIE, COOKIE_OPTIONS, signSession } from "@/lib/auth";
+import { ADMIN_COOKIE, ADMIN_COOKIE_OPTIONS, signSession } from "@/lib/auth";
 import { hashPin, isValidPin, verifyPin } from "@/lib/pin";
 import { createServiceClient } from "@/lib/supabase/server";
 
@@ -40,6 +40,6 @@ export async function POST(req: NextRequest) {
   }
 
   const res = NextResponse.json({ ok: true, firstTime });
-  res.cookies.set(ADMIN_COOKIE, signSession({ role: "admin" }), COOKIE_OPTIONS);
+  res.cookies.set(ADMIN_COOKIE, signSession({ role: "admin", at: Date.now() }), ADMIN_COOKIE_OPTIONS);
   return res;
 }

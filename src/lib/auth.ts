@@ -18,7 +18,11 @@ export interface AccountSession {
 }
 export interface AdminSession {
   role: "admin";
+  at: number; // 발급 시각(ms). 관리자 세션은 짧게만 유지한다.
 }
+
+// 관리자 세션 유효 시간. 이 시간이 지나면 PIN 을 다시 요구한다.
+export const ADMIN_SESSION_MS = 10 * 60 * 1000; // 10분
 
 function secret(): string {
   const s = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -56,6 +60,14 @@ export const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === "production",
 };
 
+// 관리자 쿠키는 브라우저 세션 쿠키(maxAge 없음)로 심어 탭을 닫으면 사라지게 한다.
+export const ADMIN_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  path: "/",
+  secure: process.env.NODE_ENV === "production",
+};
+
 export async function getAccountSession(): Promise<AccountSession | null> {
   const jar = await cookies();
   const payload = verifyToken(jar.get(ACCOUNT_COOKIE)?.value);
@@ -68,5 +80,10 @@ export async function getAccountSession(): Promise<AccountSession | null> {
 export async function isAdmin(): Promise<boolean> {
   const jar = await cookies();
   const payload = verifyToken(jar.get(ADMIN_COOKIE)?.value);
-  return !!payload && typeof payload === "object" && (payload as AdminSession).role === "admin";
+  if (!payload || typeof payload !== "object") return false;
+  const session = payload as AdminSession;
+  if (session.role !== "admin") return false;
+  // 발급 후 ADMIN_SESSION_MS 가 지나면 만료 — PIN 재확인 필요.
+  if (typeof session.at !== "number" || Date.now() - session.at > ADMIN_SESSION_MS) return false;
+  return true;
 }
