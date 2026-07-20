@@ -134,6 +134,20 @@ export function findMove(board: Board): Rect | null {
   return best;
 }
 
+// 숫자 등장 가중치(1~9). 작은 수를 더 자주 내보내면 합 10 조합이 늘어 쉬워진다.
+// 큰 수(7·8·9)는 짝이 적어 오래 남는데, 비중을 낮춰 판이 잘 풀리게 한다.
+const WEIGHTS = [4, 4, 4, 3, 3, 2, 2, 1, 1]; // 1→4 … 9→1
+const WEIGHT_SUM = WEIGHTS.reduce((a, b) => a + b, 0);
+
+function pickNumber(rnd: () => number): number {
+  let r = rnd() * WEIGHT_SUM;
+  for (let n = 0; n < 9; n++) {
+    r -= WEIGHTS[n];
+    if (r < 0) return n + 1;
+  }
+  return 9;
+}
+
 // 시작부터 지울 게 거의 없는 판이 나오지 않도록 최소 해의 수를 보장한다.
 const MIN_OPENING_MOVES = 24;
 const MAX_TRIES = 40;
@@ -142,7 +156,7 @@ export function newBoard(rnd: () => number = Math.random): Board {
   let best: Board = [];
   let bestMoves = -1;
   for (let t = 0; t < MAX_TRIES; t++) {
-    const board = Array.from({ length: CELLS }, () => 1 + Math.floor(rnd() * 9));
+    const board = Array.from({ length: CELLS }, () => pickNumber(rnd));
     const moves = countMoves(board);
     if (moves > bestMoves) {
       bestMoves = moves;
