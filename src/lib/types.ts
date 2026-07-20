@@ -17,6 +17,8 @@ export interface Game {
   scoring: Scoring;
   active: boolean;
   sort: number;
+  reset_at: string | null; // 마지막 기록 초기화 시각(안내용)
+  reset_note: string | null; // 초기화 사유
   created_at: string;
 }
 

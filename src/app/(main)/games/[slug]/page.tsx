@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 
 import { Card } from "@/components/Card";
 import { GameInfoButton } from "@/components/GameInfo";
+import { ResetNotice } from "@/components/ResetNotice";
 import { useAppState } from "@/components/StateProvider";
 import { GAME_REGISTRY } from "@/games/registry";
 import { postJSON } from "@/lib/client-api";
@@ -87,6 +88,14 @@ export default function PlayPage() {
 
       {note && <p className="text-center text-sm text-grass">{note}</p>}
       {error && <p className="text-center text-sm text-danger">{error}</p>}
+
+      <ResetNotice
+        gameName={game.name}
+        resetAt={game.reset_at}
+        resetNote={game.reset_note}
+        accountId={state.session?.id ?? null}
+        slug={slug}
+      />
 
       <Leaderboard slug={slug} />
     </div>

@@ -51,6 +51,8 @@ create table public.ma_games (
   scoring     text not null default 'high',      -- 'high'(고득점) | 'low'(저점) | 'time'(짧은시간)
   active      boolean not null default true,
   sort        int not null default 0,
+  reset_at    timestamptz,                       -- 마지막 기록 초기화 시각(안내용). null 이면 초기화 이력 없음
+  reset_note  text,                              -- 초기화 사유(예: '밸런스 조정'). 사용자에게 보여준다
   created_at  timestamptz not null default now(),
   constraint ma_games_scoring_valid check (scoring in ('high','low','time'))
 );
@@ -90,4 +92,9 @@ on conflict (slug) do nothing;
 --   insert into public.ma_games (slug, name, description, scoring, sort) values
 --     ('dino', '크롬 다이노', '장애물을 뛰어넘으며 최대한 멀리! 달릴수록 빨라집니다.', 'high', 4)
 --   on conflict (slug) do nothing;
+--
+-- 운영 DB 에 기록 초기화 안내 컬럼을 추가할 때(이 파일 전체 재실행 금지):
+--   alter table public.ma_games
+--     add column if not exists reset_at   timestamptz,
+--     add column if not exists reset_note text;
 -- ────────────────────────────────────────────────────────────────────────

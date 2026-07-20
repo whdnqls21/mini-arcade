@@ -250,8 +250,15 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
                     alert("게임 이름이 일치하지 않아 취소했습니다.");
                     return;
                   }
+                  // 사용자에게 보여줄 사유 — 비우면 '밸런스 조정'.
+                  const note = prompt("초기화 사유 (사용자에게 표시됩니다)", "밸런스 조정");
+                  if (note === null) return; // 사유 입력을 취소하면 초기화도 취소
                   run(() =>
-                    postJSON("/api/admin/action", { action: "gameResetScores", slug: g.slug })
+                    postJSON("/api/admin/action", {
+                      action: "gameResetScores",
+                      slug: g.slug,
+                      note: note.trim(),
+                    })
                   );
                 }}
                 className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"

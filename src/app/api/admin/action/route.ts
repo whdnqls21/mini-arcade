@@ -73,6 +73,14 @@ export async function POST(req: NextRequest) {
       console.error("gameResetScores 실패", error);
       return NextResponse.json({ error: "기록 초기화에 실패했습니다." }, { status: 500 });
     }
+    // 사용자 안내용으로 초기화 시각·사유를 게임에 남긴다.
+    const rawNote = typeof body?.note === "string" ? body.note.trim() : "";
+    const note = rawNote ? rawNote.slice(0, 60) : "밸런스 조정";
+    const { error: noteErr } = await sb
+      .from("ma_games")
+      .update({ reset_at: new Date().toISOString(), reset_note: note })
+      .eq("slug", slug);
+    if (noteErr) console.error("reset 안내 기록 실패", noteErr); // 안내 실패해도 초기화 자체는 성공
     return NextResponse.json({ ok: true, deleted: data?.length ?? 0 });
   }
 

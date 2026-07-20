@@ -15,6 +15,7 @@ export interface GameView extends Game {
   myBest: number | null;
   leaderboard: LeaderRow[];
 }
+// GameView 는 Game 을 확장하므로 reset_at/reset_note 가 이미 포함된다.
 
 export interface AppState {
   session: { id: string; name: string } | null;
