@@ -4,6 +4,7 @@ import type { GameEntry } from "./types";
 import Game2048 from "./2048/Game2048";
 import { Icon2048 } from "./2048/Icon2048";
 import { AppleIcon } from "./apple/AppleIcon";
+import { DinoIcon } from "./dino/DinoIcon";
 import { MahjongIcon } from "./mahjong/MahjongIcon";
 import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
 
@@ -22,6 +23,9 @@ const AppleGame = dynamic(() => import("./apple/AppleGame"), { ssr: false, loadi
 
 // 사천성은 첫 렌더에서 판을 생성하므로 서버/클라이언트 결과가 달라진다. SSR 을 끈다.
 const MahjongGame = dynamic(() => import("./mahjong/MahjongGame"), { ssr: false, loading: spinner });
+
+// 공룡 달리기도 캔버스 + rAF 라 서버에서 렌더할 것이 없다.
+const DinoGame = dynamic(() => import("./dino/DinoGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -78,6 +82,20 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "막힘", text: "이을 수 있는 짝이 없으면 섞기를 누르세요. 섞는 동안에도 시간은 흘러갑니다." },
       ],
       tip: "가장자리 패부터 걷어내면 안쪽 길이 열립니다. 눈에 보이는 짝을 아무거나 지우기보다, 여러 겹 쌓인 줄을 먼저 뚫는 편이 빠릅니다.",
+    },
+  },
+  dino: {
+    Play: DinoGame,
+    Icon: DinoIcon,
+    info: {
+      rows: [
+        { label: "목표", text: "장애물을 뛰어넘으며 최대한 멀리 달리세요." },
+        { label: "조작", text: "화면을 탭하거나 스페이스·위쪽 화살표로 점프합니다. 공중에서는 다시 뛸 수 없습니다." },
+        { label: "점수", text: "달린 거리가 그대로 점수입니다." },
+        { label: "난이도", text: "달릴수록 빨라집니다. 처음에는 낮은 장애물만 나오고, 속도가 붙으면 높은 것과 무리가 섞입니다." },
+        { label: "종료", text: "장애물에 부딪히면 끝나고, 그때 점수가 기록됩니다." },
+      ],
+      tip: "장애물이 눈앞에 올 때까지 기다렸다 뛰는 편이 안전합니다. 너무 일찍 뛰면 도착 전에 내려앉아 부딪힙니다.",
     },
   },
 };

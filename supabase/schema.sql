@@ -79,7 +79,8 @@ insert into public.ma_games (slug, name, description, scoring, sort) values
   ('2048', '2048', '타일을 합쳐 2048을 만드세요. 고득점 경쟁!', 'high', 0),
   ('suika', '수박게임', '과일을 떨어뜨려 합치세요. 수박까지 갈 수 있을까?', 'high', 1),
   ('apple', '사과게임', '합이 10이 되게 사과를 묶어 지우세요. 90초 승부!', 'high', 2),
-  ('mahjong', '사천성', '같은 패를 이어 모두 지우세요. 빠를수록 상위!', 'time', 3)
+  ('mahjong', '사천성', '같은 패를 이어 모두 지우세요. 빠를수록 상위!', 'time', 3),
+  ('dino', '공룡 달리기', '장애물을 뛰어넘으며 최대한 멀리! 달릴수록 빨라집니다.', 'high', 4)
 on conflict (slug) do nothing;
 
 -- ────────────────────────────────────────────────────────────────────────
@@ -87,6 +88,6 @@ on conflict (slug) do nothing;
 -- (맨 위 drop table 때문에 기존 기록이 전부 사라진다.) 아래 한 줄만 실행.
 --
 --   insert into public.ma_games (slug, name, description, scoring, sort) values
---     ('mahjong', '사천성', '같은 패를 이어 모두 지우세요. 빠를수록 상위!', 'time', 3)
+--     ('dino', '공룡 달리기', '장애물을 뛰어넘으며 최대한 멀리! 달릴수록 빨라집니다.', 'high', 4)
 --   on conflict (slug) do nothing;
 -- ────────────────────────────────────────────────────────────────────────
