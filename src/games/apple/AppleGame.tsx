@@ -277,9 +277,18 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
         )}
 
         {over && (
-          // 판 전체를 덮지 않고 가운데 패널만 띄운다 — 그래야 힌트 박스 안의
-          // 사과가 그대로 보여 "이 조합이었다"를 읽을 수 있다.
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/35">
+          // 판 전체를 덮지 않고 패널만 띄운다 — 그래야 힌트 박스 안의 사과가
+          // 그대로 보여 "이 조합이었다"를 읽을 수 있다.
+          // 힌트가 위쪽에 있으면 패널을 아래로, 아래쪽이면 위로 보내 겹치지 않게 한다.
+          <div
+            className={`absolute inset-0 z-10 flex justify-center rounded-xl bg-black/35 ${
+              !hint
+                ? "items-center"
+                : (hint.r0 + hint.r1 + 1) / 2 < ROWS / 2
+                  ? "items-end pb-3"
+                  : "items-start pt-3"
+            }`}
+          >
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-pitch-line bg-pitch-alt/95 px-6 py-5 shadow-card backdrop-blur-sm">
               <p className="font-display text-2xl text-ink">
                 {leftMs <= 0 ? "시간 종료" : "더 지울 수 없어요"}
