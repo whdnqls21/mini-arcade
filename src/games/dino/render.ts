@@ -18,22 +18,46 @@ const MOON = "#e8d9a0";
 const NIGHT = "#0a0f16";
 
 // 공룡 — 11x13 픽셀(= 22x26 월드단위, 충돌 상자와 정확히 같다)
+// 공룡 — 11x13 도트(= 22x26 월드단위, 충돌 상자와 정확히 같다).
+// 실제 크롬 공룡의 특징을 이 해상도에서 살릴 수 있는 만큼만 옮겼다:
+// 머리가 크고 몸통보다 앞으로 나오고, 주둥이 아래에 턱 홈이 파이고, 꼬리는 굵고 뭉툭하다.
 const DINO_BODY = [
-  ".......####",
-  ".......#o##",
-  ".......####",
-  ".......####",
-  ".......###.",
-  "###....###.",
-  "..#########",
-  "..#########",
+  "......#####",
+  "......##o##",
+  "......#####",
+  "......####.", // 오른쪽 끝을 비워 주둥이 아래 턱 홈을 만든다
+  ".##...###..", // 꼬리 + 목
+  "###########",
+  ".#########.",
   "..########.",
   "..#######..",
 ];
 // 허벅지는 늘 있고 어느 발이 땅에 닿는지만 번갈아 바뀐다 — 이게 달리는 것처럼 보인다.
-const LEGS_A = ["..##..##...", "..##..##...", ".###......."];
-const LEGS_B = ["..##..##...", "..##..##...", "......###.."];
-const LEGS_AIR = ["..##..##...", "..##..##...", "..........."];
+const LEGS_A = ["..##..##...", "..##..##...", "..##..##...", ".###......."];
+const LEGS_B = ["..##..##...", "..##..##...", "..##..##...", "......###.."];
+const LEGS_AIR = ["..##..##...", "..##..##...", "..##..##...", "..........."];
+
+// 목록 아이콘도 같은 도트를 쓴다 — 아이콘과 본편이 어긋나지 않게.
+export const DINO_SPRITE = [...DINO_BODY, ...LEGS_A];
+export const DINO_MINT = MINT;
+
+export function drawDinoSprite(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  px: number,
+  color: string
+) {
+  for (let r = 0; r < DINO_SPRITE.length; r++) {
+    const row = DINO_SPRITE[r];
+    for (let c = 0; c < row.length; c++) {
+      const ch = row[c];
+      if (ch === ".") continue;
+      ctx.fillStyle = ch === "o" ? NIGHT : color;
+      ctx.fillRect(x + c * px, y + r * px, px, px);
+    }
+  }
+}
 
 function drawSprite(
   ctx: CanvasRenderingContext2D,

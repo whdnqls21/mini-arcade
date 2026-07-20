@@ -1,34 +1,44 @@
 "use client";
 
-// 목록용 아이콘 — 공룡과 선인장. 게임에서 보게 될 실루엣을 그대로 쓴다.
+import { useEffect, useRef } from "react";
+
+import { DINO_MINT, DINO_SPRITE, drawDinoSprite } from "./render";
+
+// 목록용 아이콘 — 본편과 같은 도트를 쓴다.
 export function DinoIcon({ size = 44 }: { size?: number }) {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+
+    // 도트 한 칸 크기를 아이콘에 맞춰 정수로 잡아야 흐려지지 않는다.
+    const px = Math.max(1, Math.floor((size * 0.7) / DINO_SPRITE.length));
+    const w = DINO_SPRITE[0].length * px;
+    const h = DINO_SPRITE.length * px;
+    const x = Math.round((size - w) / 2);
+    const y = Math.round((size - h) / 2) - px;
+
+    drawDinoSprite(ctx, x, y, px, DINO_MINT);
+
+    // 지면
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.fillRect(x - px, y + h, w + px * 2, Math.max(1, Math.round(px / 2)));
+  }, [size]);
+
   return (
     <div
       style={{ width: size, height: size }}
       className="flex items-center justify-center rounded-xl bg-black/35"
-      role="img"
-      aria-label="크롬 다이노"
     >
-      <svg width={size} height={size} viewBox="0 0 22 22" aria-hidden="true">
-        {/* 지면 */}
-        <rect x="1" y="17" width="20" height="0.8" fill="rgba(255,255,255,0.25)" />
-        {/* 공룡 */}
-        <g fill="#4de0c0">
-          <rect x="3" y="9" width="3" height="2.5" />
-          <rect x="5" y="8.5" width="6" height="5.5" rx="1" />
-          <rect x="9" y="5.5" width="6" height="4.5" rx="1" />
-          <rect x="14.5" y="8" width="1.6" height="1.5" />
-          <rect x="6" y="13.5" width="1.8" height="3.5" />
-          <rect x="9" y="13.5" width="1.8" height="2.5" />
-        </g>
-        <rect x="12.6" y="6.8" width="1" height="1" fill="#0a0f16" />
-        {/* 선인장 */}
-        <g fill="#3f9e7c">
-          <rect x="17" y="10" width="2.6" height="7" rx="1" />
-          <rect x="15.8" y="12" width="1.4" height="1.2" />
-          <rect x="19.4" y="11.4" width="1.4" height="1.2" />
-        </g>
-      </svg>
+      <canvas ref={ref} style={{ width: size, height: size }} role="img" aria-label="크롬 다이노" />
     </div>
   );
 }
