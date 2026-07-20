@@ -108,6 +108,32 @@ export function countMoves(board: Board): number {
   return n;
 }
 
+// 합이 10인 사각형 하나를 찾아 돌려준다. 없으면 null.
+// 시간 초과로 끝났을 때 "아직 지울 수 있었다"를 보여주는 용도라,
+// 눈에 잘 띄도록 가장 작은(칸 수가 적은) 사각형을 고른다.
+export function findMove(board: Board): Rect | null {
+  const p = buildPrefix(board);
+  let best: Rect | null = null;
+  let bestCount = Infinity;
+  for (let r0 = 0; r0 < ROWS; r0++) {
+    for (let r1 = r0; r1 < ROWS; r1++) {
+      for (let c0 = 0; c0 < COLS; c0++) {
+        for (let c1 = c0; c1 < COLS; c1++) {
+          const rect = { c0, r0, c1, r1 };
+          if (query(p.sum, rect) !== TARGET) continue;
+          const cnt = query(p.cnt, rect);
+          if (cnt > 0 && cnt < bestCount) {
+            bestCount = cnt;
+            best = rect;
+            if (cnt === 2) return best; // 두 칸짜리면 더 작을 수 없다
+          }
+        }
+      }
+    }
+  }
+  return best;
+}
+
 // 시작부터 지울 게 거의 없는 판이 나오지 않도록 최소 해의 수를 보장한다.
 const MIN_OPENING_MOVES = 24;
 const MAX_TRIES = 40;

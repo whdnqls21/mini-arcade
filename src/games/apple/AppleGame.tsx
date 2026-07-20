@@ -11,6 +11,7 @@ import {
   clearRect,
   COLS,
   countMoves,
+  findMove,
   isValid,
   newBoard,
   normalizeRect,
@@ -39,6 +40,7 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
   const [over, setOver] = useState(false);
   const [started, setStarted] = useState(false);
   const [leftMs, setLeftMs] = useState(TIME_LIMIT_MS);
+  const [hint, setHint] = useState<Rect | null>(null); // 종료 시 아직 가능했던 조합
   const endAtRef = useRef(0);
   const reported = useRef(false);
 
@@ -49,6 +51,7 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
     setOver(false);
     setStarted(false);
     setLeftMs(TIME_LIMIT_MS);
+    setHint(null);
     reported.current = false;
   }, []);
 
@@ -79,9 +82,12 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
   useEffect(() => {
     if (over && !reported.current) {
       reported.current = true;
+      // 시간 초과로 끝났다면 아직 지울 수 있었던 조합을 하나 짚어준다.
+      // 조합이 없어서 끝난 경우엔 findMove 도 null 이라 표시되지 않는다.
+      setHint(findMove(board));
       onGameOver(score, { game: "apple" });
     }
-  }, [over, score, onGameOver]);
+  }, [over, score, board, onGameOver]);
 
   // ── 그리기 ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -90,7 +96,9 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const render = () => {
     const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return; // 아직 배치 전이면 그리지 않는다(0 크기로 굳는 걸 막음)
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(rect.width * dpr);
     canvas.height = Math.round(rect.height * dpr);
@@ -151,6 +159,13 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
       ctx.fillStyle = hit ? "#4de0c0" : "#9db0c4";
       ctx.fillText(label, cx, Math.max(CELL * 0.42, top - 3));
     }
+    };
+
+    render();
+    // 배치가 늦거나(마운트 시 0폭) 화면이 바뀌면 다시 그린다.
+    const ro = new ResizeObserver(render);
+    ro.observe(canvas);
+    return () => ro.disconnect();
   }, [board, drag]);
 
   // ── 입력 ───────────────────────────────────────────────────────────
@@ -247,15 +262,34 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
           />
         )}
 
+        {/* 종료 시 아직 가능했던 조합 — 오버레이(z-10) 위에 표시한다 */}
+        {over && hint && (
+          <div
+            aria-hidden
+            className="hint-pulse pointer-events-none absolute z-20 rounded-lg border-2 border-gold"
+            style={{
+              left: `${(hint.c0 / COLS) * 100}%`,
+              top: `${(hint.r0 / ROWS) * 100}%`,
+              width: `${((hint.c1 - hint.c0 + 1) / COLS) * 100}%`,
+              height: `${((hint.r1 - hint.r0 + 1) / ROWS) * 100}%`,
+            }}
+          />
+        )}
+
         {over && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/75">
-            <p className="font-display text-2xl text-ink">
-              {leftMs <= 0 ? "시간 종료" : "더 지울 수 없어요"}
-            </p>
-            <p className="text-sm text-ink-dim">
-              사과 <span className="tabular text-gold">{score}</span>개 / {CELLS}개
-            </p>
-            <RetryButton submitting={submitting} onRetry={reset} />
+          // 판 전체를 덮지 않고 가운데 패널만 띄운다 — 그래야 힌트 박스 안의
+          // 사과가 그대로 보여 "이 조합이었다"를 읽을 수 있다.
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/35">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-pitch-line bg-pitch-alt/95 px-6 py-5 shadow-card backdrop-blur-sm">
+              <p className="font-display text-2xl text-ink">
+                {leftMs <= 0 ? "시간 종료" : "더 지울 수 없어요"}
+              </p>
+              <p className="text-sm text-ink-dim">
+                사과 <span className="tabular text-gold">{score}</span>개 / {CELLS}개
+              </p>
+              {hint && <p className="text-xs text-gold">반짝이는 칸: 아직 지울 수 있던 조합</p>}
+              <RetryButton submitting={submitting} onRetry={reset} />
+            </div>
           </div>
         )}
       </div>
