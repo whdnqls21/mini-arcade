@@ -25,7 +25,7 @@ const W = COLS * CELL;
 const H = ROWS * CELL;
 const PATH_FADE_MS = 200; // 연결선을 잔상으로 남겨두는 시간(입력은 막지 않는다)
 
-export default function MahjongGame({ onGameOver, bestScore, submitting }: GamePlayProps) {
+export default function MahjongGame({ onGameOver, submitting }: GamePlayProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [board, setBoard] = useState<Board>(() => newBoard());
   const [picked, setPicked] = useState<Cell | null>(null);
@@ -35,6 +35,7 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
   const [elapsed, setElapsed] = useState(0);
   const [started, setStarted] = useState(false);
   const [done, setDone] = useState(false);
+  const [shuffled, setShuffled] = useState(false); // 자동으로 섞었다는 안내
   const startRef = useRef(0);
   const reported = useRef(false);
   const pathTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,6 +64,7 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
     setPath(null);
     setDone(false);
     setStarted(false);
+    setShuffled(false);
     setElapsed(0);
     reported.current = false;
     if (pathTimer.current) clearTimeout(pathTimer.current);
@@ -88,6 +90,27 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
   useEffect(() => () => {
     if (pathTimer.current) clearTimeout(pathTimer.current);
   }, []);
+
+  // 막히면 알아서 다시 깐다. 0.3% 확률로만 생기는 일이라 플레이어가 판단할 거리가 아니고,
+  // 버튼으로 두면 유리한 배치가 나올 때까지 섞어보는 것도 가능해진다.
+  useEffect(() => {
+    if (!started || done || left === 0 || !stuck) return;
+    // 다시 깐 결과가 또 막혀 있으면 무한 반복이 되므로 몇 번만 시도한다.
+    let next = board;
+    for (let i = 0; i < 5; i++) {
+      const candidate = reshuffle(board);
+      if (findAnyMove(candidate)) {
+        next = candidate;
+        break;
+      }
+    }
+    if (next === board) return;
+    setBoard(next);
+    pick(null);
+    setShuffled(true);
+    const id = setTimeout(() => setShuffled(false), 2200);
+    return () => clearTimeout(id);
+  }, [started, done, left, stuck, board, pick]);
 
   // ── 그리기 ─────────────────────────────────────────────────────────
   // useEffect 는 화면이 한 번 그려진 뒤에 도므로 선택 표시가 한 프레임 늦는다.
@@ -175,46 +198,25 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 숫자 폭이 매 초 달라져 한 줄에 몰아넣으면 판이 위아래로 흔들린다.
-          칸 너비를 고정하고 버튼은 아래 줄로 내려 높이를 항상 일정하게 둔다. */}
-      <div className="flex flex-col gap-2">
+      {/* 숫자 폭이 매 초 달라지므로 칸 너비를 고정한다. 안 그러면 버튼이 밀리며
+          헤더 높이가 바뀌어 판이 위아래로 흔들린다.
+          베스트 기록은 아래 리더보드에 이미 있어 여기서는 빼고 한 줄로 둔다. */}
+      <div className="flex items-center justify-between gap-2">
         <div className="flex gap-2">
-          <Stat label="경과" value={`${(elapsed / 1000).toFixed(1)}초`} width="5.5rem" />
-          <Stat
-            label="베스트"
-            value={bestScore != null ? `${(bestScore / 1000).toFixed(2)}초` : "-"}
-            width="6rem"
-            accent
-          />
-          <Stat label="남은 패" value={`${left}`} width="4rem" />
+          <Stat label="경과" value={`${(elapsed / 1000).toFixed(1)}초`} width="5rem" />
+          <Stat label="남은 패" value={`${left}`} width="3.5rem" />
         </div>
-        <div className="flex justify-end gap-1.5">
-          <button
-            onClick={() => {
-              setBoard((cur) => reshuffle(cur));
-              pick(null);
-            }}
-            disabled={!started || done || left === 0}
-            className={`shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-sm disabled:opacity-40 ${
-              stuck
-                ? "border-gold/60 bg-gold/15 text-gold"
-                : "border-pitch-line bg-black/20 text-ink-dim hover:text-ink"
-            }`}
-          >
-            섞기
-          </button>
-          <button
-            onClick={reset}
-            className="shrink-0 whitespace-nowrap rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink-dim hover:text-ink"
-          >
-            새 게임
-          </button>
-        </div>
+        <button
+          onClick={reset}
+          className="shrink-0 whitespace-nowrap rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink-dim hover:text-ink"
+        >
+          새 게임
+        </button>
       </div>
 
-      {stuck && (
+      {shuffled && (
         <p className="rounded-lg bg-gold/10 px-3 py-2 text-center text-xs text-gold">
-          더 이을 수 있는 짝이 없어요. 섞기를 누르세요. (시간은 계속 흘러갑니다)
+          이을 수 있는 짝이 없어서 남은 패를 다시 깔았어요.
         </p>
       )}
 
@@ -268,25 +270,11 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
   );
 }
 
-function Stat({
-  label,
-  value,
-  width,
-  accent,
-}: {
-  label: string;
-  value: string;
-  width: string;
-  accent?: boolean;
-}) {
+function Stat({ label, value, width }: { label: string; value: string; width: string }) {
   return (
     <div style={{ width }} className="shrink-0 rounded-lg bg-black/20 px-2 py-1.5 text-center">
       <div className="text-[10px] text-ink-faint">{label}</div>
-      <div
-        className={`tabular whitespace-nowrap font-display text-base ${accent ? "text-gold" : "text-ink"}`}
-      >
-        {value}
-      </div>
+      <div className="tabular whitespace-nowrap font-display text-base text-ink">{value}</div>
     </div>
   );
 }
