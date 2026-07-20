@@ -47,3 +47,32 @@ body {
   background: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
 }
+
+/* 2048 타일 애니메이션 */
+@keyframes tilePop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes tileNew {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.tile-pop {
+  animation: tilePop 140ms ease;
+}
+.tile-new {
+  animation: tileNew 130ms ease;
+}

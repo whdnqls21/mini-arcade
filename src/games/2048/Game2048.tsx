@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { GamePlayProps } from "@/games/types";
-import { canMove, type Dir, type Grid, move, newGame, spawn } from "./logic";
+import { canMove, type Dir, newGame, planMove, spawn, type Tile } from "./logic";
 
 const TILE_BG: Record<number, string> = {
   2: "#1e2a38",
@@ -20,34 +20,38 @@ const TILE_BG: Record<number, string> = {
 };
 const tileBg = (v: number) => TILE_BG[v] ?? "#f26d5b";
 const tileColor = (v: number) => (v <= 4 ? "#9db0c4" : v >= 128 ? "#0d1117" : "#eaf1f7");
-const fontSize = (v: number) => (v >= 1024 ? "1.1rem" : v >= 128 ? "1.35rem" : "1.6rem");
+const fontSize = (v: number) => (v >= 1024 ? "1.05rem" : v >= 128 ? "1.3rem" : "1.55rem");
 
 export default function Game2048({ onGameOver, bestScore, submitting }: GamePlayProps) {
-  const [grid, setGrid] = useState<Grid>(() => newGame());
+  const idc = useRef(0);
+  const nextId = useCallback(() => ++idc.current, []);
+  const [tiles, setTiles] = useState<Tile[]>(() => newGame(nextId));
   const [score, setScore] = useState(0);
   const [over, setOver] = useState(false);
   const reported = useRef(false);
 
   const reset = useCallback(() => {
-    setGrid(newGame());
+    idc.current = 0;
+    setTiles(newGame(nextId));
     setScore(0);
     setOver(false);
     reported.current = false;
-  }, []);
+  }, [nextId]);
 
   const doMove = useCallback(
     (dir: Dir) => {
       if (over) return;
-      setGrid((g) => {
-        const { grid: moved, gained, moved: didMove } = move(g, dir);
-        if (!didMove) return g;
-        const next = spawn(moved);
-        setScore((s) => s + gained);
+      setTiles((cur) => {
+        const { tiles: moved, gained, moved: didMove } = planMove(cur, dir);
+        if (!didMove) return cur;
+        const sp = spawn(moved, nextId);
+        const next = sp ? [...moved, sp] : moved;
+        if (gained) setScore((s) => s + gained);
         if (!canMove(next)) setOver(true);
         return next;
       });
     },
-    [over]
+    [over, nextId]
   );
 
   // 게임 오버 시 점수 1회 보고
@@ -60,13 +64,13 @@ export default function Game2048({ onGameOver, bestScore, submitting }: GamePlay
 
   // 키보드
   useEffect(() => {
+    const map: Record<string, Dir> = {
+      ArrowLeft: "left",
+      ArrowRight: "right",
+      ArrowUp: "up",
+      ArrowDown: "down",
+    };
     const onKey = (e: KeyboardEvent) => {
-      const map: Record<string, Dir> = {
-        ArrowLeft: "left",
-        ArrowRight: "right",
-        ArrowUp: "up",
-        ArrowDown: "down",
-      };
       const dir = map[e.key];
       if (dir) {
         e.preventDefault();
@@ -112,28 +116,42 @@ export default function Game2048({ onGameOver, bestScore, submitting }: GamePlay
       <div
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
-        className="relative mx-auto w-full max-w-[22rem] touch-none select-none rounded-xl bg-black/30 p-2"
+        className="relative mx-auto aspect-square w-full max-w-[22rem] touch-none select-none rounded-xl bg-black/30 p-1.5"
       >
-        <div className="grid grid-cols-4 gap-2">
-          {grid.flatMap((row, i) =>
-            row.map((v, j) => (
+        {/* 배경 빈칸 */}
+        <div className="absolute inset-1.5 grid grid-cols-4 grid-rows-4">
+          {Array.from({ length: 16 }, (_, i) => (
+            <div key={i} className="p-1.5">
+              <div className="h-full w-full rounded-lg bg-white/[0.04]" />
+            </div>
+          ))}
+        </div>
+
+        {/* 타일 */}
+        <div className="absolute inset-1.5">
+          {tiles.map((t) => (
+            <div
+              key={t.id}
+              className="absolute left-0 top-0 h-1/4 w-1/4 p-1.5"
+              style={{
+                transform: `translate(${t.c * 100}%, ${t.r * 100}%)`,
+                transition: "transform 110ms ease",
+              }}
+            >
               <div
-                key={`${i}-${j}`}
-                className="flex aspect-square items-center justify-center rounded-lg font-display"
-                style={{
-                  background: v === 0 ? "rgba(255,255,255,0.04)" : tileBg(v),
-                  color: v === 0 ? "transparent" : tileColor(v),
-                  fontSize: fontSize(v),
-                }}
+                className={`flex h-full w-full items-center justify-center rounded-lg font-display ${
+                  t.merged ? "tile-pop" : t.isNew ? "tile-new" : ""
+                }`}
+                style={{ background: tileBg(t.value), color: tileColor(t.value), fontSize: fontSize(t.value) }}
               >
-                {v !== 0 ? v : ""}
+                {t.value}
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
 
         {over && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/70">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/70">
             <p className="font-display text-2xl text-ink">게임 오버</p>
             <p className="text-sm text-ink-dim">
               점수 <span className="tabular text-gold">{score}</span>
@@ -160,9 +178,7 @@ function Stat({ label, value, accent }: { label: string; value: number; accent?:
   return (
     <div className="rounded-lg bg-black/20 px-3 py-1.5 text-center">
       <div className="text-[10px] text-ink-faint">{label}</div>
-      <div className={`tabular font-display text-lg ${accent ? "text-gold" : "text-ink"}`}>
-        {value}
-      </div>
+      <div className={`tabular font-display text-lg ${accent ? "text-gold" : "text-ink"}`}>{value}</div>
     </div>
   );
 }
