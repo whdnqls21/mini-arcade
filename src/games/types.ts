@@ -10,6 +10,16 @@ export interface GamePlayProps {
   accountId: string | null;
 }
 
+// 플레이 화면에 붙는 설명. 라벨은 플레이어가 실제로 궁금해하는 순서대로 —
+// 뭘 하는 게임인지 → 어떻게 조작하는지 → 점수는 어떻게 붙는지 → 언제 끝나는지.
+export interface GameInfo {
+  rows: { label: string; text: string }[];
+  tip?: string;
+  // 게임별 시각 자료 (예: 수박게임의 과일 단계). 없으면 생략.
+  Visual?: ComponentType;
+}
+
 export interface GameEntry {
   Play: ComponentType<GamePlayProps>;
+  info?: GameInfo;
 }

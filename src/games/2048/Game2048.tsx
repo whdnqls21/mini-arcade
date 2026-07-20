@@ -210,9 +210,6 @@ export default function Game2048({ onGameOver, bestScore, submitting, accountId 
         )}
       </div>
 
-      <p className="text-center text-[11px] text-ink-faint">
-        방향키 또는 스와이프로 타일을 밀어 합치세요. 게임이 끝나면 점수가 기록됩니다.
-      </p>
     </div>
   );
 }

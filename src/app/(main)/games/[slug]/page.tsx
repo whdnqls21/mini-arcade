@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useState } from "react";
 
 import { Card } from "@/components/Card";
+import { GameInfoCard } from "@/components/GameInfoCard";
 import { useAppState } from "@/components/StateProvider";
 import { GAME_REGISTRY } from "@/games/registry";
 import { postJSON } from "@/lib/client-api";
@@ -76,6 +77,8 @@ export default function PlayPage() {
 
       {note && <p className="text-center text-sm text-grass">{note}</p>}
       {error && <p className="text-center text-sm text-danger">{error}</p>}
+
+      {entry.info && <GameInfoCard info={entry.info} />}
 
       <Leaderboard slug={slug} />
     </div>

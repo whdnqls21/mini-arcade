@@ -15,7 +15,9 @@ import {
   WORLD_H,
   WORLD_W,
 } from "./engine";
+import { FruitIcon } from "./FruitIcon";
 import { DROPPABLE, FRUITS, randomDropIndex } from "./fruits";
+import { drawFruit } from "./render";
 
 const SLUG = "suika";
 const FIXED_MS = 1000 / 60; // 물리 고정 스텝
@@ -209,7 +211,8 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
         const x = Math.min(WORLD_W - f.radius, Math.max(f.radius, dropXRef.current));
         const cooling = now - lastDropRef.current < DROP_COOLDOWN_MS;
         ctx.save();
-        ctx.globalAlpha = cooling ? 0.25 : 0.5;
+        // 안내선은 흐리게, 과일은 또렷하게. 같은 알파를 쓰면 과일이 탁한 갈색으로 죽는다.
+        ctx.globalAlpha = cooling ? 0.15 : 0.4;
         ctx.setLineDash([4, 7]);
         ctx.strokeStyle = "rgba(255,255,255,0.35)";
         ctx.lineWidth = 1;
@@ -218,7 +221,8 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
         ctx.lineTo(x, WORLD_H);
         ctx.stroke();
         ctx.setLineDash([]);
-        drawFruit(ctx, x, DROP_Y, f.radius, f.color, f.shade, 0, 1);
+        ctx.globalAlpha = cooling ? 0.45 : 1;
+        drawFruit(ctx, currentRef.current, x, DROP_Y, f.radius, 0, 1);
         ctx.restore();
       }
 
@@ -232,7 +236,7 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
           if (t >= 1) popRef.current.delete(body.id);
           else s = 1 + Math.sin(Math.min(t, 1) * Math.PI) * 0.18; // 잠깐 부풀었다 돌아온다
         }
-        drawFruit(ctx, body.position.x, body.position.y, f.radius, f.color, f.shade, body.angle, s);
+        drawFruit(ctx, body.fruitIndex, body.position.x, body.position.y, f.radius, body.angle, s);
       }
 
       // 파티클
@@ -376,61 +380,17 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
         )}
       </div>
 
-      <p className="text-center text-[11px] text-ink-faint">
-        좌우로 움직여 과일을 떨어뜨리세요. 같은 과일끼리 닿으면 합쳐집니다. 점선 위로 과일이 쌓이면 끝!
-      </p>
     </div>
   );
-}
-
-// 원형 그라데이션 + 하이라이트로 입체감만 준다.
-function drawFruit(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  color: string,
-  shade: string,
-  angle: number,
-  scale: number
-) {
-  const rr = r * scale;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle);
-  const grad = ctx.createRadialGradient(-rr * 0.3, -rr * 0.35, rr * 0.1, 0, 0, rr);
-  grad.addColorStop(0, color);
-  grad.addColorStop(1, shade);
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(0, 0, rr, 0, Math.PI * 2);
-  ctx.fill();
-  // 광택
-  ctx.fillStyle = "rgba(255,255,255,0.25)";
-  ctx.beginPath();
-  ctx.ellipse(-rr * 0.32, -rr * 0.38, rr * 0.26, rr * 0.17, -0.6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
 }
 
 function NextPreview({ current, next }: { current: number; next: number }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-lg bg-black/20 px-2.5 py-1.5">
-      <Dot index={current} size={18} />
-      <span className="text-[10px] text-ink-faint">→</span>
-      <Dot index={next} size={14} />
+    <div className="flex items-center gap-1 rounded-lg bg-black/20 px-2 py-1">
+      <FruitIcon index={Math.min(current, DROPPABLE - 1)} size={26} />
+      <span className="text-[10px] text-ink-faint">›</span>
+      <FruitIcon index={Math.min(next, DROPPABLE - 1)} size={20} />
     </div>
-  );
-}
-
-function Dot({ index, size }: { index: number; size: number }) {
-  const f = FRUITS[Math.min(index, DROPPABLE - 1)];
-  return (
-    <span
-      title={f.name}
-      style={{ width: size, height: size, background: f.color }}
-      className="inline-block rounded-full"
-    />
   );
 }
 
