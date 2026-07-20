@@ -39,6 +39,14 @@ export default function Game2048({ onGameOver, bestScore, submitting, accountId 
   const [over, setOver] = useState(false);
   const [restored, setRestored] = useState(false); // 저장된 판 확인이 끝났는지
   const reported = useRef(false);
+  // 현재 판의 동기 사본. 리렌더 전에 방향키가 연달아 들어와도 직전 이동 결과 위에서 계산한다.
+  const tilesRef = useRef(tiles);
+
+  // tiles 를 바꾸는 유일한 통로 — ref 와 state 를 함께 갱신한다.
+  const applyTiles = useCallback((next: Tile[]) => {
+    tilesRef.current = next;
+    setTiles(next);
+  }, []);
 
   // 저장된 판 복원. localStorage 는 서버에서 읽을 수 없어 첫 렌더 후 처리한다.
   useEffect(() => {
@@ -46,13 +54,13 @@ export default function Game2048({ onGameOver, bestScore, submitting, accountId 
     if (saved?.tiles?.length) {
       // 타일 id 카운터를 이어받지 않으면 새 타일 id 가 겹쳐 React key 가 충돌한다.
       idc.current = saved.tiles.reduce((max, t) => Math.max(max, t.id), 0);
-      setTiles(saved.tiles);
+      applyTiles(saved.tiles);
       setScore(saved.score);
       setOver(false);
       reported.current = false;
     }
     setRestored(true);
-  }, [accountId]);
+  }, [accountId, applyTiles]);
 
   // 판이 바뀔 때마다 저장. 게임 오버면 저장을 지운다.
   useEffect(() => {
@@ -67,26 +75,26 @@ export default function Game2048({ onGameOver, bestScore, submitting, accountId 
 
   const reset = useCallback(() => {
     idc.current = 0;
-    setTiles(newGame(nextId));
+    applyTiles(newGame(nextId));
     setScore(0);
     setOver(false);
     reported.current = false;
-  }, [nextId]);
+  }, [nextId, applyTiles]);
 
+  // 이동 계산과 상태 변경은 setState 업데이터 밖에서 한다.
+  // 업데이터 안에서 setScore 를 부르면 StrictMode 가 업데이터를 두 번 실행할 때 점수가 중복 가산된다.
   const doMove = useCallback(
     (dir: Dir) => {
       if (over || !restored) return; // 복원 전 입력은 무시(복원이 덮어써 버린다)
-      setTiles((cur) => {
-        const { tiles: moved, gained, moved: didMove } = planMove(cur, dir);
-        if (!didMove) return cur;
-        const sp = spawn(moved, nextId);
-        const next = sp ? [...moved, sp] : moved;
-        if (gained) setScore((s) => s + gained);
-        if (!canMove(next)) setOver(true);
-        return next;
-      });
+      const { tiles: moved, gained, moved: didMove } = planMove(tilesRef.current, dir);
+      if (!didMove) return;
+      const sp = spawn(moved, nextId);
+      const next = sp ? [...moved, sp] : moved;
+      applyTiles(next);
+      if (gained) setScore((s) => s + gained);
+      if (!canMove(next)) setOver(true);
     },
-    [over, restored, nextId]
+    [over, restored, nextId, applyTiles]
   );
 
   // 게임 오버 시 점수 1회 보고
