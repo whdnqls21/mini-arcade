@@ -11,7 +11,7 @@ export const WORLD_W = 320;
 export const WORLD_H = 440;
 export const DROP_Y = 40; // 과일이 생성되는 높이
 export const DEATH_Y = 78; // 이 선보다 위에 과일이 머무르면 게임 오버
-export const DEATH_GRACE_MS = 1000; // 유예 시간 — 떨어뜨린 직후 튀는 건 봐준다
+export const DEATH_GRACE_MS = 2000; // 유예 시간 — 떨어뜨린 직후 튀는 건 봐준다
 
 const WALL = 60; // 벽 두께 (충분히 두꺼워야 빠른 과일이 뚫고 나가지 않는다)
 
