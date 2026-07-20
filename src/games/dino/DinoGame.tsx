@@ -5,11 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { RetryButton, StartGate } from "@/games/shared";
 import type { GamePlayProps } from "@/games/types";
 import {
-  DINO_H,
-  DINO_W,
-  DINO_X,
   type DinoState,
-  GROUND_Y,
   H,
   jump,
   newState,
@@ -17,6 +13,7 @@ import {
   step,
   W,
 } from "./logic";
+import { drawScene } from "./render";
 
 const DT = 1 / 60; // 물리 고정 스텝(초)
 
@@ -113,7 +110,7 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
         }
       }
 
-      draw(ctx, canvas, s, runningRef.current);
+      drawScene(ctx, canvas, s, runningRef.current);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -171,113 +168,6 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
       </p>
     </div>
   );
-}
-
-// ── 그리기 ───────────────────────────────────────────────────────────
-const GRASS = "#4de0c0";
-const CACTUS = "#3f9e7c";
-
-function draw(
-  ctx: CanvasRenderingContext2D,
-  canvas: HTMLCanvasElement,
-  s: DinoState,
-  running: boolean
-) {
-  const rect = canvas.getBoundingClientRect();
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const scale = (rect.width * dpr) / W;
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  ctx.clearRect(0, 0, W, H);
-
-  // 배경
-  ctx.fillStyle = "#0a0f16";
-  ctx.fillRect(0, 0, W, H);
-
-  // 구름 — 느리게 흘러 원근을 만든다
-  ctx.fillStyle = "rgba(255,255,255,0.06)";
-  for (let i = 0; i < 3; i++) {
-    const cx = W - ((s.dist * 0.25 + i * 150) % (W + 60));
-    const cy = 22 + i * 13;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 16, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // 지면
-  ctx.strokeStyle = "rgba(255,255,255,0.22)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(0, GROUND_Y + 1);
-  ctx.lineTo(W, GROUND_Y + 1);
-  ctx.stroke();
-  // 흐르는 자갈
-  ctx.fillStyle = "rgba(255,255,255,0.16)";
-  for (let i = 0; i < 14; i++) {
-    const gx = W - ((s.dist + i * 43) % (W + 40));
-    ctx.fillRect(gx, GROUND_Y + 5 + (i % 3) * 3, 6, 1.5);
-  }
-
-  // 장애물
-  ctx.fillStyle = CACTUS;
-  for (const o of s.obstacles) {
-    const top = GROUND_Y - o.h;
-    ctx.beginPath();
-    ctx.roundRect(o.x, top, o.w, o.h, 3);
-    ctx.fill();
-    // 팔 — 폭이 좁은 것에만
-    if (o.w <= 13) {
-      ctx.fillRect(o.x - 3.5, top + o.h * 0.35, 3.5, 2.5);
-      ctx.fillRect(o.x + o.w, top + o.h * 0.5, 3.5, 2.5);
-    }
-  }
-
-  drawDino(ctx, s, running);
-
-  // 속도계 — 달릴수록 차오른다
-  if (running) {
-    const t = Math.min(1, (s.speed - 180) / (420 - 180));
-    ctx.fillStyle = "rgba(255,255,255,0.10)";
-    ctx.fillRect(W - 46, 10, 36, 3);
-    ctx.fillStyle = t > 0.75 ? "#f4c64e" : GRASS;
-    ctx.fillRect(W - 46, 10, 36 * t, 3);
-  }
-}
-
-function drawDino(ctx: CanvasRenderingContext2D, s: DinoState, running: boolean) {
-  const foot = GROUND_Y - s.y;
-  const top = foot - DINO_H;
-  const x = DINO_X;
-  const air = s.y > 0.5;
-
-  ctx.fillStyle = s.dead ? "#7d8b99" : GRASS;
-
-  // 꼬리
-  ctx.fillRect(x - 5, top + 8, 7, 5);
-  // 몸통
-  ctx.beginPath();
-  ctx.roundRect(x, top + 7, 14, 12, 2);
-  ctx.fill();
-  // 목 + 머리
-  ctx.beginPath();
-  ctx.roundRect(x + 9, top, 13, 10, 2);
-  ctx.fill();
-  // 주둥이
-  ctx.fillRect(x + 20, top + 5, 3, 3);
-  // 눈
-  ctx.fillStyle = "#0a0f16";
-  ctx.fillRect(x + 17, top + 3, 2, 2);
-
-  ctx.fillStyle = s.dead ? "#7d8b99" : GRASS;
-  if (air) {
-    // 공중 — 다리를 모은다
-    ctx.fillRect(x + 3, top + 18, 4, 6);
-    ctx.fillRect(x + 9, top + 18, 4, 6);
-  } else {
-    // 달리기 — 거리로 위상을 만들어 두 다리를 번갈아 든다
-    const phase = running ? Math.floor(s.dist / 12) % 2 : 0;
-    ctx.fillRect(x + 3, top + 18, 4, phase === 0 ? 8 : 5);
-    ctx.fillRect(x + 9, top + 18, 4, phase === 0 ? 5 : 8);
-  }
 }
 
 function Stat({
