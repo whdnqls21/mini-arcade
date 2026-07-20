@@ -56,17 +56,24 @@ export default function PlayPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between pt-1">
-        <div>
-          <Link href="/" className="text-xs text-ink-faint hover:text-grass">
-            ← 게임
-          </Link>
-          <h1 className="font-display text-2xl text-ink">{game.name}</h1>
+      {/* 게임 중에는 하단 메뉴가 숨겨지므로 이 버튼이 유일한 출구다. 크게 둔다. */}
+      <div className="flex items-center gap-2 pt-1">
+        <Link
+          href="/"
+          aria-label="게임 목록으로 돌아가기"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-pitch-line bg-black/25 text-ink-dim transition-colors hover:border-grass/50 hover:text-grass focus:outline-none focus-visible:ring-2 focus-visible:ring-grass"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </Link>
+
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-display text-2xl leading-tight text-ink">{game.name}</h1>
+          <p className="text-[11px] leading-none text-ink-faint">{scoringLabel[game.scoring]}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="text-[11px] text-ink-faint">{scoringLabel[game.scoring]}</span>
-          {entry.info && <GameInfoButton info={entry.info} />}
-        </div>
+
+        {entry.info && <GameInfoButton info={entry.info} />}
       </div>
 
       <Card>
