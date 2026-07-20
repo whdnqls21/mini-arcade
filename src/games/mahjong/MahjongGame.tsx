@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { GamePlayProps } from "@/games/types";
 import { drawFruit } from "@/games/suika/render";
@@ -23,7 +23,7 @@ import { faceOf, TILE_EDGE } from "./tiles";
 const CELL = 40; // 월드 좌표 한 칸
 const W = COLS * CELL;
 const H = ROWS * CELL;
-const CLEAR_DELAY_MS = 240; // 연결선을 보여주는 시간
+const PATH_FADE_MS = 200; // 연결선을 잔상으로 남겨두는 시간(입력은 막지 않는다)
 
 export default function MahjongGame({ onGameOver, bestScore, submitting }: GamePlayProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -37,7 +37,7 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
   const [done, setDone] = useState(false);
   const startRef = useRef(0);
   const reported = useRef(false);
-  const locked = useRef(false);
+  const pathTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const left = remaining(board);
   const stuck = useMemo(
@@ -65,7 +65,7 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
     setStarted(false);
     setElapsed(0);
     reported.current = false;
-    locked.current = false;
+    if (pathTimer.current) clearTimeout(pathTimer.current);
   }, [pick]);
 
   // 경과 시간 — 시작 시각과의 차이로 계산해 누적 오차를 없앤다.
@@ -85,8 +85,14 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
     onGameOver(ms, { game: "mahjong" });
   }, [started, left, onGameOver]);
 
+  useEffect(() => () => {
+    if (pathTimer.current) clearTimeout(pathTimer.current);
+  }, []);
+
   // ── 그리기 ─────────────────────────────────────────────────────────
-  useEffect(() => {
+  // useEffect 는 화면이 한 번 그려진 뒤에 도므로 선택 표시가 한 프레임 늦는다.
+  // 판 전체를 다시 그려도 0.3ms 라 화면을 잠깐 붙잡아도 무방하다.
+  useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -124,7 +130,7 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
 
   // ── 입력 ───────────────────────────────────────────────────────────
   function tap(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (!started || done || locked.current) return;
+    if (!started || done) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -151,20 +157,20 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
       return;
     }
 
-    locked.current = true;
-    setPath(found);
-    const a = prev;
+    // 타일은 즉시 지운다. 지우기를 미루면 탭이 굼떠 보이고, 그동안 입력을 막으면
+    // 한 판에 24번 × 지연만큼 기록이 부풀어 시간 경쟁이 왜곡된다.
+    setBoard((cur) => {
+      const next = cur.slice();
+      next[indexOf(prev.c, prev.r)] = 0;
+      next[indexOf(c, r)] = 0;
+      return next;
+    });
     pick(null);
-    setTimeout(() => {
-      setBoard((cur) => {
-        const next = cur.slice();
-        next[indexOf(a.c, a.r)] = 0;
-        next[indexOf(c, r)] = 0;
-        return next;
-      });
-      setPath(null);
-      locked.current = false;
-    }, CLEAR_DELAY_MS);
+
+    // 연결선만 잔상으로 잠깐 남긴다 — 다음 탭을 막지 않는다.
+    setPath(found);
+    if (pathTimer.current) clearTimeout(pathTimer.current);
+    pathTimer.current = setTimeout(() => setPath(null), PATH_FADE_MS);
   }
 
   return (
