@@ -1,0 +1,23 @@
+import type { MetadataRoute } from "next";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "미니 아케이드",
+    short_name: "아케이드",
+    description: "친구들과 퍼즐 게임으로 기록 경쟁",
+    start_url: "/",
+    scope: "/",
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#0d1117",
+    theme_color: "#0d1117",
+    lang: "ko",
+    icons: [
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/icon-192", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-192", sizes: "192x192", type: "image/png", purpose: "maskable" },
+      { src: "/icon-512", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+  };
+}

@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #0d1117;
+  --bg-base-2: #131a24;
+  --grass: #4de0c0;
+  --gold: #f4c64e;
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #eaf1f7;
+  --text-dim: #9db0c4;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background-color: var(--bg-base);
+}
+
+body {
+  color: var(--text);
+  font-family: var(--font-body), sans-serif;
+  min-height: 100dvh;
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, rgba(77, 224, 192, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
+.font-display {
+  font-family: var(--font-display), sans-serif;
+}
+.tabular {
+  font-family: var(--font-numeric), var(--font-body), sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}

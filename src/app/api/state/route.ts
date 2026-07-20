@@ -1,0 +1,19 @@
+import { NextResponse } from "next/server";
+
+import { buildState } from "@/lib/state";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  try {
+    const state = await buildState();
+    return NextResponse.json(state);
+  } catch (err) {
+    console.error("GET /api/state 실패", err);
+    const detail = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      { error: `상태를 불러오지 못했습니다. (${detail})` },
+      { status: 500 }
+    );
+  }
+}
