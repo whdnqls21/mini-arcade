@@ -31,13 +31,13 @@ export default function AppHeader() {
         <button
           type="button"
           onClick={secretTap}
-          aria-label="뇌지컬 대전"
+          aria-label="뇌지컬 리그"
           className="leading-none"
         >
           <BrainMark size={28} />
         </button>
         <Link href="/" className="font-display text-xl tracking-tight text-ink">
-          뇌지컬 <span className="text-grass">대전</span>
+          뇌지컬 <span className="text-grass">리그</span>
         </Link>
       </div>
     </header>

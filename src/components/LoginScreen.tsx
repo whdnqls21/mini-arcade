@@ -35,7 +35,7 @@ export default function LoginScreen() {
   return (
     <div className="flex flex-col gap-4 pt-8">
       <div className="text-center">
-        <p className="text-xs tracking-[0.2em] text-grass">뇌지컬 대전</p>
+        <p className="text-xs tracking-[0.2em] text-grass">뇌지컬 리그</p>
         <h1 className="mt-1 font-display text-2xl text-ink">
           {mode === "login" ? "로그인" : "회원가입"}
         </h1>

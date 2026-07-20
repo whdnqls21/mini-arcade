@@ -4,7 +4,7 @@ import { ICON_VERSION } from "@/lib/brain-mark";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "뇌지컬 대전",
+    name: "뇌지컬 리그",
     short_name: "뇌지컬",
     description: "친구들과 퍼즐 게임으로 기록 경쟁",
     start_url: "/",

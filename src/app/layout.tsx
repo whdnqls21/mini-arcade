@@ -13,9 +13,9 @@ const numeric = Oswald({ weight: ["400", "500", "600", "700"], subsets: ["latin"
 import { ICON_VERSION } from "@/lib/brain-mark";
 
 export const metadata: Metadata = {
-  title: "뇌지컬 대전",
-  description: "친구들과 퍼즐 게임으로 기록 경쟁하는 뇌지컬 대전",
-  applicationName: "뇌지컬 대전",
+  title: "뇌지컬 리그",
+  description: "친구들과 퍼즐 게임으로 기록 경쟁하는 뇌지컬 리그",
+  applicationName: "뇌지컬 리그",
   // 아이콘을 바꾸면 ICON_VERSION 을 올린다. 브라우저와 OS 가 아이콘을 오래 캐시해서
   // 경로가 같으면 예전 그림을 계속 쓴다.
   icons: {
