@@ -1,0 +1,444 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import type { GamePlayProps } from "@/games/types";
+import { clearGame, loadGame, saveGame } from "@/lib/game-save";
+import { burst, type Particle, playDropSound, playMergeSound, stepParticles } from "./effects";
+import {
+  createWorld,
+  DEATH_GRACE_MS,
+  DEATH_Y,
+  DROP_Y,
+  type FruitSnapshot,
+  type SuikaWorld,
+  WORLD_H,
+  WORLD_W,
+} from "./engine";
+import { DROPPABLE, FRUITS, randomDropIndex } from "./fruits";
+
+const SLUG = "suika";
+const FIXED_MS = 1000 / 60; // 물리 고정 스텝
+const DROP_COOLDOWN_MS = 420;
+const COMBO_WINDOW_MS = 1200;
+const POP_MS = 220;
+const SAVE_INTERVAL_MS = 1000;
+
+interface SaveSuika {
+  fruits: FruitSnapshot[];
+  score: number;
+  current: number;
+  next: number;
+}
+
+export default function SuikaGame({ onGameOver, bestScore, submitting, accountId }: GamePlayProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const worldRef = useRef<SuikaWorld | null>(null);
+
+  // 루프 안에서 쓰는 값은 전부 ref — 리렌더와 무관하게 최신값을 봐야 한다.
+  const scoreRef = useRef(0);
+  const overRef = useRef(false);
+  const dropXRef = useRef(WORLD_W / 2);
+  const currentRef = useRef(0);
+  const nextRef = useRef(0);
+  const lastDropRef = useRef(0);
+  const particlesRef = useRef<Particle[]>([]);
+  const popRef = useRef<Map<number, number>>(new Map()); // bodyId → 시작 시각
+  const comboRef = useRef({ count: 0, at: 0 });
+  const mutedRef = useRef(false);
+  const lastSaveRef = useRef(0);
+
+  // 화면 표시용 미러
+  const [score, setScore] = useState(0);
+  const [over, setOver] = useState(false);
+  const [current, setCurrentUi] = useState(0);
+  const [next, setNextUi] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [ready, setReady] = useState(false);
+  const reported = useRef(false);
+
+  const setCurrent = useCallback((i: number) => {
+    currentRef.current = i;
+    setCurrentUi(i);
+  }, []);
+  const setNext = useCallback((i: number) => {
+    nextRef.current = i;
+    setNextUi(i);
+  }, []);
+
+  const persist = useCallback(() => {
+    const world = worldRef.current;
+    if (!world || overRef.current) return;
+    saveGame<SaveSuika>(SLUG, accountId, {
+      fruits: world.snapshot(),
+      score: scoreRef.current,
+      current: currentRef.current,
+      next: nextRef.current,
+    });
+  }, [accountId]);
+
+  const reset = useCallback(() => {
+    worldRef.current?.clear();
+    scoreRef.current = 0;
+    overRef.current = false;
+    particlesRef.current = [];
+    popRef.current.clear();
+    comboRef.current = { count: 0, at: 0 };
+    lastDropRef.current = 0;
+    setScore(0);
+    setOver(false);
+    setCombo(0);
+    setCurrent(randomDropIndex());
+    setNext(randomDropIndex());
+    reported.current = false;
+    clearGame(SLUG, accountId);
+  }, [accountId, setCurrent, setNext]);
+
+  // ── 월드 생성 + 저장된 판 복원 ─────────────────────────────────────
+  useEffect(() => {
+    const world = createWorld();
+    worldRef.current = world;
+
+    const saved = loadGame<SaveSuika>(SLUG, accountId);
+    if (saved?.fruits?.length) {
+      world.restore(saved.fruits);
+      scoreRef.current = saved.score ?? 0;
+      setScore(scoreRef.current);
+      setCurrent(saved.current ?? randomDropIndex());
+      setNext(saved.next ?? randomDropIndex());
+    } else {
+      setCurrent(randomDropIndex());
+      setNext(randomDropIndex());
+    }
+    setReady(true);
+
+    return () => {
+      world.destroy();
+      worldRef.current = null;
+    };
+  }, [accountId, setCurrent, setNext]);
+
+  // ── 물리 + 렌더 루프 ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!ready) return;
+    const canvas = canvasRef.current;
+    const world = worldRef.current;
+    if (!canvas || !world) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let raf = 0;
+    let last = performance.now();
+    let acc = 0;
+
+    // 캔버스 해상도를 컨테이너 크기 × DPR 로 맞춘다.
+    const fit = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(canvas);
+
+    const advance = (dt: number) => {
+      if (overRef.current) return;
+      const { merges, overMs } = world.step(dt);
+      const now = performance.now();
+
+      for (const m of merges) {
+        scoreRef.current += m.score;
+        particlesRef.current.push(...burst(m.x, m.y, FRUITS[m.index - 1].color, FRUITS[m.index].radius));
+        popRef.current.set(m.bodyId, now);
+        playMergeSound(m.index, mutedRef.current);
+        // 연속 합체를 콤보로 센다
+        const c = comboRef.current;
+        c.count = now - c.at < COMBO_WINDOW_MS ? c.count + 1 : 1;
+        c.at = now;
+      }
+      if (merges.length) {
+        setScore(scoreRef.current);
+        setCombo(comboRef.current.count);
+      } else if (comboRef.current.count && now - comboRef.current.at > COMBO_WINDOW_MS) {
+        comboRef.current.count = 0;
+        setCombo(0);
+      }
+
+      if (overMs >= DEATH_GRACE_MS) {
+        overRef.current = true;
+        setOver(true);
+        clearGame(SLUG, accountId);
+      }
+
+      if (now - lastSaveRef.current > SAVE_INTERVAL_MS) {
+        lastSaveRef.current = now;
+        persist();
+      }
+    };
+
+    const draw = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const scale = (rect.width * dpr) / WORLD_W;
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+
+      // 배경
+      ctx.fillStyle = "#0a0f16";
+      ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+      const now = performance.now();
+
+      // 경계선 — 과일이 근처에 있으면 붉게
+      const danger = world.fruits().some((b) => b.position.y - FRUITS[b.fruitIndex].radius < DEATH_Y + 16);
+      ctx.save();
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = danger ? "rgba(255,107,107,0.75)" : "rgba(255,255,255,0.16)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, DEATH_Y);
+      ctx.lineTo(WORLD_W, DEATH_Y);
+      ctx.stroke();
+      ctx.restore();
+
+      // 조준선 + 다음에 떨어질 과일 미리보기
+      if (!overRef.current) {
+        const f = FRUITS[currentRef.current];
+        const x = Math.min(WORLD_W - f.radius, Math.max(f.radius, dropXRef.current));
+        const cooling = now - lastDropRef.current < DROP_COOLDOWN_MS;
+        ctx.save();
+        ctx.globalAlpha = cooling ? 0.25 : 0.5;
+        ctx.setLineDash([4, 7]);
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, DROP_Y + f.radius);
+        ctx.lineTo(x, WORLD_H);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        drawFruit(ctx, x, DROP_Y, f.radius, f.color, f.shade, 0, 1);
+        ctx.restore();
+      }
+
+      // 과일
+      for (const body of world.fruits()) {
+        const f = FRUITS[body.fruitIndex];
+        const started = popRef.current.get(body.id);
+        let s = 1;
+        if (started !== undefined) {
+          const t = (now - started) / POP_MS;
+          if (t >= 1) popRef.current.delete(body.id);
+          else s = 1 + Math.sin(Math.min(t, 1) * Math.PI) * 0.18; // 잠깐 부풀었다 돌아온다
+        }
+        drawFruit(ctx, body.position.x, body.position.y, f.radius, f.color, f.shade, body.angle, s);
+      }
+
+      // 파티클
+      for (const p of particlesRef.current) {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    };
+
+    const loop = (now: number) => {
+      // 탭이 백그라운드였다 돌아오면 delta 가 커진다 — 한 번에 몰아서 계산하지 않도록 자른다.
+      const delta = Math.min(now - last, 100);
+      last = now;
+      acc += delta;
+      let guard = 0;
+      while (acc >= FIXED_MS && guard++ < 6) {
+        advance(FIXED_MS);
+        acc -= FIXED_MS;
+      }
+      particlesRef.current = stepParticles(particlesRef.current, delta / FIXED_MS);
+      draw();
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, [ready, accountId, persist]);
+
+  // ── 입력 ───────────────────────────────────────────────────────────
+  const toWorldX = useCallback((clientX: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return WORLD_W / 2;
+    const rect = canvas.getBoundingClientRect();
+    return ((clientX - rect.left) / rect.width) * WORLD_W;
+  }, []);
+
+  const aim = useCallback(
+    (clientX: number) => {
+      dropXRef.current = toWorldX(clientX);
+    },
+    [toWorldX]
+  );
+
+  const release = useCallback(
+    (clientX: number) => {
+      const world = worldRef.current;
+      if (!world || overRef.current) return;
+      const now = performance.now();
+      if (now - lastDropRef.current < DROP_COOLDOWN_MS) return;
+      lastDropRef.current = now;
+      dropXRef.current = toWorldX(clientX);
+      world.drop(currentRef.current, dropXRef.current);
+      playDropSound(mutedRef.current);
+      setCurrent(nextRef.current);
+      setNext(randomDropIndex());
+      persist();
+    },
+    [toWorldX, setCurrent, setNext, persist]
+  );
+
+  // 게임 오버 시 점수 1회 보고
+  useEffect(() => {
+    if (over && !reported.current) {
+      reported.current = true;
+      onGameOver(score, { game: SLUG });
+    }
+  }, [over, score, onGameOver]);
+
+  // 페이지를 벗어날 때 마지막 상태를 저장
+  useEffect(() => {
+    return () => {
+      persist();
+    };
+  }, [persist]);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <Stat label="점수" value={score} />
+          <Stat label="베스트" value={bestScore ?? 0} accent />
+        </div>
+        <div className="flex items-center gap-2">
+          <NextPreview current={current} next={next} />
+          <button
+            onClick={() => {
+              mutedRef.current = !muted;
+              setMuted(!muted);
+            }}
+            aria-label={muted ? "소리 켜기" : "소리 끄기"}
+            className="rounded-lg border border-pitch-line bg-black/20 px-2.5 py-2 text-sm text-ink-dim hover:text-ink"
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
+          <button
+            onClick={reset}
+            className="rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink-dim hover:text-ink"
+          >
+            새 게임
+          </button>
+        </div>
+      </div>
+
+      <div className="relative mx-auto w-full max-w-[22rem]">
+        <canvas
+          ref={canvasRef}
+          onPointerMove={(e) => e.buttons > 0 && aim(e.clientX)}
+          onPointerDown={(e) => aim(e.clientX)}
+          onPointerUp={(e) => release(e.clientX)}
+          style={{ aspectRatio: `${WORLD_W} / ${WORLD_H}` }}
+          className="w-full touch-none select-none rounded-xl border border-pitch-line"
+        />
+
+        {combo >= 2 && (
+          <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 font-display text-2xl text-gold drop-shadow">
+            {combo} COMBO!
+          </div>
+        )}
+
+        {over && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/70">
+            <p className="font-display text-2xl text-ink">게임 오버</p>
+            <p className="text-sm text-ink-dim">
+              점수 <span className="tabular text-gold">{score}</span>
+              {submitting && " · 기록 저장 중…"}
+            </p>
+            <button
+              onClick={reset}
+              className="rounded-xl bg-grass px-5 py-2.5 font-display text-pitch-base"
+            >
+              다시 하기
+            </button>
+          </div>
+        )}
+      </div>
+
+      <p className="text-center text-[11px] text-ink-faint">
+        좌우로 움직여 과일을 떨어뜨리세요. 같은 과일끼리 닿으면 합쳐집니다. 점선 위로 과일이 쌓이면 끝!
+      </p>
+    </div>
+  );
+}
+
+// 원형 그라데이션 + 하이라이트로 입체감만 준다.
+function drawFruit(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  color: string,
+  shade: string,
+  angle: number,
+  scale: number
+) {
+  const rr = r * scale;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  const grad = ctx.createRadialGradient(-rr * 0.3, -rr * 0.35, rr * 0.1, 0, 0, rr);
+  grad.addColorStop(0, color);
+  grad.addColorStop(1, shade);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(0, 0, rr, 0, Math.PI * 2);
+  ctx.fill();
+  // 광택
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.beginPath();
+  ctx.ellipse(-rr * 0.32, -rr * 0.38, rr * 0.26, rr * 0.17, -0.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function NextPreview({ current, next }: { current: number; next: number }) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg bg-black/20 px-2.5 py-1.5">
+      <Dot index={current} size={18} />
+      <span className="text-[10px] text-ink-faint">→</span>
+      <Dot index={next} size={14} />
+    </div>
+  );
+}
+
+function Dot({ index, size }: { index: number; size: number }) {
+  const f = FRUITS[Math.min(index, DROPPABLE - 1)];
+  return (
+    <span
+      title={f.name}
+      style={{ width: size, height: size, background: f.color }}
+      className="inline-block rounded-full"
+    />
+  );
+}
+
+function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+  return (
+    <div className="rounded-lg bg-black/20 px-3 py-1.5 text-center">
+      <div className="text-[10px] text-ink-faint">{label}</div>
+      <div className={`tabular font-display text-lg ${accent ? "text-gold" : "text-ink"}`}>{value}</div>
+    </div>
+  );
+}

@@ -76,5 +76,15 @@ alter table public.ma_scores   enable row level security;
 -- 시드: 첫 게임 2048 + settings 단일 행
 insert into public.ma_settings (id) values (1) on conflict (id) do nothing;
 insert into public.ma_games (slug, name, description, scoring, sort) values
-  ('2048', '2048', '타일을 합쳐 2048을 만드세요. 고득점 경쟁!', 'high', 0)
+  ('2048', '2048', '타일을 합쳐 2048을 만드세요. 고득점 경쟁!', 'high', 0),
+  ('suika', '수박게임', '과일을 떨어뜨려 합치세요. 수박까지 갈 수 있을까?', 'high', 1)
 on conflict (slug) do nothing;
+
+-- ────────────────────────────────────────────────────────────────────────
+-- 이미 운영 중인 DB 에 게임만 추가할 때는 이 파일 전체를 다시 돌리지 말 것.
+-- (맨 위 drop table 때문에 기존 기록이 전부 사라진다.) 아래 한 줄만 실행.
+--
+--   insert into public.ma_games (slug, name, description, scoring, sort) values
+--     ('suika', '수박게임', '과일을 떨어뜨려 합치세요. 수박까지 갈 수 있을까?', 'high', 1)
+--   on conflict (slug) do nothing;
+-- ────────────────────────────────────────────────────────────────────────
