@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { GamePlayProps } from "@/games/types";
+import { clearGame, loadGame, saveGame } from "@/lib/game-save";
 import { canMove, type Dir, newGame, planMove, spawn, type Tile } from "./logic";
+
+const SLUG = "2048";
+
+// 이어하기로 저장되는 판. merged/isNew 는 이번 이동에만 쓰는 연출 플래그라 저장하지 않는다.
+interface Save2048 {
+  tiles: { id: number; value: number; r: number; c: number }[];
+  score: number;
+}
 
 const TILE_BG: Record<number, string> = {
   2: "#1e2a38",
@@ -22,13 +31,39 @@ const tileBg = (v: number) => TILE_BG[v] ?? "#f26d5b";
 const tileColor = (v: number) => (v <= 4 ? "#9db0c4" : v >= 128 ? "#0d1117" : "#eaf1f7");
 const fontSize = (v: number) => (v >= 1024 ? "1.05rem" : v >= 128 ? "1.3rem" : "1.55rem");
 
-export default function Game2048({ onGameOver, bestScore, submitting }: GamePlayProps) {
+export default function Game2048({ onGameOver, bestScore, submitting, accountId }: GamePlayProps) {
   const idc = useRef(0);
   const nextId = useCallback(() => ++idc.current, []);
   const [tiles, setTiles] = useState<Tile[]>(() => newGame(nextId));
   const [score, setScore] = useState(0);
   const [over, setOver] = useState(false);
+  const [restored, setRestored] = useState(false); // 저장된 판 확인이 끝났는지
   const reported = useRef(false);
+
+  // 저장된 판 복원. localStorage 는 서버에서 읽을 수 없어 첫 렌더 후 처리한다.
+  useEffect(() => {
+    const saved = loadGame<Save2048>(SLUG, accountId);
+    if (saved?.tiles?.length) {
+      // 타일 id 카운터를 이어받지 않으면 새 타일 id 가 겹쳐 React key 가 충돌한다.
+      idc.current = saved.tiles.reduce((max, t) => Math.max(max, t.id), 0);
+      setTiles(saved.tiles);
+      setScore(saved.score);
+      setOver(false);
+      reported.current = false;
+    }
+    setRestored(true);
+  }, [accountId]);
+
+  // 판이 바뀔 때마다 저장. 게임 오버면 저장을 지운다.
+  useEffect(() => {
+    if (!restored) return;
+    if (over) {
+      clearGame(SLUG, accountId);
+      return;
+    }
+    const plain = tiles.map((t) => ({ id: t.id, value: t.value, r: t.r, c: t.c }));
+    saveGame<Save2048>(SLUG, accountId, { tiles: plain, score });
+  }, [tiles, score, over, restored, accountId]);
 
   const reset = useCallback(() => {
     idc.current = 0;
@@ -40,7 +75,7 @@ export default function Game2048({ onGameOver, bestScore, submitting }: GamePlay
 
   const doMove = useCallback(
     (dir: Dir) => {
-      if (over) return;
+      if (over || !restored) return; // 복원 전 입력은 무시(복원이 덮어써 버린다)
       setTiles((cur) => {
         const { tiles: moved, gained, moved: didMove } = planMove(cur, dir);
         if (!didMove) return cur;
@@ -51,7 +86,7 @@ export default function Game2048({ onGameOver, bestScore, submitting }: GamePlay
         return next;
       });
     },
-    [over, nextId]
+    [over, restored, nextId]
   );
 
   // 게임 오버 시 점수 1회 보고
@@ -127,8 +162,8 @@ export default function Game2048({ onGameOver, bestScore, submitting }: GamePlay
           ))}
         </div>
 
-        {/* 타일 */}
-        <div className="absolute inset-1.5">
+        {/* 타일 — 복원 전에는 감춰 새 판이 한 프레임 비치는 걸 막는다 */}
+        <div className="absolute inset-1.5" style={{ opacity: restored ? 1 : 0 }}>
           {tiles.map((t) => (
             <div
               key={t.id}

@@ -66,7 +66,12 @@ export default function PlayPage() {
       </div>
 
       <Card>
-        <Play onGameOver={onGameOver} bestScore={game.myBest} submitting={submitting} />
+        <Play
+          onGameOver={onGameOver}
+          bestScore={game.myBest}
+          submitting={submitting}
+          accountId={state.session?.id ?? null}
+        />
       </Card>
 
       {note && <p className="text-center text-sm text-grass">{note}</p>}

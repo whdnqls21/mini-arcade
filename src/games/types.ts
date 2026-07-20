@@ -6,6 +6,8 @@ export interface GamePlayProps {
   onGameOver: (score: number, meta?: Record<string, unknown>) => void;
   bestScore: number | null;
   submitting: boolean;
+  // 이어하기 저장을 계정별로 분리하기 위한 id. 비로그인 상태면 null.
+  accountId: string | null;
 }
 
 export interface GameEntry {
