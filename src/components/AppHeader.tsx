@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
-// 관리자 진입은 숨김 제스처: 🕹️ 로고를 빠르게 5번 탭.
+import { BrainMark } from "@/components/BrainMark";
+
+// 관리자 진입은 숨김 제스처: 로고를 빠르게 5번 탭.
 export default function AppHeader() {
   const router = useRouter();
   const taps = useRef(0);
@@ -30,9 +32,9 @@ export default function AppHeader() {
           type="button"
           onClick={secretTap}
           aria-label="뇌지컬 대전"
-          className="text-2xl leading-none"
+          className="leading-none"
         >
-          🕹️
+          <BrainMark size={28} />
         </button>
         <Link href="/" className="font-display text-xl tracking-tight text-ink">
           뇌지컬 <span className="text-grass">대전</span>
