@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { RetryButton } from "@/games/shared";
 import type { GamePlayProps } from "@/games/types";
 import { clearGame, loadGame, saveGame } from "@/lib/game-save";
 import { canMove, type Dir, newGame, planMove, spawn, type Tile } from "./logic";
@@ -182,14 +183,8 @@ export default function Game2048({ onGameOver, bestScore, submitting, accountId 
             <p className="font-display text-2xl text-ink">게임 오버</p>
             <p className="text-sm text-ink-dim">
               점수 <span className="tabular text-gold">{score}</span>
-              {submitting && " · 기록 저장 중…"}
             </p>
-            <button
-              onClick={reset}
-              className="rounded-xl bg-grass px-5 py-2.5 font-display text-pitch-base"
-            >
-              다시 하기
-            </button>
+            <RetryButton submitting={submitting} onRetry={reset} />
           </div>
         )}
       </div>

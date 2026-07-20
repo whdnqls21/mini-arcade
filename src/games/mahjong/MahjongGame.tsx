@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { GamePlayProps } from "@/games/types";
+import { drawFruit } from "@/games/suika/render";
 import {
   type Board,
   type Cell,
@@ -16,29 +17,44 @@ import {
   reshuffle,
   ROWS,
 } from "./logic";
-import { faceOf, TILE_BG, TILE_EDGE } from "./tiles";
+import { RetryButton, StartGate } from "@/games/shared";
+import { faceOf, TILE_EDGE } from "./tiles";
 
+const CELL = 40; // 월드 좌표 한 칸
+const W = COLS * CELL;
+const H = ROWS * CELL;
 const CLEAR_DELAY_MS = 240; // 연결선을 보여주는 시간
 
 export default function MahjongGame({ onGameOver, bestScore, submitting }: GamePlayProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [board, setBoard] = useState<Board>(() => newBoard());
   const [picked, setPicked] = useState<Cell | null>(null);
   // 리렌더 전에 두 번째 탭이 들어와도 첫 선택을 놓치지 않도록 동기 사본을 둔다.
   const pickedRef = useRef<Cell | null>(null);
   const [path, setPath] = useState<{ x: number; y: number }[] | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [started, setStarted] = useState(false);
   const [done, setDone] = useState(false);
   const startRef = useRef(0);
   const reported = useRef(false);
   const locked = useRef(false);
 
   const left = remaining(board);
-  const stuck = useMemo(() => !done && left > 0 && !findAnyMove(board), [board, done, left]);
+  const stuck = useMemo(
+    () => started && !done && left > 0 && !findAnyMove(board),
+    [board, started, done, left]
+  );
 
-  // 선택을 바꾸는 유일한 통로 — ref 와 state 를 함께 갱신한다.
   const pick = useCallback((cell: Cell | null) => {
     pickedRef.current = cell;
     setPicked(cell);
+  }, []);
+
+  // 시간 기록 게임이라 판을 본 순간부터 재면 불공평하다. 시작을 누른 시점부터 잰다.
+  const begin = useCallback(() => {
+    startRef.current = performance.now();
+    setElapsed(0);
+    setStarted(true);
   }, []);
 
   const reset = useCallback(() => {
@@ -46,36 +62,75 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
     pick(null);
     setPath(null);
     setDone(false);
+    setStarted(false);
     setElapsed(0);
-    startRef.current = performance.now();
     reported.current = false;
     locked.current = false;
   }, [pick]);
 
-  useEffect(() => {
-    startRef.current = performance.now();
-  }, []);
-
   // 경과 시간 — 시작 시각과의 차이로 계산해 누적 오차를 없앤다.
   useEffect(() => {
-    if (done) return;
+    if (!started || done) return;
     const id = setInterval(() => setElapsed(performance.now() - startRef.current), 100);
     return () => clearInterval(id);
-  }, [done]);
+  }, [started, done]);
 
   // 다 지우면 그때의 경과 시간이 곧 기록. 완주하지 못하면 기록하지 않는다.
   useEffect(() => {
-    if (left === 0 && !reported.current) {
-      reported.current = true;
-      const ms = Math.round(performance.now() - startRef.current);
-      setElapsed(ms);
-      setDone(true);
-      onGameOver(ms, { game: "mahjong" });
-    }
-  }, [left, onGameOver]);
+    if (!started || left !== 0 || reported.current) return;
+    reported.current = true;
+    const ms = Math.round(performance.now() - startRef.current);
+    setElapsed(ms);
+    setDone(true);
+    onGameOver(ms, { game: "mahjong" });
+  }, [started, left, onGameOver]);
 
-  function tap(c: number, r: number) {
-    if (done || locked.current) return;
+  // ── 그리기 ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const scale = (rect.width * dpr) / W;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    for (let i = 0; i < COLS * ROWS; i++) {
+      const v = board[i];
+      if (!v) continue;
+      const { c, r } = cellOf(i);
+      const f = faceOf(v);
+      const x = c * CELL;
+      const y = r * CELL;
+      const isPicked = pickedRef.current?.c === c && pickedRef.current?.r === r;
+
+      // 과일 색이 비슷해도 구분되도록 얼굴마다 바탕색을 다르게 준다.
+      ctx.fillStyle = f.bg;
+      ctx.beginPath();
+      ctx.roundRect(x + 1.5, y + 1.5, CELL - 3, CELL - 3, 6);
+      ctx.fill();
+      ctx.strokeStyle = isPicked ? "#4de0c0" : TILE_EDGE;
+      ctx.lineWidth = isPicked ? 2.5 : 1;
+      ctx.stroke();
+
+      drawFruit(ctx, f.fruit, x + CELL / 2, y + CELL / 2 + CELL * 0.05, CELL * 0.32, 0, 1);
+    }
+  }, [board, picked]);
+
+  // ── 입력 ───────────────────────────────────────────────────────────
+  function tap(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!started || done || locked.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const c = Math.floor(((e.clientX - rect.left) / rect.width) * COLS);
+    const r = Math.floor(((e.clientY - rect.top) / rect.height) * ROWS);
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return;
     if (!board[indexOf(c, r)]) return;
 
     const here: Cell = { c, r };
@@ -112,14 +167,16 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
     }, CLEAR_DELAY_MS);
   }
 
-  const seconds = (elapsed / 1000).toFixed(1);
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-2">
-          <Stat label="경과" value={`${seconds}초`} />
-          <Stat label="베스트" value={bestScore != null ? `${(bestScore / 1000).toFixed(2)}초` : "-"} accent />
+          <Stat label="경과" value={`${(elapsed / 1000).toFixed(1)}초`} />
+          <Stat
+            label="베스트"
+            value={bestScore != null ? `${(bestScore / 1000).toFixed(2)}초` : "-"}
+            accent
+          />
           <Stat label="남은 패" value={`${left}`} />
         </div>
         <div className="flex gap-1.5">
@@ -128,7 +185,7 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
               setBoard((cur) => reshuffle(cur));
               pick(null);
             }}
-            disabled={done || left === 0}
+            disabled={!started || done || left === 0}
             className={`rounded-lg border px-3 py-2 text-sm disabled:opacity-40 ${
               stuck
                 ? "border-gold/60 bg-gold/15 text-gold"
@@ -153,19 +210,12 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
       )}
 
       <div className="relative">
-        <div
-          className="grid gap-[2px] rounded-xl bg-black/25 p-1.5"
-          style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}
-        >
-          {Array.from({ length: COLS * ROWS }, (_, i) => {
-            const { c, r } = cellOf(i);
-            const v = board[i];
-            const isPicked = picked?.c === c && picked?.r === r;
-            return (
-              <Tile key={i} value={v} picked={isPicked} onTap={() => tap(c, r)} />
-            );
-          })}
-        </div>
+        <canvas
+          ref={canvasRef}
+          onPointerDown={tap}
+          style={{ aspectRatio: `${W} / ${H}` }}
+          className="w-full touch-none select-none rounded-xl bg-black/25"
+        />
 
         {/* 연결선 — 판 바깥으로 돌아가는 경로도 보여야 해서 넘침을 허용한다 */}
         {path && (
@@ -173,13 +223,13 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
             viewBox={`0 0 ${COLS} ${ROWS}`}
             preserveAspectRatio="none"
             style={{ overflow: "visible" }}
-            className="pointer-events-none absolute inset-1.5 z-10"
+            className="pointer-events-none absolute inset-0 z-10"
           >
             <polyline
               points={path.map((p) => `${p.x - 0.5},${p.y - 0.5}`).join(" ")}
               fill="none"
               stroke="#4de0c0"
-              strokeWidth="0.09"
+              strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
@@ -187,57 +237,25 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
           </svg>
         )}
 
+        {!started && !done && (
+          <StartGate
+            title="사천성"
+            lines={["같은 과일 두 장을 이어 모두 지우세요.", "시작을 누르면 시간이 흐릅니다."]}
+            onStart={begin}
+          />
+        )}
+
         {done && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/80">
             <p className="font-display text-2xl text-ink">완주!</p>
             <p className="text-sm text-ink-dim">
               기록 <span className="tabular text-gold">{(elapsed / 1000).toFixed(2)}초</span>
-              {submitting && " · 저장 중…"}
             </p>
-            <button
-              onClick={reset}
-              className="rounded-xl bg-grass px-5 py-2.5 font-display text-pitch-base"
-            >
-              다시 하기
-            </button>
+            <RetryButton submitting={submitting} onRetry={reset} />
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-function Tile({
-  value,
-  picked,
-  onTap,
-}: {
-  value: number;
-  picked: boolean;
-  onTap: () => void;
-}) {
-  if (!value) return <span className="aspect-[3/4]" />;
-  const f = faceOf(value);
-  return (
-    <button
-      onClick={onTap}
-      style={{
-        background: TILE_BG,
-        borderColor: picked ? "#4de0c0" : TILE_EDGE,
-        boxShadow: picked ? "0 0 0 2px #4de0c0" : "inset 0 -2px 0 rgba(0,0,0,0.16)",
-      }}
-      className="flex aspect-[3/4] flex-col items-center justify-center rounded border leading-none transition-transform active:scale-95"
-    >
-      <span
-        className="tabular font-display"
-        style={{ color: f.color, fontSize: "min(3.6vw, 1rem)" }}
-      >
-        {f.num}
-      </span>
-      <span style={{ color: f.color, fontSize: "min(2.6vw, 0.7rem)", opacity: 0.85 }}>
-        {f.mark}
-      </span>
-    </button>
   );
 }
 

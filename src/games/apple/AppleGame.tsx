@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { RetryButton, StartGate } from "@/games/shared";
 import type { GamePlayProps } from "@/games/types";
 import { drawFruit } from "@/games/suika/render";
 import {
@@ -36,6 +37,7 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
   const [drag, setDrag] = useState<Drag | null>(null);
   const [score, setScore] = useState(0);
   const [over, setOver] = useState(false);
+  const [started, setStarted] = useState(false);
   const [leftMs, setLeftMs] = useState(TIME_LIMIT_MS);
   const endAtRef = useRef(0);
   const reported = useRef(false);
@@ -45,32 +47,34 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
     setScore(0);
     setDrag(null);
     setOver(false);
+    setStarted(false);
     setLeftMs(TIME_LIMIT_MS);
-    endAtRef.current = performance.now() + TIME_LIMIT_MS;
     reported.current = false;
   }, []);
 
-  // 시작 시각 고정 후 남은 시간을 주기적으로 계산한다.
-  // setInterval 누적 오차 대신 목표 시각과의 차이를 쓴다.
-  useEffect(() => {
+  // 제한 시간이 있는 게임이라 판을 본 순간부터 재면 불공평하다. 시작을 누른 시점부터 잰다.
+  const begin = useCallback(() => {
     endAtRef.current = performance.now() + TIME_LIMIT_MS;
+    setLeftMs(TIME_LIMIT_MS);
+    setStarted(true);
   }, []);
 
+  // 남은 시간은 목표 시각과의 차이로 계산해 setInterval 누적 오차를 피한다.
   useEffect(() => {
-    if (over) return;
+    if (!started || over) return;
     const id = setInterval(() => {
       const left = Math.max(0, endAtRef.current - performance.now());
       setLeftMs(left);
       if (left <= 0) setOver(true);
     }, 100);
     return () => clearInterval(id);
-  }, [over]);
+  }, [started, over]);
 
   // 더 지울 수 있는 조합이 없으면 시간이 남아도 끝낸다.
   useEffect(() => {
-    if (over) return;
+    if (!started || over) return;
     if (countMoves(board) === 0) setOver(true);
-  }, [board, over]);
+  }, [started, board, over]);
 
   useEffect(() => {
     if (over && !reported.current) {
@@ -163,7 +167,7 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
   }, []);
 
   const onDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (over) return;
+    if (!started || over) return;
     // 포인터 캡처는 부가 기능(캔버스 밖으로 나가도 드래그 유지)일 뿐이라
     // 실패해도 드래그 자체는 시작되어야 한다.
     try {
@@ -176,12 +180,12 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
   };
 
   const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drag || over) return;
+    if (!drag || !started || over) return;
     setDrag({ from: drag.from, to: cellAt(e.clientX, e.clientY) });
   };
 
   const onUp = () => {
-    if (!drag || over) return;
+    if (!drag || !started || over) return;
     const rect: Rect = normalizeRect(drag.from, drag.to);
     setDrag(null);
     if (!isValid(board, rect)) return;
@@ -235,6 +239,14 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
           className="w-full touch-none select-none rounded-xl bg-black/25"
         />
 
+        {!started && !over && (
+          <StartGate
+            title="사과게임"
+            lines={["합이 10이 되게 사과를 묶어 지우세요.", "시작을 누르면 90초가 흐릅니다."]}
+            onStart={begin}
+          />
+        )}
+
         {over && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/75">
             <p className="font-display text-2xl text-ink">
@@ -242,14 +254,8 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
             </p>
             <p className="text-sm text-ink-dim">
               사과 <span className="tabular text-gold">{score}</span>개 / {CELLS}개
-              {submitting && " · 기록 저장 중…"}
             </p>
-            <button
-              onClick={reset}
-              className="rounded-xl bg-grass px-5 py-2.5 font-display text-pitch-base"
-            >
-              다시 하기
-            </button>
+            <RetryButton submitting={submitting} onRetry={reset} />
           </div>
         )}
       </div>

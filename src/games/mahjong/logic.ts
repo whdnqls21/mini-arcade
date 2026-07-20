@@ -3,8 +3,8 @@
 
 export const COLS = 8;
 export const ROWS = 6;
-export const FACES = 12; // 타일 종류
-export const COPIES = 4; // 종류당 장수
+export const FACES = 8; // 타일 종류 — 과일 8종
+export const COPIES = 6; // 종류당 장수
 export const TOTAL = FACES * COPIES; // 48장 = 24쌍
 
 // 0 은 이미 지운 칸, 1~FACES 는 타일 종류.

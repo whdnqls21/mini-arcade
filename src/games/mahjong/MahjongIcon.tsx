@@ -1,37 +1,46 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
+import { drawFruit } from "@/games/suika/render";
+import { faceOf } from "./tiles";
+
 // 목록용 아이콘 — 짝이 맞는 패 두 장. 게임에서 실제로 보게 될 패를 그대로 쓴다.
-
-import { faceOf, TILE_BG, TILE_EDGE } from "./tiles";
-
 export function MahjongIcon({ size = 44 }: { size?: number }) {
-  const f = faceOf(1); // 一萬
-  const tw = size * 0.3;
+  const ref = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+
+    const f = faceOf(8); // 수박
+    const tw = size * 0.4;
+    const ty = (size - tw) / 2;
+    for (const tx of [size * 0.06, size * 0.54]) {
+      ctx.fillStyle = f.bg;
+      ctx.beginPath();
+      ctx.roundRect(tx, ty, tw, tw, size * 0.07);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.18)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      drawFruit(ctx, f.fruit, tx + tw / 2, ty + tw / 2 + tw * 0.05, tw * 0.32, 0, 1);
+    }
+  }, [size]);
 
   return (
     <div
-      style={{ width: size, height: size, gap: size * 0.08 }}
+      style={{ width: size, height: size }}
       className="flex items-center justify-center rounded-xl bg-black/35"
-      role="img"
-      aria-label="사천성"
     >
-      {[0, 1].map((i) => (
-        <span
-          key={i}
-          style={{
-            width: tw,
-            height: tw * 1.33,
-            background: TILE_BG,
-            borderColor: TILE_EDGE,
-            borderRadius: size * 0.06,
-            boxShadow: "inset 0 -2px 0 rgba(0,0,0,0.16)",
-          }}
-          className="flex flex-col items-center justify-center border leading-none"
-        >
-          <span className="font-display" style={{ color: f.color, fontSize: size * 0.19 }}>
-            {f.num}
-          </span>
-          <span style={{ color: f.color, fontSize: size * 0.13, opacity: 0.85 }}>{f.mark}</span>
-        </span>
-      ))}
+      <canvas ref={ref} style={{ width: size, height: size }} role="img" aria-label="사천성" />
     </div>
   );
 }
