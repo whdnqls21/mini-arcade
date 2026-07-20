@@ -16,7 +16,7 @@ import {
   WORLD_H,
   WORLD_W,
 } from "./engine";
-import { FruitIcon } from "./FruitIcon";
+import { FruitChain, FruitIcon } from "./FruitIcon";
 import { DROPPABLE, FRUITS, randomDropIndex } from "./fruits";
 import { drawFruit } from "./render";
 
@@ -48,7 +48,6 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
   const particlesRef = useRef<Particle[]>([]);
   const popRef = useRef<Map<number, number>>(new Map()); // bodyId → 시작 시각
   const comboRef = useRef({ count: 0, at: 0 });
-  const mutedRef = useRef(false);
   const lastSaveRef = useRef(0);
 
   // 화면 표시용 미러
@@ -57,7 +56,6 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
   const [current, setCurrentUi] = useState(0);
   const [next, setNextUi] = useState(0);
   const [combo, setCombo] = useState(0);
-  const [muted, setMuted] = useState(false);
   const [ready, setReady] = useState(false);
   const reported = useRef(false);
 
@@ -155,7 +153,7 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
         scoreRef.current += m.score;
         particlesRef.current.push(...burst(m.x, m.y, FRUITS[m.index - 1].color, FRUITS[m.index].radius));
         popRef.current.set(m.bodyId, now);
-        playMergeSound(m.index, mutedRef.current);
+        playMergeSound(m.index);
         // 연속 합체를 콤보로 센다
         const c = comboRef.current;
         c.count = now - c.at < COMBO_WINDOW_MS ? c.count + 1 : 1;
@@ -297,7 +295,7 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
       lastDropRef.current = now;
       dropXRef.current = toWorldX(clientX);
       world.drop(currentRef.current, dropXRef.current);
-      playDropSound(mutedRef.current);
+      playDropSound();
       setCurrent(nextRef.current);
       setNext(randomDropIndex());
       persist();
@@ -328,17 +326,7 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
           <Stat label="베스트" value={bestScore ?? 0} accent />
         </div>
         <div className="flex items-center gap-2">
-          <NextPreview current={current} next={next} />
-          <button
-            onClick={() => {
-              mutedRef.current = !muted;
-              setMuted(!muted);
-            }}
-            aria-label={muted ? "소리 켜기" : "소리 끄기"}
-            className="rounded-lg border border-pitch-line bg-black/20 px-2.5 py-2 text-sm text-ink-dim hover:text-ink"
-          >
-            {muted ? "🔇" : "🔊"}
-          </button>
+          <NextPreview next={next} />
           <button
             onClick={reset}
             className="shrink-0 whitespace-nowrap rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink-dim hover:text-ink"
@@ -375,16 +363,20 @@ export default function SuikaGame({ onGameOver, bestScore, submitting, accountId
         )}
       </div>
 
+      {/* 과일 순서 — 게임 중에도 보이게 둔다. 지금 떨어뜨릴 과일에 표시가 붙는다. */}
+      <div className="rounded-lg bg-black/20 px-1.5 py-1">
+        <FruitChain compact highlight={current} />
+      </div>
     </div>
   );
 }
 
-function NextPreview({ current, next }: { current: number; next: number }) {
+// 지금 떨어뜨릴 과일은 판 위와 아래 순서표에 이미 보이므로, 여기서는 다음 것만 알려준다.
+function NextPreview({ next }: { next: number }) {
   return (
-    <div className="flex items-center gap-1 rounded-lg bg-black/20 px-2 py-1">
-      <FruitIcon index={Math.min(current, DROPPABLE - 1)} size={26} />
-      <span className="text-[10px] text-ink-faint">›</span>
-      <FruitIcon index={Math.min(next, DROPPABLE - 1)} size={20} />
+    <div className="flex flex-col items-center rounded-lg bg-black/20 px-2.5 py-1">
+      <span className="text-[10px] text-ink-faint">다음</span>
+      <FruitIcon index={Math.min(next, DROPPABLE - 1)} size={24} />
     </div>
   );
 }

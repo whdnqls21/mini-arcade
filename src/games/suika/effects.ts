@@ -64,8 +64,8 @@ function audio(): AudioContext | null {
   return ctx;
 }
 
-export function playMergeSound(index: number, muted: boolean): void {
-  if (muted) return;
+// 음소거는 기기 볼륨/무음 스위치를 따른다. 앱 안에 따로 토글을 두지 않는다.
+export function playMergeSound(index: number): void {
   const ac = audio();
   if (!ac) return;
   const osc = ac.createOscillator();
@@ -81,8 +81,7 @@ export function playMergeSound(index: number, muted: boolean): void {
   osc.stop(ac.currentTime + 0.24);
 }
 
-export function playDropSound(muted: boolean): void {
-  if (muted) return;
+export function playDropSound(): void {
   const ac = audio();
   if (!ac) return;
   const osc = ac.createOscillator();

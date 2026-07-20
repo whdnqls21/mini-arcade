@@ -47,19 +47,40 @@ export function SuikaIcon({ size = 44 }: { size?: number }) {
 
 // 체리에서 수박까지 — 아이콘 크기를 실제 반지름 비율에 맞춰 커지게 해서
 // "합칠수록 커진다"를 글로 설명하지 않고 보여준다.
-export function FruitChain() {
+//
+// compact 는 게임 중에 판 아래 늘 띄워두는 용도다. 이름을 빼고 크기를 줄여
+// 한 줄에 들어가게 하고, 지금 떨어뜨릴 과일을 표시해 "내가 어디쯤인지" 보이게 한다.
+export function FruitChain({
+  compact = false,
+  highlight,
+}: {
+  compact?: boolean;
+  highlight?: number;
+} = {}) {
   const min = FRUITS[0].radius;
   const max = FRUITS[FRUITS.length - 1].radius;
-  const sizeOf = (r: number) => 22 + ((r - min) / (max - min)) * 22;
+  const lo = compact ? 15 : 22;
+  const span = compact ? 12 : 22;
+  const sizeOf = (r: number) => lo + ((r - min) / (max - min)) * span;
 
   return (
-    <div className="-mx-1 flex items-end gap-0.5 overflow-x-auto px-1 pb-1">
+    <div
+      className={`flex items-end overflow-x-auto ${compact ? "gap-0 px-0.5" : "-mx-1 gap-0.5 px-1 pb-1"}`}
+    >
       {FRUITS.map((f, i) => (
         <div key={f.name} className="flex shrink-0 items-end gap-0.5">
-          {i > 0 && <span className="pb-2 text-[9px] text-ink-faint">›</span>}
-          <div className="flex flex-col items-center gap-0.5">
+          {i > 0 && (
+            <span className={`text-[9px] text-ink-faint ${compact ? "pb-1.5" : "pb-2"}`}>›</span>
+          )}
+          <div
+            className={`flex flex-col items-center gap-0.5 ${
+              highlight === i ? "rounded-md bg-grass/15 ring-1 ring-grass/50" : ""
+            }`}
+          >
             <FruitIcon index={i} size={sizeOf(f.radius)} />
-            <span className="whitespace-nowrap text-[9px] text-ink-faint">{f.name}</span>
+            {!compact && (
+              <span className="whitespace-nowrap text-[9px] text-ink-faint">{f.name}</span>
+            )}
           </div>
         </div>
       ))}
