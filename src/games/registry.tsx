@@ -4,6 +4,7 @@ import type { GameEntry } from "./types";
 import Game2048 from "./2048/Game2048";
 import { Icon2048 } from "./2048/Icon2048";
 import { AppleIcon } from "./apple/AppleIcon";
+import { MahjongIcon } from "./mahjong/MahjongIcon";
 import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
 
 // 수박게임은 물리 엔진(matter.js)을 쓰므로 별도 청크로 분리하고 SSR 을 끈다.
@@ -18,6 +19,9 @@ const SuikaGame = dynamic(() => import("./suika/SuikaGame"), { ssr: false, loadi
 
 // 사과게임도 캔버스로 그리므로 서버 렌더링할 이유가 없다.
 const AppleGame = dynamic(() => import("./apple/AppleGame"), { ssr: false, loading: spinner });
+
+// 퍼즐마작은 첫 렌더에서 판을 생성하므로 서버/클라이언트 결과가 달라진다. SSR 을 끈다.
+const MahjongGame = dynamic(() => import("./mahjong/MahjongGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -60,6 +64,20 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "종료", text: "90초가 지나거나, 더 이상 10을 만들 수 없으면 끝납니다." },
       ],
       tip: "2와 8, 3과 7처럼 두 개짜리부터 찾으면 빠릅니다. 큰 숫자(8·9)는 짝이 적으니 먼저 처리하는 편이 좋아요.",
+    },
+  },
+  mahjong: {
+    Play: MahjongGame,
+    Icon: MahjongIcon,
+    info: {
+      rows: [
+        { label: "목표", text: "48장을 모두 지우세요. 다 지우는 데 걸린 시간이 기록입니다." },
+        { label: "조작", text: "같은 패 두 장을 차례로 누릅니다. 이을 수 있으면 연결선이 보이고 사라집니다." },
+        { label: "규칙", text: "두 패를 잇는 길이 꺾임 2번 이하여야 합니다. 길은 빈칸만 지나며, 판 바깥으로 돌아가도 됩니다." },
+        { label: "기록", text: "짧을수록 상위입니다. 다 지우지 못하고 그만두면 기록에 남지 않습니다." },
+        { label: "막힘", text: "이을 수 있는 짝이 없으면 섞기를 누르세요. 섞는 동안에도 시간은 흘러갑니다." },
+      ],
+      tip: "가장자리 패부터 걷어내면 안쪽 길이 열립니다. 눈에 보이는 짝을 아무거나 지우기보다, 여러 겹 쌓인 줄을 먼저 뚫는 편이 빠릅니다.",
     },
   },
 };
