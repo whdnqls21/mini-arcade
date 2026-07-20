@@ -1,6 +1,6 @@
 // 크롬 다이노 화면 그리기. 컴포넌트와 분리해 정적으로도 한 프레임을 그려볼 수 있게 한다.
 
-import { DINO_H, DINO_X, type DinoState, GROUND_Y, H, W } from "./logic";
+import { DINO_H, DINO_SLIDE_H, DINO_X, type DinoState, GROUND_Y, H, W } from "./logic";
 
 // ── 그리기 ───────────────────────────────────────────────────────────
 // 규칙: 민트는 공룡에게만 쓴다. 나머지는 채도를 뺀 청회색이라 눈이 항상 주인공을 먼저 찾는다.
@@ -36,6 +36,17 @@ const DINO_BODY = [
 const LEGS_A = ["..##..##...", "..##..##...", "..##..##...", ".###......."];
 const LEGS_B = ["..##..##...", "..##..##...", "..##..##...", "......###.."];
 const LEGS_AIR = ["..##..##...", "..##..##...", "..##..##...", "..........."];
+
+// 슬라이드 — 몸을 낮춰 길게 엎드린 자세. 7행(=14 월드단위, SLIDE_H 와 같다).
+const DINO_SLIDE = [
+  "......####.",
+  "......#o##.",
+  "###########",
+  "############",
+  ".##########.",
+  "..#.....#...",
+  ".##.....##..",
+];
 
 // 목록 아이콘도 같은 도트를 쓴다 — 아이콘과 본편이 어긋나지 않게.
 export const DINO_SPRITE = [...DINO_BODY, ...LEGS_A];
@@ -153,17 +164,33 @@ export function drawScene(
     ctx.fillRect(gx, GROUND_Y + PX * 2 + (i % 3) * PX * 2, PX * 3, PX);
   }
 
-  drawCacti(ctx, s);
+  drawObstacles(ctx, s);
   drawDino(ctx, s, running);
 }
 
-function drawCacti(ctx: CanvasRenderingContext2D, s: DinoState) {
-  ctx.fillStyle = CACTUS;
+const OVERHANG = "#c0693f"; // 공중 바 — "점프 말고 슬라이드" 신호로 선인장 초록과 다른 색
+
+function drawObstacles(ctx: CanvasRenderingContext2D, s: DinoState) {
   for (const o of s.obstacles) {
     const x = Math.round(o.x / PX) * PX;
+
+    if (o.kind === "overhang") {
+      // 위에서 내려온 바 — 아래에 슬라이드로 지날 틈이 있다.
+      const top = Math.round((GROUND_Y - (o.base + o.h)) / PX) * PX;
+      const bottom = Math.round((GROUND_Y - o.base) / PX) * PX;
+      const w = Math.round(o.w / PX) * PX;
+      ctx.fillStyle = OVERHANG;
+      ctx.fillRect(x, top, w, bottom - top);
+      // 아래 모서리에 톱니 — 지나갈 틈(슬라이드 선)을 강조
+      ctx.fillStyle = "#e0b062";
+      for (let dx = 0; dx < w; dx += PX * 2) ctx.fillRect(x + dx, bottom - PX, PX, PX);
+      continue;
+    }
+
+    // 지상 선인장
+    ctx.fillStyle = CACTUS;
     const h = Math.round(o.h / PX) * PX;
     const top = GROUND_Y - h;
-
     if (o.w > 20) {
       // 무리 — 굵기가 다른 기둥 여러 개
       const n = Math.round(o.w / 12);
@@ -174,13 +201,12 @@ function drawCacti(ctx: CanvasRenderingContext2D, s: DinoState) {
       }
       continue;
     }
-
     // 기둥 + 팔 — 팔 높이를 좌우로 어긋나게 둬야 선인장처럼 보인다
     ctx.fillRect(x + PX, top, PX * 3, h);
-    const armL = top + Math.round(h * 0.4 / PX) * PX;
+    const armL = top + Math.round((h * 0.4) / PX) * PX;
     ctx.fillRect(x - PX, armL, PX * 2, PX);
     ctx.fillRect(x - PX, armL, PX, PX * 3);
-    const armR = top + Math.round(h * 0.6 / PX) * PX;
+    const armR = top + Math.round((h * 0.6) / PX) * PX;
     ctx.fillRect(x + PX * 4, armR, PX * 2, PX);
     ctx.fillRect(x + PX * 5, armR - PX * 2, PX, PX * 3);
   }
@@ -189,8 +215,8 @@ function drawCacti(ctx: CanvasRenderingContext2D, s: DinoState) {
 function drawDino(ctx: CanvasRenderingContext2D, s: DinoState, running: boolean) {
   const foot = GROUND_Y - s.y;
   const x = Math.round(DINO_X / PX) * PX;
-  const y = Math.round((foot - DINO_H) / PX) * PX;
   const color = s.dead ? MINT_DEAD : MINT;
+  const sliding = s.sliding && s.y === 0 && !s.dead;
 
   // 발밑 그림자 — 공중에 뜬 정도가 눈에 보이게 한다
   if (!s.dead) {
@@ -200,6 +226,14 @@ function drawDino(ctx: CanvasRenderingContext2D, s: DinoState, running: boolean)
     ctx.fillRect(x + PX * 2, GROUND_Y + PX, sw, PX);
   }
 
+  if (sliding) {
+    // 슬라이드 자세 — 낮은 높이(SLIDE_H)에 맞춰 발밑에서부터 그린다.
+    const y = Math.round((foot - DINO_SLIDE_H) / PX) * PX;
+    drawSprite(ctx, DINO_SLIDE, x, y, color);
+    return;
+  }
+
+  const y = Math.round((foot - DINO_H) / PX) * PX;
   drawSprite(ctx, DINO_BODY, x, y, color);
   const legs = s.y > 0.5 ? LEGS_AIR : running ? (Math.floor(s.dist / 14) % 2 ? LEGS_B : LEGS_A) : LEGS_A;
   drawSprite(ctx, legs, x, y + DINO_BODY.length * PX, color);

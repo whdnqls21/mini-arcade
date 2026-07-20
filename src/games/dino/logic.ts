@@ -1,17 +1,17 @@
-// 끝없이 달리며 장애물을 뛰어넘는 게임. 화면과 무관한 순수 로직만 둔다.
-// 좌표 단위는 월드 기준이고 시간은 초를 쓴다(중력·속도 계산이 읽기 쉬워진다).
+// 끝없이 달리며 장애물을 뛰어넘거나(점프) 몸을 낮춰(슬라이드) 피하는 게임.
+// 화면과 무관한 순수 로직만 둔다. 좌표는 월드 단위, 시간은 초.
 
 export const W = 320;
-// 세로가 너무 납작하면 시작/게임오버 화면이 판을 넘친다. 하늘을 넉넉히 둔다.
-export const H = 176;
-export const GROUND_Y = 132; // 지면 높이(위에서부터)
+// 다른 게임과 높이를 맞추려고 세로를 키웠다(하단 버튼까지 포함해 비슷해진다).
+export const H = 360;
+export const GROUND_Y = 300; // 지면 높이(위에서부터)
 
 export const DINO_X = 28;
 export const DINO_W = 22;
-export const DINO_H = 26;
+export const DINO_H = 26; // 서 있을 때 높이
+export const DINO_SLIDE_H = 14; // 슬라이드 중 높이(낮은 것 아래로 지나간다)
 
 // 점프: 최고 높이 약 52, 체공 약 0.6초.
-// 가장 높은 장애물(36)보다 16 정도 여유를 둬야 타이밍 허용 폭이 쓸 만해진다.
 export const GRAVITY = 1156; // units/s²
 export const JUMP_V = 347; // units/s
 export const AIRTIME = (2 * JUMP_V) / GRAVITY;
@@ -24,10 +24,18 @@ export const SPEED_RAMP = 12; // 초당 증가
 // 충돌 판정은 보이는 것보다 조금 너그럽게 준다.
 const FORGIVE = 2.5;
 
+// 슬라이드해야 지나갈 수 있는 공중 바의 아래 여백.
+// 서 있는 높이(26)보다 낮고 슬라이드 높이(14)보다 높아야 슬라이드로만 통과된다.
+const OVERHANG_CLEAR = 17;
+
+export type ObstacleKind = "ground" | "overhang";
+
 export interface Obstacle {
   x: number;
   w: number;
-  h: number;
+  base: number; // 아래 끝(지면 위 높이). ground 는 0.
+  h: number; // 세로 두께
+  kind: ObstacleKind;
 }
 
 export interface DinoState {
@@ -35,6 +43,7 @@ export interface DinoState {
   dist: number; // 누적 이동 거리
   y: number; // 지면 위 높이(0 = 착지)
   vy: number;
+  sliding: boolean;
   obstacles: Obstacle[];
   gapLeft: number; // 다음 장애물까지 남은 거리
   dead: boolean;
@@ -46,6 +55,7 @@ export function newState(): DinoState {
     dist: 0,
     y: 0,
     vy: 0,
+    sliding: false,
     obstacles: [],
     gapLeft: 260, // 첫 장애물까지는 넉넉히
     dead: false,
@@ -60,38 +70,53 @@ export function jump(s: DinoState): boolean {
   return true;
 }
 
-/**
- * 이 속도에서 반드시 뛰어넘을 수 있는 최소 간격.
- * 체공 중 지나가는 거리에 몸통과 여유를 더한다. 이걸 지키지 않으면
- * 속도가 붙었을 때 물리적으로 통과 불가능한 배치가 나온다.
- */
+// 슬라이드는 땅에 있을 때만 몸을 낮춘다(공중에선 무시). 버튼을 누르는 동안 유지.
+export function setSlide(s: DinoState, on: boolean): void {
+  s.sliding = on;
+}
+
+// 현재 충돌 상자의 높이 — 땅에서 슬라이드 중일 때만 낮아진다.
+function dinoHeight(s: DinoState): number {
+  return s.sliding && s.y === 0 ? DINO_SLIDE_H : DINO_H;
+}
+
+/** 이 속도에서 반드시 뛰어넘을 수 있는 최소 간격. */
 export function minGap(speed: number): number {
   return speed * AIRTIME + DINO_W + 26;
 }
 
 /**
- * 속도가 붙을수록 어려운 장애물이 열린다.
- * 느릴수록 체공 중 이동 거리가 짧아 오히려 정확히 뛰어야 하므로,
- * 종류를 가리지 않으면 시작 직후가 가장 어려운 거꾸로 된 난이도가 된다.
+ * 속도가 붙을수록 어려운 장애물이 열린다. 느릴수록 체공 거리가 짧아
+ * 오히려 정확히 뛰어야 하므로, 종류를 안 가리면 시작 직후가 가장 어렵다.
  */
 function makeObstacle(rnd: () => number, speed: number): Obstacle {
   const hard = (speed - SPEED_START) / (SPEED_MAX - SPEED_START); // 0~1
   const roll = rnd();
+  const ground = (h: number): Obstacle => ({ x: W, w: h > 26 ? 13 : 11, base: 0, h, kind: "ground" });
+  // 공중 바 — 아래 여백 아래로 슬라이드해서 지난다. 점프로는 못 넘게 위로 충분히 높인다.
+  const overhang = (): Obstacle => ({
+    x: W,
+    w: 20 + Math.round(rnd() * 10),
+    base: OVERHANG_CLEAR,
+    h: 46, // OVERHANG_CLEAR + 46 = 63 > 점프 최고점, 점프로는 통과 불가
+    kind: "overhang",
+  });
 
-  if (hard < 0.2) {
-    // 도입부 — 낮고 좁은 것만
-    return { x: W, w: 11, h: 18 + Math.round(rnd() * 4) };
+  if (hard < 0.18) {
+    // 도입부 — 낮은 지상 장애물만
+    return ground(18 + Math.round(rnd() * 4));
   }
-  if (hard < 0.5) {
-    // 중반 — 중간 높이까지
-    if (roll < 0.65) return { x: W, w: 11, h: 18 + Math.round(rnd() * 5) };
-    return { x: W, w: 13, h: 24 + Math.round(rnd() * 5) };
+  if (hard < 0.45) {
+    // 중반 — 지상 위주, 가끔 공중 바
+    if (roll < 0.75) return ground(18 + Math.round(rnd() * 7));
+    return overhang();
   }
-  // 후반 — 높은 것과 무리까지 전부
-  if (roll < 0.4) return { x: W, w: 11, h: 18 + Math.round(rnd() * 5) };
-  if (roll < 0.75) return { x: W, w: 13, h: 28 + Math.round(rnd() * 8) };
+  // 후반 — 지상 높은 것과 공중 바가 골고루
+  if (roll < 0.5) return ground(20 + Math.round(rnd() * 12));
+  if (roll < 0.8) return overhang();
+  // 붙어 있는 지상 무리
   const n = 2 + Math.floor(rnd() * 2);
-  return { x: W, w: 9 * n + 3 * (n - 1), h: 20 + Math.round(rnd() * 8) };
+  return { x: W, w: 9 * n + 3 * (n - 1), base: 0, h: 20 + Math.round(rnd() * 8), kind: "ground" };
 }
 
 export function step(s: DinoState, dtSec: number, rnd: () => number = Math.random): void {
@@ -123,14 +148,14 @@ export function step(s: DinoState, dtSec: number, rnd: () => number = Math.rando
     s.gapLeft = base + rnd() * base * 0.7;
   }
 
-  // 충돌
+  // 충돌 — 세로로 [발, 발+높이] 와 장애물 [base, base+h] 가 겹치는지
   const left = DINO_X + FORGIVE;
   const right = DINO_X + DINO_W - FORGIVE;
-  const bottom = s.y; // 발
-  const top = s.y + DINO_H - FORGIVE;
+  const bottom = s.y;
+  const top = s.y + dinoHeight(s) - FORGIVE;
   for (const o of s.obstacles) {
     if (o.x + o.w < left || o.x > right) continue;
-    if (bottom < o.h && top > 0) {
+    if (bottom < o.base + o.h && top > o.base) {
       s.dead = true;
       return;
     }

@@ -5,15 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { RetryButton, StartGate } from "@/games/shared";
 import { thud, tone } from "@/games/sound";
 import type { GamePlayProps } from "@/games/types";
-import {
-  type DinoState,
-  H,
-  jump,
-  newState,
-  scoreOf,
-  step,
-  W,
-} from "./logic";
+import { type DinoState, H, jump, newState, scoreOf, setSlide, step, W } from "./logic";
 import { drawScene } from "./render";
 
 const DT = 1 / 60; // 물리 고정 스텝(초)
@@ -52,6 +44,11 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
     }
   }, []);
 
+  const slide = useCallback((on: boolean) => {
+    if (!runningRef.current) return;
+    setSlide(stateRef.current, on);
+  }, []);
+
   useEffect(() => {
     if (dead && !reported.current) {
       reported.current = true;
@@ -59,18 +56,28 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
     }
   }, [dead, score, onGameOver]);
 
-  // 키보드 — 스페이스/위쪽 화살표
+  // 키보드 — 위/스페이스 점프, 아래 슬라이드(누르는 동안)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space" || e.code === "ArrowUp") {
         e.preventDefault();
         if (!runningRef.current && !dead) begin();
         else doJump();
+      } else if (e.code === "ArrowDown") {
+        e.preventDefault();
+        slide(true);
       }
     };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "ArrowDown") slide(false);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [doJump, begin, dead]);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [doJump, slide, begin, dead]);
 
   // ── 물리 + 렌더 루프 ───────────────────────────────────────────────
   useEffect(() => {
@@ -85,6 +92,7 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
 
     const fit = () => {
       const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
@@ -143,7 +151,6 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
       <div className="relative">
         <canvas
           ref={canvasRef}
-          onPointerDown={doJump}
           style={{ aspectRatio: `${W} / ${H}` }}
           className="w-full touch-none select-none rounded-xl bg-black/25"
         />
@@ -151,7 +158,7 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
         {!started && !dead && (
           <StartGate
             title="크롬 다이노"
-            lines={["장애물을 뛰어넘어 최대한 멀리 가세요.", "화면을 탭하거나 스페이스로 점프합니다."]}
+            lines={["장애물은 점프로 넘고, 붉은 바는 슬라이드로 지나세요.", "아래 왼쪽 슬라이드 · 오른쪽 점프."]}
             onStart={begin}
           />
         )}
@@ -167,10 +174,48 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
         )}
       </div>
 
-      <p className="text-center text-[11px] text-ink-faint">
-        달릴수록 빨라집니다. 속도가 붙으면 높은 장애물과 무리가 나옵니다.
-      </p>
+      {/* 조작 버튼 — 왼쪽 슬라이드(누르는 동안), 오른쪽 점프. */}
+      <div className="flex gap-2">
+        <CommandButton
+          label="슬라이드"
+          icon="▼"
+          onPress={() => slide(true)}
+          onRelease={() => slide(false)}
+        />
+        <CommandButton label="점프" icon="▲" onPress={doJump} />
+      </div>
     </div>
+  );
+}
+
+// 점프는 누르는 순간 한 번, 슬라이드는 누르는 동안 유지 → onPress/onRelease 로 나눈다.
+function CommandButton({
+  label,
+  icon,
+  onPress,
+  onRelease,
+}: {
+  label: string;
+  icon: string;
+  onPress: () => void;
+  onRelease?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        onPress();
+      }}
+      onPointerUp={onRelease}
+      onPointerLeave={onRelease}
+      onPointerCancel={onRelease}
+      onContextMenu={(e) => e.preventDefault()}
+      className="flex flex-1 select-none items-center justify-center gap-2 rounded-xl border border-pitch-line bg-black/25 py-3.5 font-display text-lg text-ink-dim transition-colors active:border-grass/50 active:bg-grass/10 active:text-grass"
+    >
+      <span className="text-base">{icon}</span>
+      {label}
+    </button>
   );
 }
 
