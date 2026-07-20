@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Card } from "@/components/Card";
+import { ProfileSettings } from "@/components/ProfileSettings";
 import { useAppState } from "@/components/StateProvider";
 import { postJSON } from "@/lib/client-api";
 import { formatScore } from "@/lib/format";
@@ -48,6 +49,8 @@ export default function MePage() {
           </ul>
         )}
       </Card>
+
+      <ProfileSettings currentName={me.name} onChanged={refresh} />
 
       <button
         onClick={async () => {
