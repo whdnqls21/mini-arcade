@@ -29,13 +29,13 @@ export default function AppHeader() {
         <button
           type="button"
           onClick={secretTap}
-          aria-label="미니 아케이드"
+          aria-label="뇌지컬 대전"
           className="text-2xl leading-none"
         >
           🕹️
         </button>
         <Link href="/" className="font-display text-xl tracking-tight text-ink">
-          미니 <span className="text-grass">아케이드</span>
+          뇌지컬 <span className="text-grass">대전</span>
         </Link>
       </div>
     </header>

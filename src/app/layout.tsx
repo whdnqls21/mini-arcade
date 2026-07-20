@@ -11,11 +11,11 @@ const body = Noto_Sans_KR({ weight: ["400", "500", "700"], subsets: ["latin"], v
 const numeric = Oswald({ weight: ["400", "500", "600", "700"], subsets: ["latin"], variable: "--font-numeric", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "미니 아케이드",
-  description: "친구들과 퍼즐 게임으로 기록 경쟁하는 미니 아케이드",
-  applicationName: "미니 아케이드",
+  title: "뇌지컬 대전",
+  description: "친구들과 퍼즐 게임으로 기록 경쟁하는 뇌지컬 대전",
+  applicationName: "뇌지컬 대전",
   icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/apple-icon" },
-  appleWebApp: { capable: true, title: "아케이드", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "뇌지컬", statusBarStyle: "black-translucent" },
   other: { "apple-mobile-web-app-capable": "yes" },
 };
 

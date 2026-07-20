@@ -1,4 +1,4 @@
-# 미니 아케이드 (mini-arcade)
+# 뇌지컬 대전 (mini-arcade)
 
 친구들과 **퍼즐 게임으로 기록 경쟁**하는 모바일 우선 웹앱(PWA).
 토너먼트 예측 앱의 인프라(Next.js + Supabase + PIN 세션 + PWA)를 재활용해 만들었다.

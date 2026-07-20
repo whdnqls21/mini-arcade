@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "미니 아케이드",
-    short_name: "아케이드",
+    name: "뇌지컬 대전",
+    short_name: "뇌지컬",
     description: "친구들과 퍼즐 게임으로 기록 경쟁",
     start_url: "/",
     scope: "/",
