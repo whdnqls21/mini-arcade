@@ -18,6 +18,7 @@ import {
   ROWS,
 } from "./logic";
 import { RetryButton, StartGate } from "@/games/shared";
+import { sequence, tone } from "@/games/sound";
 import { faceOf, TILE_EDGE } from "./tiles";
 
 const CELL = 40; // 월드 좌표 한 칸
@@ -84,6 +85,13 @@ export default function MahjongGame({ onGameOver, submitting }: GamePlayProps) {
     const ms = Math.round(performance.now() - startRef.current);
     setElapsed(ms);
     setDone(true);
+    // 완주 팡파레 — 도미솔도
+    sequence([
+      { freq: 523, gain: 0.16, dur: 0.14, type: "triangle" },
+      { freq: 659, gain: 0.16, dur: 0.14, type: "triangle" },
+      { freq: 784, gain: 0.16, dur: 0.14, type: "triangle" },
+      { freq: 1047, gain: 0.18, dur: 0.26, type: "triangle" },
+    ], 0.11);
     onGameOver(ms, { game: "mahjong" });
   }, [started, left, onGameOver]);
 
@@ -108,6 +116,7 @@ export default function MahjongGame({ onGameOver, submitting }: GamePlayProps) {
     setBoard(next);
     pick(null);
     setShuffled(true);
+    tone({ freq: 300, type: "sawtooth", gain: 0.1, dur: 0.1, glideTo: 200 });
     const id = setTimeout(() => setShuffled(false), 2200);
     return () => clearTimeout(id);
   }, [started, done, left, stuck, board, pick]);
@@ -121,7 +130,9 @@ export default function MahjongGame({ onGameOver, submitting }: GamePlayProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const render = () => {
     const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0) return; // 배치 전(0폭)이면 그리지 않는다 — 0 크기로 굳는 걸 막음
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(rect.width * dpr);
     canvas.height = Math.round(rect.height * dpr);
@@ -149,6 +160,13 @@ export default function MahjongGame({ onGameOver, submitting }: GamePlayProps) {
 
       drawFruit(ctx, f.fruit, x + CELL / 2, y + CELL / 2 + CELL * 0.05, CELL * 0.32, 0, 1);
     }
+    };
+
+    render();
+    // 마운트 시 0폭이거나 화면이 회전하면 다시 그린다(다른 게임과 동일).
+    const ro = new ResizeObserver(render);
+    ro.observe(canvas);
+    return () => ro.disconnect();
   }, [board, picked]);
 
   // ── 입력 ───────────────────────────────────────────────────────────
@@ -190,6 +208,7 @@ export default function MahjongGame({ onGameOver, submitting }: GamePlayProps) {
     });
     pick(null);
 
+    tone({ freq: 660, type: "sine", gain: 0.13, dur: 0.13 });
     // 연결선만 잔상으로 잠깐 남긴다 — 다음 탭을 막지 않는다.
     setPath(found);
     if (pathTimer.current) clearTimeout(pathTimer.current);

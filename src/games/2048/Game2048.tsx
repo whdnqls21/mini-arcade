@@ -6,6 +6,7 @@ import { RetryButton } from "@/games/shared";
 import type { GamePlayProps } from "@/games/types";
 import { clearGame, loadGame, saveGame } from "@/lib/game-save";
 import { canMove, type Dir, newGame, planMove, spawn, type Tile } from "./logic";
+import { semitone, thud, tone } from "@/games/sound";
 import { tileBg, tileColor, tileFontSize } from "./tiles";
 
 const SLUG = "2048";
@@ -76,7 +77,11 @@ export default function Game2048({ onGameOver, bestScore, submitting, accountId 
       const sp = spawn(moved, nextId);
       const next = sp ? [...moved, sp] : moved;
       applyTiles(next);
-      if (gained) setScore((s) => s + gained);
+      if (gained) {
+        setScore((s) => s + gained);
+        // 합쳐진 값이 클수록(2의 몇 제곱인지) 높은 음.
+        tone({ freq: semitone(300, Math.min(24, Math.log2(gained) * 2)), type: "sine", gain: 0.14, dur: 0.12 });
+      }
       if (!canMove(next)) setOver(true);
     },
     [over, restored, nextId, applyTiles]
@@ -86,6 +91,7 @@ export default function Game2048({ onGameOver, bestScore, submitting, accountId 
   useEffect(() => {
     if (over && !reported.current) {
       reported.current = true;
+      thud(0.22, 0.3);
       onGameOver(score, { game: "2048" });
     }
   }, [over, score, onGameOver]);

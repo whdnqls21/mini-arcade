@@ -44,54 +44,16 @@ export function stepParticles(list: Particle[], dt: number): Particle[] {
 }
 
 // ── 효과음 ──────────────────────────────────────────────────────────
-// 단계가 올라갈수록 높은 음. 짧은 사인파 하나면 충분하다.
+// 합성 오디오는 공용 모듈(games/sound.ts)로 옮겼다. 여기선 수박게임용 래퍼만 둔다.
 
-let ctx: AudioContext | null = null;
+import { semitone, tone } from "@/games/sound";
 
-function audio(): AudioContext | null {
-  if (typeof window === "undefined") return null;
-  if (!ctx) {
-    const Ctor = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctor) return null;
-    try {
-      ctx = new Ctor();
-    } catch {
-      return null;
-    }
-  }
-  // 모바일은 사용자 제스처 이후에야 재생이 풀린다.
-  if (ctx.state === "suspended") void ctx.resume();
-  return ctx;
-}
-
-// 음소거는 기기 볼륨/무음 스위치를 따른다. 앱 안에 따로 토글을 두지 않는다.
+// 단계가 올라갈수록 높은 음 — 합칠수록 음이 쌓이는 느낌.
 export function playMergeSound(index: number): void {
-  const ac = audio();
-  if (!ac) return;
-  const osc = ac.createOscillator();
-  const gain = ac.createGain();
-  // 단계별로 반음씩 올려 음이 쌓이는 느낌을 준다.
-  osc.frequency.value = 320 * Math.pow(2, index / 12);
-  osc.type = "sine";
-  gain.gain.setValueAtTime(0.0001, ac.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.18, ac.currentTime + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.22);
-  osc.connect(gain).connect(ac.destination);
-  osc.start();
-  osc.stop(ac.currentTime + 0.24);
+  tone({ freq: semitone(320, index), type: "sine", gain: 0.18, dur: 0.22 });
 }
 
+// 과일을 떨어뜨릴 때 낮은 "톡".
 export function playDropSound(): void {
-  const ac = audio();
-  if (!ac) return;
-  const osc = ac.createOscillator();
-  const gain = ac.createGain();
-  osc.frequency.value = 180;
-  osc.type = "triangle";
-  gain.gain.setValueAtTime(0.0001, ac.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.08, ac.currentTime + 0.008);
-  gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.12);
-  osc.connect(gain).connect(ac.destination);
-  osc.start();
-  osc.stop(ac.currentTime + 0.14);
+  tone({ freq: 180, type: "triangle", gain: 0.08, dur: 0.12 });
 }

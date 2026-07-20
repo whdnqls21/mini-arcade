@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { RetryButton, StartGate } from "@/games/shared";
+import { thud, tone } from "@/games/sound";
 import type { GamePlayProps } from "@/games/types";
 import {
   type DinoState,
@@ -46,7 +47,9 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
 
   const doJump = useCallback(() => {
     if (!runningRef.current) return;
-    jump(stateRef.current);
+    if (jump(stateRef.current)) {
+      tone({ freq: 380, type: "square", gain: 0.1, dur: 0.12, glideTo: 620 });
+    }
   }, []);
 
   useEffect(() => {
@@ -107,6 +110,7 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
         if (s.dead) {
           runningRef.current = false;
           setDead(true);
+          thud(0.24, 0.3);
         }
       }
 

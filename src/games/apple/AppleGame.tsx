@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { RetryButton, StartGate } from "@/games/shared";
 import type { GamePlayProps } from "@/games/types";
+import { semitone, thud, tone } from "@/games/sound";
 import { drawFruit } from "@/games/suika/render";
 import {
   type Board,
@@ -85,6 +86,7 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
       // 시간 초과로 끝났다면 아직 지울 수 있었던 조합을 하나 짚어준다.
       // 조합이 없어서 끝난 경우엔 findMove 도 null 이라 표시되지 않는다.
       setHint(findMove(board));
+      thud(0.2, 0.28);
       onGameOver(score, { game: "apple" });
     }
   }, [over, score, board, onGameOver]);
@@ -207,6 +209,8 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
     const res = clearRect(board, rect);
     setBoard(res.board);
     setScore((s) => s + res.cleared);
+    // 한 번에 많이 지울수록 높고 밝은 음.
+    tone({ freq: semitone(440, Math.min(19, res.cleared - 2)), type: "triangle", gain: 0.16, dur: 0.11 });
   };
 
   const seconds = Math.ceil(leftMs / 1000);
