@@ -3,18 +3,21 @@ import dynamic from "next/dynamic";
 import type { GameEntry } from "./types";
 import Game2048 from "./2048/Game2048";
 import { Icon2048 } from "./2048/Icon2048";
+import { AppleIcon } from "./apple/AppleIcon";
 import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
 
 // 수박게임은 물리 엔진(matter.js)을 쓰므로 별도 청크로 분리하고 SSR 을 끈다.
 // 캔버스/AudioContext 는 브라우저에서만 의미가 있어 서버 렌더링할 이유가 없다.
-const SuikaGame = dynamic(() => import("./suika/SuikaGame"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-64 items-center justify-center">
-      <div className="h-7 w-7 animate-spin rounded-full border-2 border-pitch-line border-t-grass" />
-    </div>
-  ),
-});
+const spinner = () => (
+  <div className="flex h-64 items-center justify-center">
+    <div className="h-7 w-7 animate-spin rounded-full border-2 border-pitch-line border-t-grass" />
+  </div>
+);
+
+const SuikaGame = dynamic(() => import("./suika/SuikaGame"), { ssr: false, loading: spinner });
+
+// 사과게임도 캔버스로 그리므로 서버 렌더링할 이유가 없다.
+const AppleGame = dynamic(() => import("./apple/AppleGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -43,6 +46,20 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
       ],
       tip: "큰 과일을 아래에 깔고 작은 과일을 위에 얹으면 더미가 안정적입니다. 벽 쪽 좁은 틈은 나중에 손대기 어려우니 비워두세요.",
       Visual: FruitChain,
+    },
+  },
+  apple: {
+    Play: AppleGame,
+    Icon: AppleIcon,
+    info: {
+      rows: [
+        { label: "목표", text: "제한 시간 안에 사과를 최대한 많이 지우세요." },
+        { label: "조작", text: "손가락으로 사각형을 그려 사과를 감싸면 됩니다. 드래그하는 동안 현재 합이 위에 표시됩니다." },
+        { label: "규칙", text: "감싼 사과의 숫자 합이 정확히 10일 때만 지워집니다. 지운 자리는 빈칸으로 남습니다." },
+        { label: "점수", text: "지운 사과 개수가 그대로 점수입니다. 전부 지우면 80점." },
+        { label: "종료", text: "90초가 지나거나, 더 이상 10을 만들 수 없으면 끝납니다." },
+      ],
+      tip: "2와 8, 3과 7처럼 두 개짜리부터 찾으면 빠릅니다. 큰 숫자(8·9)는 짝이 적으니 먼저 처리하는 편이 좋아요.",
     },
   },
 };
