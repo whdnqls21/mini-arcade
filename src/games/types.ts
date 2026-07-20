@@ -22,4 +22,6 @@ export interface GameInfo {
 export interface GameEntry {
   Play: ComponentType<GamePlayProps>;
   info?: GameInfo;
+  // 게임 목록에 쓰는 아이콘. 게임에서 실제로 보게 될 것을 축소해 보여준다.
+  Icon?: ComponentType<{ size?: number }>;
 }

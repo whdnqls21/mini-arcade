@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { Card } from "@/components/Card";
 import { useAppState } from "@/components/StateProvider";
+import { GAME_REGISTRY } from "@/games/registry";
 import { formatScore } from "@/lib/format";
 
 export default function GamesPage() {
@@ -23,11 +24,17 @@ export default function GamesPage() {
 
       {state.games.map((g) => {
         const top = g.leaderboard[0];
+        const Icon = GAME_REGISTRY[g.slug]?.Icon;
         return (
           <Link key={g.slug} href={`/games/${g.slug}`}>
             <Card className="flex flex-col gap-3 transition-colors hover:border-grass/40">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex items-start gap-3">
+                {Icon && (
+                  <span className="shrink-0">
+                    <Icon size={44} />
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
                   <h2 className="font-display text-xl text-ink">{g.name}</h2>
                   {g.description && (
                     <p className="mt-0.5 text-xs text-ink-faint">{g.description}</p>

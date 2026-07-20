@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useState } from "react";
 
 import { Card } from "@/components/Card";
-import { GameInfoCard } from "@/components/GameInfoCard";
+import { GameInfoButton } from "@/components/GameInfo";
 import { useAppState } from "@/components/StateProvider";
 import { GAME_REGISTRY } from "@/games/registry";
 import { postJSON } from "@/lib/client-api";
@@ -63,7 +63,10 @@ export default function PlayPage() {
           </Link>
           <h1 className="font-display text-2xl text-ink">{game.name}</h1>
         </div>
-        <span className="text-[11px] text-ink-faint">{scoringLabel[game.scoring]}</span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-[11px] text-ink-faint">{scoringLabel[game.scoring]}</span>
+          {entry.info && <GameInfoButton info={entry.info} />}
+        </div>
       </div>
 
       <Card>
@@ -77,8 +80,6 @@ export default function PlayPage() {
 
       {note && <p className="text-center text-sm text-grass">{note}</p>}
       {error && <p className="text-center text-sm text-danger">{error}</p>}
-
-      {entry.info && <GameInfoCard info={entry.info} />}
 
       <Leaderboard slug={slug} />
     </div>

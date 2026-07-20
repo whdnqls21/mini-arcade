@@ -33,6 +33,18 @@ export function FruitIcon({ index, size }: { index: number; size: number }) {
   );
 }
 
+// 목록용 아이콘 — 이 게임의 목적지인 수박을 그대로 보여준다.
+export function SuikaIcon({ size = 44 }: { size?: number }) {
+  return (
+    <div
+      style={{ width: size, height: size }}
+      className="flex items-center justify-center rounded-xl bg-black/35"
+    >
+      <FruitIcon index={FRUITS.length - 1} size={size * 0.92} />
+    </div>
+  );
+}
+
 // 체리에서 수박까지 — 아이콘 크기를 실제 반지름 비율에 맞춰 커지게 해서
 // "합칠수록 커진다"를 글로 설명하지 않고 보여준다.
 export function FruitChain() {

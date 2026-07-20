@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GamePlayProps } from "@/games/types";
 import { clearGame, loadGame, saveGame } from "@/lib/game-save";
 import { canMove, type Dir, newGame, planMove, spawn, type Tile } from "./logic";
+import { tileBg, tileColor, tileFontSize } from "./tiles";
 
 const SLUG = "2048";
 
@@ -13,23 +14,6 @@ interface Save2048 {
   tiles: { id: number; value: number; r: number; c: number }[];
   score: number;
 }
-
-const TILE_BG: Record<number, string> = {
-  2: "#1e2a38",
-  4: "#233346",
-  8: "#2f6f5e",
-  16: "#2f8a6e",
-  32: "#33a37c",
-  64: "#37c08c",
-  128: "#c9a227",
-  256: "#d4ac2a",
-  512: "#e0b62e",
-  1024: "#eebf31",
-  2048: "#f4c64e",
-};
-const tileBg = (v: number) => TILE_BG[v] ?? "#f26d5b";
-const tileColor = (v: number) => (v <= 4 ? "#9db0c4" : v >= 128 ? "#0d1117" : "#eaf1f7");
-const fontSize = (v: number) => (v >= 1024 ? "1.05rem" : v >= 128 ? "1.3rem" : "1.55rem");
 
 export default function Game2048({ onGameOver, bestScore, submitting, accountId }: GamePlayProps) {
   const idc = useRef(0);
@@ -185,7 +169,7 @@ export default function Game2048({ onGameOver, bestScore, submitting, accountId 
                 className={`flex h-full w-full items-center justify-center rounded-lg font-display ${
                   t.merged ? "tile-pop" : t.isNew ? "tile-new" : ""
                 }`}
-                style={{ background: tileBg(t.value), color: tileColor(t.value), fontSize: fontSize(t.value) }}
+                style={{ background: tileBg(t.value), color: tileColor(t.value), fontSize: tileFontSize(t.value) }}
               >
                 {t.value}
               </div>
