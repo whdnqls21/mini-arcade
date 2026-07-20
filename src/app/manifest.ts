@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+import { ICON_VERSION } from "@/lib/brain-mark";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "뇌지컬 대전",
@@ -13,11 +15,11 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#0d1117",
     lang: "ko",
     icons: [
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: "/icon-192", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icon-512", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/icon-192", sizes: "192x192", type: "image/png", purpose: "maskable" },
-      { src: "/icon-512", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: `/icon.svg?v=${ICON_VERSION}`, sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: `/icon-192?v=${ICON_VERSION}`, sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: `/icon-512?v=${ICON_VERSION}`, sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: `/icon-192?v=${ICON_VERSION}`, sizes: "192x192", type: "image/png", purpose: "maskable" },
+      { src: `/icon-512?v=${ICON_VERSION}`, sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

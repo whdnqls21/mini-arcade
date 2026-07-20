@@ -10,11 +10,19 @@ const display = Do_Hyeon({ weight: "400", subsets: ["latin"], variable: "--font-
 const body = Noto_Sans_KR({ weight: ["400", "500", "700"], subsets: ["latin"], variable: "--font-body", display: "swap" });
 const numeric = Oswald({ weight: ["400", "500", "600", "700"], subsets: ["latin"], variable: "--font-numeric", display: "swap" });
 
+import { ICON_VERSION } from "@/lib/brain-mark";
+
 export const metadata: Metadata = {
   title: "뇌지컬 대전",
   description: "친구들과 퍼즐 게임으로 기록 경쟁하는 뇌지컬 대전",
   applicationName: "뇌지컬 대전",
-  icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/apple-icon" },
+  // 아이콘을 바꾸면 ICON_VERSION 을 올린다. 브라우저와 OS 가 아이콘을 오래 캐시해서
+  // 경로가 같으면 예전 그림을 계속 쓴다.
+  icons: {
+    icon: `/icon.svg?v=${ICON_VERSION}`,
+    shortcut: `/icon.svg?v=${ICON_VERSION}`,
+    apple: `/apple-icon?v=${ICON_VERSION}`,
+  },
   appleWebApp: { capable: true, title: "뇌지컬", statusBarStyle: "black-translucent" },
   other: { "apple-mobile-web-app-capable": "yes" },
 };

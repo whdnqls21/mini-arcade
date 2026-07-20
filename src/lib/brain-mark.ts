@@ -1,6 +1,9 @@
 // 앱 심볼 — 회로가 흐르는 뇌. PWA 아이콘, 헤더, 파비콘이 전부 이 한 벌을 쓴다.
 // 문자열로 만드는 이유: next/og(satori)는 JSX SVG 지원이 제한적이라 data URI 이미지로 넘기는 편이 안전하다.
 
+// 심볼을 고칠 때마다 올린다. 아이콘 URL 에 붙어 캐시를 무효화한다.
+export const ICON_VERSION = 2;
+
 const GRASS = "#4de0c0";
 const GRASS_DIM = "#2fb79a";
 const GOLD = "#f4c64e";
