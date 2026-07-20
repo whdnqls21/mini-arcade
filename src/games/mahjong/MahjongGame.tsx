@@ -169,24 +169,27 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
+      {/* 숫자 폭이 매 초 달라져 한 줄에 몰아넣으면 판이 위아래로 흔들린다.
+          칸 너비를 고정하고 버튼은 아래 줄로 내려 높이를 항상 일정하게 둔다. */}
+      <div className="flex flex-col gap-2">
         <div className="flex gap-2">
-          <Stat label="경과" value={`${(elapsed / 1000).toFixed(1)}초`} />
+          <Stat label="경과" value={`${(elapsed / 1000).toFixed(1)}초`} width="5.5rem" />
           <Stat
             label="베스트"
             value={bestScore != null ? `${(bestScore / 1000).toFixed(2)}초` : "-"}
+            width="6rem"
             accent
           />
-          <Stat label="남은 패" value={`${left}`} />
+          <Stat label="남은 패" value={`${left}`} width="4rem" />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex justify-end gap-1.5">
           <button
             onClick={() => {
               setBoard((cur) => reshuffle(cur));
               pick(null);
             }}
             disabled={!started || done || left === 0}
-            className={`rounded-lg border px-3 py-2 text-sm disabled:opacity-40 ${
+            className={`shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-sm disabled:opacity-40 ${
               stuck
                 ? "border-gold/60 bg-gold/15 text-gold"
                 : "border-pitch-line bg-black/20 text-ink-dim hover:text-ink"
@@ -196,7 +199,7 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
           </button>
           <button
             onClick={reset}
-            className="rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink-dim hover:text-ink"
+            className="shrink-0 whitespace-nowrap rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink-dim hover:text-ink"
           >
             새 게임
           </button>
@@ -259,11 +262,23 @@ export default function MahjongGame({ onGameOver, bestScore, submitting }: GameP
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Stat({
+  label,
+  value,
+  width,
+  accent,
+}: {
+  label: string;
+  value: string;
+  width: string;
+  accent?: boolean;
+}) {
   return (
-    <div className="rounded-lg bg-black/20 px-2.5 py-1.5 text-center">
+    <div style={{ width }} className="shrink-0 rounded-lg bg-black/20 px-2 py-1.5 text-center">
       <div className="text-[10px] text-ink-faint">{label}</div>
-      <div className={`tabular font-display text-base ${accent ? "text-gold" : "text-ink"}`}>
+      <div
+        className={`tabular whitespace-nowrap font-display text-base ${accent ? "text-gold" : "text-ink"}`}
+      >
         {value}
       </div>
     </div>

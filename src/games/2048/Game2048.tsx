@@ -135,7 +135,7 @@ export default function Game2048({ onGameOver, bestScore, submitting, accountId 
         </div>
         <button
           onClick={reset}
-          className="rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink-dim hover:text-ink"
+          className="shrink-0 whitespace-nowrap rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink-dim hover:text-ink"
         >
           새 게임
         </button>
