@@ -20,7 +20,7 @@ const SuikaGame = dynamic(() => import("./suika/SuikaGame"), { ssr: false, loadi
 // 사과게임도 캔버스로 그리므로 서버 렌더링할 이유가 없다.
 const AppleGame = dynamic(() => import("./apple/AppleGame"), { ssr: false, loading: spinner });
 
-// 퍼즐마작은 첫 렌더에서 판을 생성하므로 서버/클라이언트 결과가 달라진다. SSR 을 끈다.
+// 사천성은 첫 렌더에서 판을 생성하므로 서버/클라이언트 결과가 달라진다. SSR 을 끈다.
 const MahjongGame = dynamic(() => import("./mahjong/MahjongGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.

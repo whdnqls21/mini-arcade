@@ -11,7 +11,7 @@ export function MahjongIcon({ size = 44 }: { size?: number }) {
       style={{ width: size, height: size, gap: size * 0.08 }}
       className="flex items-center justify-center rounded-xl bg-black/35"
       role="img"
-      aria-label="퍼즐마작"
+      aria-label="사천성"
     >
       {[0, 1].map((i) => (
         <span
