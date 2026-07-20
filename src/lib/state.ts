@@ -79,10 +79,13 @@ export interface AdminAccount {
   created_at: string;
   playCount: number;
 }
+export interface AdminGame extends Game {
+  scoreCount: number; // 이 게임에 쌓인 기록 수(초기화 시 지워질 양)
+}
 export interface AdminState {
   adminPinSet: boolean;
   accounts: AdminAccount[];
-  games: Game[];
+  games: AdminGame[];
 }
 
 export async function buildAdminState(): Promise<AdminState> {
@@ -90,13 +93,17 @@ export async function buildAdminState(): Promise<AdminState> {
   const [setRes, aRes, sRes, gRes] = await Promise.all([
     sb.from("ma_settings").select("admin_pin_hash").eq("id", 1).maybeSingle(),
     sb.from("ma_accounts").select("id,name,active,created_at").order("created_at"),
-    sb.from("ma_scores").select("account_id"),
+    sb.from("ma_scores").select("account_id,game_slug"),
     sb.from("ma_games").select("*").order("sort"),
   ]);
   const accounts = (aRes.data ?? []) as Account[];
-  const scores = (sRes.data ?? []) as { account_id: string }[];
+  const scores = (sRes.data ?? []) as { account_id: string; game_slug: string }[];
   const playCount = new Map<string, number>();
-  for (const s of scores) playCount.set(s.account_id, (playCount.get(s.account_id) ?? 0) + 1);
+  const scoreCount = new Map<string, number>();
+  for (const s of scores) {
+    playCount.set(s.account_id, (playCount.get(s.account_id) ?? 0) + 1);
+    scoreCount.set(s.game_slug, (scoreCount.get(s.game_slug) ?? 0) + 1);
+  }
 
   return {
     adminPinSet: !!(setRes.data as { admin_pin_hash: string | null } | null)?.admin_pin_hash,
@@ -107,6 +114,9 @@ export async function buildAdminState(): Promise<AdminState> {
       created_at: a.created_at,
       playCount: playCount.get(a.id) ?? 0,
     })),
-    games: (gRes.data ?? []) as Game[],
+    games: ((gRes.data ?? []) as Game[]).map((g) => ({
+      ...g,
+      scoreCount: scoreCount.get(g.slug) ?? 0,
+    })),
   };
 }

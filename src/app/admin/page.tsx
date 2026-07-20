@@ -219,22 +219,46 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
         {admin.games.map((g) => (
           <div key={g.slug} className="flex items-center gap-2 text-sm">
             <span className={g.active ? "text-ink" : "text-ink-faint"}>{g.name}</span>
-            <span className="text-[11px] text-ink-faint">({g.scoring})</span>
-            <button
-              disabled={busy}
-              onClick={() =>
-                run(() =>
-                  postJSON("/api/admin/action", {
-                    action: "gameActive",
-                    slug: g.slug,
-                    active: !g.active,
-                  })
-                )
-              }
-              className="ml-auto rounded-lg border border-pitch-line px-2.5 py-1 text-xs text-ink-dim disabled:opacity-40"
-            >
-              {g.active ? "숨기기" : "노출"}
-            </button>
+            <span className="text-[11px] text-ink-faint">
+              ({g.scoring}) · 기록 {g.scoreCount}개
+            </span>
+            <div className="ml-auto flex gap-1.5">
+              <button
+                disabled={busy}
+                onClick={() =>
+                  run(() =>
+                    postJSON("/api/admin/action", {
+                      action: "gameActive",
+                      slug: g.slug,
+                      active: !g.active,
+                    })
+                  )
+                }
+                className="rounded-lg border border-pitch-line px-2.5 py-1 text-xs text-ink-dim disabled:opacity-40"
+              >
+                {g.active ? "숨기기" : "노출"}
+              </button>
+              <button
+                disabled={busy || g.scoreCount === 0}
+                onClick={() => {
+                  // 되돌릴 수 없는 삭제 — 게임 이름을 그대로 입력해야 진행.
+                  const typed = prompt(
+                    `'${g.name}' 의 기록 ${g.scoreCount}개를 모두 삭제합니다.\n되돌릴 수 없습니다. 진행하려면 게임 이름을 입력하세요.`
+                  );
+                  if (typed === null) return;
+                  if (typed.trim() !== g.name) {
+                    alert("게임 이름이 일치하지 않아 취소했습니다.");
+                    return;
+                  }
+                  run(() =>
+                    postJSON("/api/admin/action", { action: "gameResetScores", slug: g.slug })
+                  );
+                }}
+                className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"
+              >
+                기록 초기화
+              </button>
+            </div>
           </div>
         ))}
       </Card>
