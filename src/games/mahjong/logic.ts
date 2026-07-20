@@ -1,8 +1,8 @@
 // 사천성(Shisen-Sho) 규칙 — 같은 타일 둘을 꺾임 2번 이하 경로로 이으면 제거된다.
 // 경로는 빈칸만 지날 수 있고, 판 바깥을 돌아가는 것도 허용된다.
 
-export const COLS = 8;
-export const ROWS = 6;
+export const COLS = 6;
+export const ROWS = 8;
 export const FACES = 8; // 타일 종류 — 과일 8종
 export const COPIES = 6; // 종류당 장수
 export const TOTAL = FACES * COPIES; // 48장 = 24쌍

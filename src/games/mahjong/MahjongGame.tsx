@@ -220,7 +220,7 @@ export default function MahjongGame({ onGameOver, submitting }: GamePlayProps) {
         </p>
       )}
 
-      <div className="relative">
+      <div className="relative mx-auto w-full max-w-[22rem]">
         <canvas
           ref={canvasRef}
           onPointerDown={tap}

@@ -228,7 +228,7 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
         </span>
       </div>
 
-      <div className="relative">
+      <div className="relative mx-auto w-full max-w-[22rem]">
         <canvas
           ref={canvasRef}
           onPointerDown={onDown}
