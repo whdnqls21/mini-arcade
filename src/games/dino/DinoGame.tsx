@@ -149,7 +149,7 @@ export default function DinoGame({ onGameOver, bestScore, submitting }: GamePlay
 
         {!started && !dead && (
           <StartGate
-            title="공룡 달리기"
+            title="크롬 다이노"
             lines={["장애물을 뛰어넘어 최대한 멀리 가세요.", "화면을 탭하거나 스페이스로 점프합니다."]}
             onStart={begin}
           />

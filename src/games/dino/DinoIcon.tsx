@@ -2,14 +2,12 @@
 
 // 목록용 아이콘 — 공룡과 선인장. 게임에서 보게 될 실루엣을 그대로 쓴다.
 export function DinoIcon({ size = 44 }: { size?: number }) {
-  const u = size / 22; // 22단위 격자로 그린다
-
   return (
     <div
       style={{ width: size, height: size }}
       className="flex items-center justify-center rounded-xl bg-black/35"
       role="img"
-      aria-label="공룡 달리기"
+      aria-label="크롬 다이노"
     >
       <svg width={size} height={size} viewBox="0 0 22 22" aria-hidden="true">
         {/* 지면 */}

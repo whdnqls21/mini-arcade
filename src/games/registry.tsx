@@ -24,7 +24,7 @@ const AppleGame = dynamic(() => import("./apple/AppleGame"), { ssr: false, loadi
 // 사천성은 첫 렌더에서 판을 생성하므로 서버/클라이언트 결과가 달라진다. SSR 을 끈다.
 const MahjongGame = dynamic(() => import("./mahjong/MahjongGame"), { ssr: false, loading: spinner });
 
-// 공룡 달리기도 캔버스 + rAF 라 서버에서 렌더할 것이 없다.
+// 크롬 다이노도 캔버스 + rAF 라 서버에서 렌더할 것이 없다.
 const DinoGame = dynamic(() => import("./dino/DinoGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
