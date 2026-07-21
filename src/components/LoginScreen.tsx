@@ -65,9 +65,14 @@ export default function LoginScreen() {
             value={name}
             maxLength={12}
             onChange={(e) => setName(e.target.value)}
-            placeholder="닉네임"
+            placeholder={mode === "signup" ? "이름 또는 닉네임" : "닉네임"}
             className="rounded-xl border border-pitch-line bg-black/20 px-4 py-3 text-ink outline-none focus:border-grass"
           />
+          {mode === "signup" && (
+            <p className="text-[11px] leading-relaxed text-ink-faint">
+              순위표와 게시판에 보이는 이름이에요. 이름이나 닉네임으로 정해주세요 (1~12자, 글자·숫자 포함).
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
