@@ -3,20 +3,13 @@
 import { useState } from "react";
 
 import { Card } from "@/components/Card";
-import { CATEGORY_LABEL, STATUS_LABEL, STATUS_ORDER, STATUS_STYLE } from "@/lib/board-meta";
+import { CATEGORY_LABEL, STATUS_LABEL, STATUS_STYLE } from "@/lib/board-meta";
 import { postJSON } from "@/lib/client-api";
 import { timeAgo } from "@/lib/format";
-import type { PostStatus, PostView } from "@/lib/types";
+import type { PostView } from "@/lib/types";
 
-export function PostCard({
-  post,
-  isAdmin,
-  reload,
-}: {
-  post: PostView;
-  isAdmin: boolean;
-  reload: () => Promise<void> | void;
-}) {
+// 사용자용 카드 — 추천과 본인 글 삭제만. 상태·고정·삭제 관리는 관리자 화면에 있다.
+export function PostCard({ post, reload }: { post: PostView; reload: () => Promise<void> | void }) {
   const [busy, setBusy] = useState(false);
 
   const run = async (fn: () => Promise<unknown>) => {
@@ -71,72 +64,20 @@ export function PostCard({
           </button>
         )}
 
-        <div className="ml-auto flex items-center gap-1.5">
-          {isAdmin && !post.isNotice && (
-            <StatusPicker
-              value={post.status}
-              disabled={busy}
-              onPick={(status) =>
-                run(() => postJSON("/api/board/action", { action: "setStatus", postId: post.id, status }))
+        {post.mine && (
+          <button
+            disabled={busy}
+            onClick={() => {
+              if (confirm("이 글을 삭제할까요?")) {
+                run(() => postJSON("/api/board/action", { action: "delete", postId: post.id }));
               }
-            />
-          )}
-          {isAdmin && (
-            <button
-              disabled={busy}
-              onClick={() =>
-                run(() =>
-                  postJSON("/api/board/action", { action: "pin", postId: post.id, pinned: !post.pinned })
-                )
-              }
-              className={`rounded-lg border px-2 py-1 text-[11px] disabled:opacity-40 ${
-                post.pinned ? "border-gold/50 text-gold" : "border-pitch-line text-ink-faint"
-              }`}
-            >
-              {post.pinned ? "고정 해제" : "고정"}
-            </button>
-          )}
-          {(post.mine || isAdmin) && (
-            <button
-              disabled={busy}
-              onClick={() => {
-                if (confirm("이 글을 삭제할까요?")) {
-                  run(() => postJSON("/api/board/action", { action: "delete", postId: post.id }));
-                }
-              }}
-              className="rounded-lg border border-danger/40 px-2 py-1 text-[11px] text-danger disabled:opacity-40"
-            >
-              삭제
-            </button>
-          )}
-        </div>
+            }}
+            className="ml-auto rounded-lg border border-danger/40 px-2 py-1 text-[11px] text-danger disabled:opacity-40"
+          >
+            삭제
+          </button>
+        )}
       </div>
     </Card>
-  );
-}
-
-function StatusPicker({
-  value,
-  onPick,
-  disabled,
-}: {
-  value: PostStatus | null;
-  onPick: (status: PostStatus | null) => void;
-  disabled: boolean;
-}) {
-  return (
-    <select
-      value={value ?? ""}
-      disabled={disabled}
-      onChange={(e) => onPick((e.target.value || null) as PostStatus | null)}
-      className="rounded-lg border border-pitch-line bg-black/20 px-2 py-1 text-[11px] text-ink-dim disabled:opacity-40"
-    >
-      <option value="">상태 없음</option>
-      {STATUS_ORDER.map((s) => (
-        <option key={s} value={s}>
-          {STATUS_LABEL[s]}
-        </option>
-      ))}
-    </select>
   );
 }

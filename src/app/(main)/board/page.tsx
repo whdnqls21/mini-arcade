@@ -91,7 +91,7 @@ export default function BoardPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {ordered.map((p) => (
-            <PostCard key={p.id} post={p} isAdmin={data.isAdmin} reload={load} />
+            <PostCard key={p.id} post={p} reload={load} />
           ))}
         </div>
       )}

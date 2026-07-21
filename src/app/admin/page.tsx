@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { Card } from "@/components/Card";
+import { AdminBoard } from "@/components/board/AdminBoard";
 import { postJSON } from "@/lib/client-api";
 import type { AdminState } from "@/lib/state";
 
@@ -219,9 +220,10 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
         </div>
       )}
 
-      {/* 공지 작성 — 게시판 상단에 뜬다. 관리자 세션은 이 화면을 벗어나면 끊기므로
-          공지는 여기서 쓴다(게시판 글쓰기에는 공지 옵션이 뜨지 않는다). */}
+      {/* 게시판 — 공지 작성과 글 관리(상태·고정·삭제)를 여기 모은다.
+          관리자 세션은 이 화면을 벗어나면 끊기므로 게시판엔 관리 버튼을 두지 않는다. */}
       <NoticeForm />
+      <AdminBoard />
 
       {/* 계정 관리 */}
       <Card className="flex flex-col gap-3">
