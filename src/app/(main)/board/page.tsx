@@ -22,6 +22,7 @@ export default function BoardPage() {
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>("recent");
   const [writing, setWriting] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -91,7 +92,13 @@ export default function BoardPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {ordered.map((p) => (
-            <PostCard key={p.id} post={p} reload={load} />
+            <PostCard
+              key={p.id}
+              post={p}
+              open={openId === p.id}
+              onToggle={() => setOpenId((cur) => (cur === p.id ? null : p.id))}
+              reload={load}
+            />
           ))}
         </div>
       )}
