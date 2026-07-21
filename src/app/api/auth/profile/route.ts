@@ -95,5 +95,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // ── 솔로모드 전환 ─────────────────────────────────────────────────
+  if (action === "setSolo") {
+    const solo = body?.solo;
+    if (typeof solo !== "boolean") {
+      return NextResponse.json({ error: "솔로모드 값이 올바르지 않습니다." }, { status: 400 });
+    }
+    const { error } = await sb.from("ma_accounts").update({ solo }).eq("id", me.id);
+    if (error) {
+      console.error("setSolo 실패", error);
+      return NextResponse.json({ error: "솔로모드 변경에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, solo });
+  }
+
   return NextResponse.json({ error: "알 수 없는 동작입니다." }, { status: 400 });
 }

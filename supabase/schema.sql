@@ -31,6 +31,7 @@ create table public.ma_accounts (
   name       text not null unique,             -- 표시 이름(로그인 아이디)
   pin_hash   text not null,                     -- 4자리 PIN bcrypt 해시
   active     boolean not null default true,     -- false 면 로그인 차단
+  solo       boolean not null default false,    -- 솔로모드: 리더보드에서 제외(경쟁 부담 없이 개인 기록만)
   created_at timestamptz not null default now()
 );
 
@@ -129,6 +130,10 @@ on conflict (slug) do nothing;
 --   alter table public.ma_games
 --     add column if not exists reset_at   timestamptz,
 --     add column if not exists reset_note text;
+--
+-- 운영 DB 에 솔로모드 컬럼을 추가할 때(이 파일 전체 재실행 금지):
+--   alter table public.ma_accounts
+--     add column if not exists solo boolean not null default false;
 --
 -- 운영 DB 에 게시판을 추가할 때(이 파일 전체 재실행 금지) — 위 create table 두 개를
 -- create table if not exists 로 바꿔 그대로 실행하고, 아래 RLS 도 함께 실행:

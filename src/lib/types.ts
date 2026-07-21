@@ -6,6 +6,7 @@ export interface Account {
   id: string;
   name: string;
   active: boolean;
+  solo: boolean; // 솔로모드: 리더보드에서 제외
   // pin_hash 는 서버에서만 다루며 클라이언트로 내려보내지 않는다.
   created_at: string;
 }

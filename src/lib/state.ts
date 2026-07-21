@@ -18,7 +18,7 @@ export interface GameView extends Game {
 // GameView 는 Game 을 확장하므로 reset_at/reset_note 가 이미 포함된다.
 
 export interface AppState {
-  session: { id: string; name: string } | null;
+  session: { id: string; name: string; solo: boolean } | null;
   isAdmin: boolean;
   games: GameView[];
 }
@@ -34,20 +34,27 @@ export async function buildState(): Promise<AppState> {
     isAdmin(),
     sb.from("ma_games").select("*").eq("active", true).order("sort"),
     sb.from("ma_scores").select("*"),
-    sb.from("ma_accounts").select("id,name,active,created_at").eq("active", true),
+    sb.from("ma_accounts").select("id,name,active,solo,created_at").eq("active", true),
   ]);
 
   const games = (gRes.data ?? []) as Game[];
   const scores = (sRes.data ?? []) as Score[];
   const accounts = (aRes.data ?? []) as Account[];
   const nameById = new Map(accounts.map((a) => [a.id, a.name]));
+  const soloById = new Map(accounts.map((a) => [a.id, a.solo]));
 
   const gameViews: GameView[] = games.map((g) => {
-    // 계정별 베스트 (활성 계정만)
+    // 계정별 베스트 (활성 + 솔로모드 아닌 계정만) — 리더보드용.
     const bestByAccount = new Map<string, number>();
+    // 내 베스트는 솔로 여부와 무관하게 항상 계산한다(내정보/게임 화면에서 보여준다).
+    let myBest: number | null = null;
     for (const s of scores) {
       if (s.game_slug !== g.slug) continue;
+      if (session && s.account_id === session.id) {
+        myBest = myBest == null ? s.score : better(g.scoring, myBest, s.score);
+      }
       if (!nameById.has(s.account_id)) continue; // 비활성/삭제 계정 제외
+      if (soloById.get(s.account_id)) continue; // 솔로모드 계정은 리더보드에서 제외
       const cur = bestByAccount.get(s.account_id);
       bestByAccount.set(s.account_id, cur == null ? s.score : better(g.scoring, cur, s.score));
     }
@@ -60,13 +67,15 @@ export async function buildState(): Promise<AppState> {
 
     return {
       ...g,
-      myBest: session ? bestByAccount.get(session.id) ?? null : null,
+      myBest,
       leaderboard: rows,
     };
   });
 
   return {
-    session: session ? { id: session.id, name: session.name } : null,
+    session: session
+      ? { id: session.id, name: session.name, solo: soloById.get(session.id) ?? false }
+      : null,
     isAdmin: admin,
     games: gameViews,
   };

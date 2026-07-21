@@ -18,6 +18,15 @@ export default function RankPage() {
         <h1 className="font-display text-2xl text-ink">게임별 리더보드</h1>
       </div>
 
+      {state.session?.solo && (
+        <Card className="border-grass/30 bg-grass/5">
+          <p className="text-sm leading-relaxed text-ink-dim">
+            <span className="text-grass">솔로모드</span>라 내 기록은 순위에 올라가지 않아요. 편하게
+            즐기세요. <span className="text-ink-faint">(내정보에서 끌 수 있어요.)</span>
+          </p>
+        </Card>
+      )}
+
       {state.games.map((g) => (
         <Card key={g.slug} className="flex flex-col gap-2">
           <div className="flex items-center justify-between">

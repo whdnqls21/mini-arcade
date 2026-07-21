@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Card } from "@/components/Card";
 import { ProfileSettings } from "@/components/ProfileSettings";
+import { SoloModeToggle } from "@/components/SoloModeToggle";
 import { useAppState } from "@/components/StateProvider";
 import { postJSON } from "@/lib/client-api";
 import { formatScore } from "@/lib/format";
@@ -14,10 +15,12 @@ export default function MePage() {
   if (!state?.session) return null;
   const me = state.session;
 
+  // 내 기록은 myBest 기준(솔로모드여도 개인 기록은 보인다). 순위는 리더보드에 있을 때만.
   const myRanks = state.games
     .map((g) => {
+      if (g.myBest == null) return null;
       const row = g.leaderboard.find((r) => r.accountId === me.id);
-      return row ? { game: g, rank: row.rank, best: row.best } : null;
+      return { game: g, rank: row?.rank ?? null, best: g.myBest };
     })
     .filter((x): x is NonNullable<typeof x> => x != null);
 
@@ -42,13 +45,15 @@ export default function MePage() {
                 <span className="font-display text-ink">{game.name}</span>
                 <span className="text-ink-dim">
                   <span className="tabular text-gold">{formatScore(game.scoring, best)}</span>{" "}
-                  <span className="text-xs text-ink-faint">({rank}위)</span>
+                  {rank != null && <span className="text-xs text-ink-faint">({rank}위)</span>}
                 </span>
               </li>
             ))}
           </ul>
         )}
       </Card>
+
+      <SoloModeToggle solo={me.solo} onChanged={refresh} />
 
       <ProfileSettings currentName={me.name} onChanged={refresh} />
 
