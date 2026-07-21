@@ -278,7 +278,7 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
         {!started && !over && (
           <StartGate
             title="사과게임"
-            lines={["합이 10이 되게 사과를 묶어 지우세요.", "시작을 누르면 90초가 흐릅니다."]}
+            lines={["합이 10이 되게 사과를 묶어 지우세요.", "시작을 누르면 80초가 흐릅니다."]}
             onStart={begin}
           />
         )}

@@ -1,10 +1,10 @@
 // 사과게임(Fruit Box) 규칙 — 드래그한 사각형 안 숫자의 합이 정확히 10이면 지워진다.
 // 지운 자리는 비어 있는 채로 남고 새 사과가 채워지지 않는다.
 
-export const COLS = 8;
-export const ROWS = 11;
+export const COLS = 10;
+export const ROWS = 13;
 export const CELLS = COLS * ROWS;
-export const TIME_LIMIT_MS = 90_000;
+export const TIME_LIMIT_MS = 80_000;
 export const TARGET = 10;
 
 // 0 은 이미 지워진 칸.
