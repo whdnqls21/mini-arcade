@@ -83,3 +83,13 @@ export function thud(gain = 0.2, dur = 0.16): void {
 
 // 반음 계단 — index 로 음높이를 올린다(도레미…).
 export const semitone = (base: number, steps: number) => base * Math.pow(2, steps / 12);
+
+// 카운트다운 초읽기 틱 — 제한 시간 게임의 마지막 몇 초에 초마다 울린다.
+// final(마지막 1초)은 더 높고 길게 내 긴장감을 준다.
+export function tick(final = false): void {
+  if (final) {
+    tone({ freq: 1320, type: "square", gain: 0.12, dur: 0.2 });
+  } else {
+    tone({ freq: 880, type: "square", gain: 0.1, dur: 0.06 });
+  }
+}

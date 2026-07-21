@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { RetryButton, StartGate } from "@/games/shared";
 import type { GamePlayProps } from "@/games/types";
-import { semitone, thud, tone } from "@/games/sound";
+import { semitone, thud, tick, tone } from "@/games/sound";
 import { drawFruit } from "@/games/suika/render";
 import {
   type Board,
@@ -44,6 +44,7 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
   const [hint, setHint] = useState<Rect | null>(null); // 종료 시 아직 가능했던 조합
   const endAtRef = useRef(0);
   const reported = useRef(false);
+  const lastTickSec = useRef(0); // 초읽기 틱 중복 방지
 
   const reset = useCallback(() => {
     setBoard(newBoard());
@@ -54,6 +55,7 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
     setLeftMs(TIME_LIMIT_MS);
     setHint(null);
     reported.current = false;
+    lastTickSec.current = 0;
   }, []);
 
   // 제한 시간이 있는 게임이라 판을 본 순간부터 재면 불공평하다. 시작을 누른 시점부터 잰다.
@@ -69,6 +71,12 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
     const id = setInterval(() => {
       const left = Math.max(0, endAtRef.current - performance.now());
       setLeftMs(left);
+      // 마지막 5초 초읽기 — 초가 바뀔 때 한 번씩만 틱.
+      const sec = Math.ceil(left / 1000);
+      if (sec !== lastTickSec.current) {
+        lastTickSec.current = sec;
+        if (sec >= 1 && sec <= 5) tick(sec === 1);
+      }
       if (left <= 0) setOver(true);
     }, 100);
     return () => clearInterval(id);

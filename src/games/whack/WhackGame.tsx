@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { RetryButton, StartGate } from "@/games/shared";
 import { BadMoleIcon, MoleIcon } from "@/games/whack/MoleArt";
 import type { GamePlayProps } from "@/games/types";
-import { semitone, sequence, thud, tone } from "@/games/sound";
+import { semitone, sequence, thud, tick, tone } from "@/games/sound";
 
 const COLS = 4;
 const ROWS = 5;
@@ -36,6 +36,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
   const idRef = useRef(0);
   const reported = useRef(false);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTickSec = useRef(0); // 초읽기 틱 중복 방지
 
   // moles 는 setInterval 콜백에서도 최신값이 필요해 ref 를 원본으로 두고 화면엔 미러링한다.
   const commitMoles = useCallback((next: (Mole | null)[]) => {
@@ -62,6 +63,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
     setScore(0);
     idRef.current = 0;
     reported.current = false;
+    lastTickSec.current = 0;
     startRef.current = performance.now();
     setRemain(GAME_MS);
     setPhase("playing");
@@ -84,7 +86,14 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
         finish();
         return;
       }
-      setRemain(GAME_MS - elapsed);
+      const left = GAME_MS - elapsed;
+      setRemain(left);
+      // 마지막 5초 초읽기 — 초가 바뀔 때 한 번씩만 틱.
+      const sec = Math.ceil(left / 1000);
+      if (sec !== lastTickSec.current) {
+        lastTickSec.current = sec;
+        if (sec >= 1 && sec <= 5) tick(sec === 1);
+      }
       const r = elapsed / GAME_MS; // 0 → 1
       // 난이도 곡선: 후반일수록 짧게 보이고(반응 속도), 여러 개가 동시에(주의 분산) 뜬다.
       const life = 900 - 430 * r; // 등장 유지 시간(ms): 900 → 470
