@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { ACCOUNT_COOKIE, COOKIE_OPTIONS, getAccountSession, signSession } from "@/lib/auth";
+import { validateName } from "@/lib/name";
 import { hashPin, isValidPin, verifyPin } from "@/lib/pin";
 import { createServiceClient } from "@/lib/supabase/server";
 
@@ -32,10 +33,11 @@ export async function POST(req: NextRequest) {
 
   // ── 이름 변경 ────────────────────────────────────────────────────
   if (action === "rename") {
-    const name = typeof body?.name === "string" ? body.name.trim() : "";
-    if (!name || name.length > 12) {
-      return NextResponse.json({ error: "이름을 확인하세요 (1~12자)." }, { status: 400 });
+    const nameCheck = validateName(body?.name);
+    if (!nameCheck.ok) {
+      return NextResponse.json({ error: nameCheck.error }, { status: 400 });
     }
+    const name = nameCheck.name;
     if (name === me.name) {
       return NextResponse.json({ error: "지금 쓰는 이름과 같습니다." }, { status: 400 });
     }
