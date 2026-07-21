@@ -35,50 +35,46 @@ export function PostCard({
 
   return (
     <Card className={`flex flex-col gap-2 ${post.isNotice ? "border-gold/40 bg-gold/5" : ""}`}>
-      {/* 헤더 — 탭하면 펼침/접힘. 제목 줄에 분류·상태·추천수를 요약해 보여준다. */}
+      {/* 헤더 — 라벨과 제목을 한 줄에. 탭하면 펼침/접힘. */}
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex flex-col gap-1.5 text-left"
+        className="flex items-start gap-2 text-left"
       >
-        <div className="flex items-center gap-2 text-[11px]">
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
+            post.isNotice ? "bg-gold/20 text-gold" : "bg-pitch-line text-ink-dim"
+          }`}
+        >
+          {CATEGORY_LABEL[post.category]}
+        </span>
+        {post.status && (
           <span
-            className={`rounded-full px-2 py-0.5 ${
-              post.isNotice ? "bg-gold/20 text-gold" : "bg-pitch-line text-ink-dim"
-            }`}
+            className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${STATUS_STYLE[post.status]}`}
           >
-            {CATEGORY_LABEL[post.category]}
+            {STATUS_LABEL[post.status]}
           </span>
-          {post.status && (
-            <span className={`rounded-full border px-2 py-0.5 ${STATUS_STYLE[post.status]}`}>
-              {STATUS_LABEL[post.status]}
-            </span>
-          )}
-          {!post.isNotice && post.votes > 0 && (
-            <span className="text-ink-faint">👍 {post.votes}</span>
-          )}
-          <span className="ml-auto shrink-0 text-ink-faint">{timeAgo(post.createdAt)}</span>
-        </div>
+        )}
 
-        <div className="flex items-center gap-2">
-          <h2 className="min-w-0 flex-1 font-display text-base text-ink">
-            {open ? post.title : <span className="line-clamp-1">{post.title}</span>}
-          </h2>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={`shrink-0 text-ink-faint transition-transform ${open ? "rotate-180" : ""}`}
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </div>
+        <h2 className="min-w-0 flex-1 font-display text-base text-ink">
+          {open ? post.title : <span className="line-clamp-1">{post.title}</span>}
+        </h2>
+
+        <span className="shrink-0 text-[11px] text-ink-faint">{timeAgo(post.createdAt)}</span>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`shrink-0 text-ink-faint transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
       </button>
 
       {open && (
