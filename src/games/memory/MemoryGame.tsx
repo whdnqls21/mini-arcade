@@ -48,18 +48,31 @@ export default function MemoryGame({ onGameOver, bestScore, submitting }: GamePl
   const reported = useRef(false);
   const locked = useRef(false);
   const flipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 빠르게 두 장을 연속으로 누르면 tap 이 아직 반영 안 된 state 를 읽어 첫 장이 사라진다.
+  // ref 를 동기 원본으로 두고 화면엔 state 로 미러링한다.
+  const flippedRef = useRef<number[]>([]);
+  const matchedRef = useRef<Set<number>>(new Set());
+
+  const commitFlipped = useCallback((v: number[]) => {
+    flippedRef.current = v;
+    setFlipped(v);
+  }, []);
+  const commitMatched = useCallback((v: Set<number>) => {
+    matchedRef.current = v;
+    setMatched(v);
+  }, []);
 
   const reset = useCallback(() => {
     if (flipTimer.current) clearTimeout(flipTimer.current);
     setDeck(newDeck());
-    setFlipped([]);
-    setMatched(new Set());
+    commitFlipped([]);
+    commitMatched(new Set());
     setStarted(false);
     setDone(false);
     setElapsed(0);
     reported.current = false;
     locked.current = false;
-  }, []);
+  }, [commitFlipped, commitMatched]);
 
   // 첫 뒤집기부터 시간을 잰다(카드는 다 덮여 있어 미리 봐도 이득이 없으니 시작 버튼은 없다).
   useEffect(() => {
@@ -76,36 +89,33 @@ export default function MemoryGame({ onGameOver, bestScore, submitting }: GamePl
 
   function tap(i: number) {
     if (done || locked.current) return;
-    if (matched.has(i) || flipped.includes(i)) return;
+    if (matchedRef.current.has(i) || flippedRef.current.includes(i)) return;
 
     if (!started) {
       startRef.current = performance.now();
       setStarted(true);
     }
 
-    const next = [...flipped, i];
+    const next = [...flippedRef.current, i];
+    commitFlipped(next);
     tone({ freq: 520, type: "sine", gain: 0.08, dur: 0.08 });
 
-    if (next.length < 2) {
-      setFlipped(next);
-      return;
-    }
+    if (next.length < 2) return;
 
     // 두 장째 — 짝 판정
-    setFlipped(next);
     const [a, b] = next;
     if (deck[a].fruit === deck[b].fruit) {
-      const nm = new Set(matched);
+      const nm = new Set(matchedRef.current);
       nm.add(a);
       nm.add(b);
-      setMatched(nm);
-      setFlipped([]);
+      commitMatched(nm);
+      commitFlipped([]);
       tone({ freq: semitone(660, nm.size), type: "triangle", gain: 0.14, dur: 0.14 });
       if (nm.size === deck.length) finish();
     } else {
       locked.current = true;
       flipTimer.current = setTimeout(() => {
-        setFlipped([]);
+        commitFlipped([]);
         locked.current = false;
       }, FLIP_BACK_MS);
     }
