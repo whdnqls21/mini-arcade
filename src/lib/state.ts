@@ -13,6 +13,7 @@ export interface LeaderRow {
 
 export interface GameView extends Game {
   myBest: number | null;
+  mySoloBest: number | null; // 솔로모드에서 세운 기록만의 베스트(내정보 솔로 표시용)
   leaderboard: LeaderRow[];
 }
 // GameView 는 Game 을 확장하므로 reset_at/reset_note 가 이미 포함된다.
@@ -48,10 +49,15 @@ export async function buildState(): Promise<AppState> {
     const bestByAccount = new Map<string, number>();
     // 내 베스트는 솔로 여부와 무관하게 항상 계산한다(내정보/게임 화면에서 보여준다).
     let myBest: number | null = null;
+    // 솔로모드에서 세운 기록만의 베스트(meta.solo === true).
+    let mySoloBest: number | null = null;
     for (const s of scores) {
       if (s.game_slug !== g.slug) continue;
       if (session && s.account_id === session.id) {
         myBest = myBest == null ? s.score : better(g.scoring, myBest, s.score);
+        if (s.meta && (s.meta as Record<string, unknown>).solo === true) {
+          mySoloBest = mySoloBest == null ? s.score : better(g.scoring, mySoloBest, s.score);
+        }
       }
       if (!nameById.has(s.account_id)) continue; // 비활성/삭제 계정 제외
       if (soloById.get(s.account_id)) continue; // 솔로모드 계정은 리더보드에서 제외
@@ -68,6 +74,7 @@ export async function buildState(): Promise<AppState> {
     return {
       ...g,
       myBest,
+      mySoloBest,
       leaderboard: rows,
     };
   });

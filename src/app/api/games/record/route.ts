@@ -34,11 +34,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "진행 중인 게임이 아닙니다." }, { status: 400 });
   }
 
+  // 기록 시점의 솔로모드 여부를 서버가 판단해 meta 에 새긴다(내정보에서 솔로 기록만 골라 보이려고).
+  const { data: acct } = await sb
+    .from("ma_accounts")
+    .select("solo")
+    .eq("id", session.id)
+    .maybeSingle();
+  const finalMeta = { ...(meta ?? {}), solo: !!acct?.solo };
+
   const { error } = await sb.from("ma_scores").insert({
     account_id: session.id,
     game_slug: gameSlug,
     score: Math.round(score),
-    meta,
+    meta: finalMeta,
   });
   if (error) {
     console.error("record 실패", error);
