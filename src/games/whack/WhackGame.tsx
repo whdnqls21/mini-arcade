@@ -87,17 +87,25 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
       }
       setRemain(GAME_MS - elapsed);
       const r = elapsed / GAME_MS; // 0 → 1
-      const life = 1150 - 520 * r; // 등장 유지 시간(ms): 후반일수록 짧게
-      const spawnP = 0.18 + 0.32 * r; // 틱마다 등장 확률
-      const bombP = 0.18 + 0.14 * r; // 폭탄 비율
+      // 난이도 곡선: 후반일수록 짧게 보이고(반응 속도), 여러 개가 동시에(주의 분산) 뜬다.
+      const life = 900 - 430 * r; // 등장 유지 시간(ms): 900 → 470
+      const bombP = 0.2 + 0.16 * r; // 폭탄 비율: 0.20 → 0.36
+      const targetActive = 1 + Math.round(r * 4); // 동시 등장 목표: 1 → 5
+      const spawnGate = 0.5 + 0.5 * r; // 목표까지 채우는 속도(초반은 천천히): 0.5 → 1.0
 
       const next = molesRef.current.map((m) => (m && now >= m.expire ? null : m));
       const empties: number[] = [];
+      let active = 0;
       next.forEach((m, i) => {
-        if (!m) empties.push(i);
+        if (m) active++;
+        else empties.push(i);
       });
-      if (empties.length && Math.random() < spawnP) {
-        const i = empties[Math.floor(Math.random() * empties.length)];
+
+      // 목표 동시 등장 수까지 채우되, 한 틱에 최대 2개만 — 한꺼번에 우르르 뜨지 않게.
+      let toSpawn = Math.min(targetActive - active, empties.length, 2);
+      while (toSpawn > 0 && Math.random() < spawnGate) {
+        const idx = Math.floor(Math.random() * empties.length);
+        const i = empties.splice(idx, 1)[0];
         const kind: Kind = Math.random() < bombP ? "bomb" : "fruit";
         idRef.current += 1;
         next[i] = {
@@ -106,6 +114,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
           fruit: FRUIT_POOL[Math.floor(Math.random() * FRUIT_POOL.length)],
           expire: now + life,
         };
+        toSpawn--;
       }
       commitMoles(next);
     }, 100);
