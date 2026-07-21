@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { RetryButton, StartGate } from "@/games/shared";
-import { FruitIcon } from "@/games/suika/FruitIcon";
+import { BadMoleIcon, MoleIcon } from "@/games/whack/MoleArt";
 import type { GamePlayProps } from "@/games/types";
 import { semitone, sequence, thud, tone } from "@/games/sound";
 
@@ -11,14 +11,13 @@ const COLS = 3;
 const ROWS = 4;
 const HOLES = COLS * ROWS; // 12구멍
 const GAME_MS = 30000; // 30초 승부
-// 구멍에서 튀어나올 과일들 — 크기 40에서 서로 잘 구분되는 것만.
-const FRUIT_POOL = [0, 2, 4, 6, 8, 10];
+const VARIANTS = 3; // 좋은 두더지 털색 변주 수(MoleArt 의 FUR 길이)
 
-type Kind = "fruit" | "bomb";
+type Kind = "good" | "bad";
 interface Mole {
   id: number;
   kind: Kind;
-  fruit: number;
+  variant: number; // 좋은 두더지 털색 선택용
   expire: number; // performance.now() 기준, 이 시각 넘으면 사라짐
 }
 
@@ -29,7 +28,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
   const [score, setScore] = useState(0);
   const [phase, setPhase] = useState<Phase>("ready");
   const [remain, setRemain] = useState(GAME_MS);
-  const [flash, setFlash] = useState<number | null>(null); // 폭탄 눌렀을 때 붉은 표시
+  const [flash, setFlash] = useState<number | null>(null); // 나쁜 두더지 눌렀을 때 붉은 표시
 
   const molesRef = useRef<(Mole | null)[]>(Array(HOLES).fill(null));
   const scoreRef = useRef(0);
@@ -89,7 +88,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
       const r = elapsed / GAME_MS; // 0 → 1
       // 난이도 곡선: 후반일수록 짧게 보이고(반응 속도), 여러 개가 동시에(주의 분산) 뜬다.
       const life = 900 - 430 * r; // 등장 유지 시간(ms): 900 → 470
-      const bombP = 0.2 + 0.16 * r; // 폭탄 비율: 0.20 → 0.36
+      const badP = 0.2 + 0.16 * r; // 나쁜 두더지 비율: 0.20 → 0.36
       const targetActive = 1 + Math.round(r * 4); // 동시 등장 목표: 1 → 5
       const spawnGate = 0.5 + 0.5 * r; // 목표까지 채우는 속도(초반은 천천히): 0.5 → 1.0
 
@@ -106,12 +105,12 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
       while (toSpawn > 0 && Math.random() < spawnGate) {
         const idx = Math.floor(Math.random() * empties.length);
         const i = empties.splice(idx, 1)[0];
-        const kind: Kind = Math.random() < bombP ? "bomb" : "fruit";
+        const kind: Kind = Math.random() < badP ? "bad" : "good";
         idRef.current += 1;
         next[i] = {
           id: idRef.current,
           kind,
-          fruit: FRUIT_POOL[Math.floor(Math.random() * FRUIT_POOL.length)],
+          variant: Math.floor(Math.random() * VARIANTS),
           expire: now + life,
         };
         toSpawn--;
@@ -135,7 +134,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
     next[i] = null;
     commitMoles(next);
 
-    if (m.kind === "fruit") {
+    if (m.kind === "good") {
       scoreRef.current += 1;
       setScore(scoreRef.current);
       tone({ freq: semitone(660, Math.min(scoreRef.current, 12)), type: "triangle", gain: 0.14, dur: 0.1 });
@@ -192,7 +191,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
               key={i}
               onClick={() => tap(i)}
               data-kind={m ? m.kind : "empty"}
-              aria-label={m ? (m.kind === "bomb" ? "폭탄" : "과일") : "빈 구멍"}
+              aria-label={m ? (m.kind === "bad" ? "나쁜 두더지" : "두더지") : "빈 구멍"}
               className="relative flex items-center justify-center overflow-hidden rounded-2xl border border-pitch-line bg-gradient-to-b from-[#0f1720] to-[#05090d] active:scale-95"
             >
               {/* 구멍 안쪽 그림자 */}
@@ -203,7 +202,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
                   className="relative"
                   style={{ animation: "whack-pop 150ms ease-out" }}
                 >
-                  {m.kind === "fruit" ? <FruitIcon index={m.fruit} size={40} /> : <BombIcon size={40} />}
+                  {m.kind === "good" ? <MoleIcon variant={m.variant} size={40} /> : <BadMoleIcon size={40} />}
                 </span>
               )}
               {flash === i && <span className="absolute inset-0 rounded-2xl bg-danger/40" />}
@@ -214,7 +213,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
         {phase === "ready" && (
           <StartGate
             title="두더지 잡기"
-            lines={["과일이 튀어나오면 재빨리 탭!", "폭탄을 누르면 점수가 깎여요.", "제한 시간 30초."]}
+            lines={["두더지가 튀어나오면 재빨리 탭!", "빨간 눈 나쁜 두더지는 누르면 감점.", "제한 시간 30초."]}
             onStart={start}
           />
         )}
@@ -241,25 +240,5 @@ function Stat({ label, value, width, accent }: { label: string; value: string; w
         {value}
       </div>
     </div>
-  );
-}
-
-// 폭탄 — 에셋 없이 인라인 SVG 로. 둥근 몸체 + 도화선 + 불꽃.
-function BombIcon({ size = 40 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-      <circle cx="21" cy="31" r="13" fill="#12161b" stroke="#39414b" strokeWidth="1.5" />
-      <circle cx="16" cy="26" r="3" fill="#525b66" opacity="0.7" />
-      <rect x="25.5" y="14" width="5" height="6" rx="1.5" transform="rotate(28 28 17)" fill="#2a2f36" />
-      <path d="M30 14 q5 -5 8 -1" stroke="#d08a2a" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      <g>
-        <circle cx="39" cy="11" r="2.4" fill="#ffcf4d" />
-        <path
-          d="M39 6.5 L40 9.5 L43 10 L40 11 L39 14 L38 11 L35 10 L38 9.5 Z"
-          fill="#ff8a1f"
-          opacity="0.9"
-        />
-      </g>
-    </svg>
   );
 }

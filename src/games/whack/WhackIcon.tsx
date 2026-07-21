@@ -1,8 +1,8 @@
 "use client";
 
-import { FruitIcon } from "@/games/suika/FruitIcon";
+import { MoleIcon } from "@/games/whack/MoleArt";
 
-// 목록용 아이콘 — 구멍에서 과일이 튀어나온 모습.
+// 목록용 아이콘 — 구멍에서 두더지가 튀어나온 모습.
 export function WhackIcon({ size = 44 }: { size?: number }) {
   return (
     <div
@@ -12,8 +12,8 @@ export function WhackIcon({ size = 44 }: { size?: number }) {
       aria-label="두더지 잡기"
     >
       <span className="pointer-events-none absolute inset-x-1.5 bottom-1 h-2 rounded-full bg-black/40 blur-[1px]" />
-      <span className="relative mb-0.5">
-        <FruitIcon index={10} size={size * 0.62} />
+      <span className="relative">
+        <MoleIcon size={size * 0.78} />
       </span>
     </div>
   );
