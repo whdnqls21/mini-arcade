@@ -7,6 +7,7 @@ import { AppleIcon } from "./apple/AppleIcon";
 import { DinoIcon } from "./dino/DinoIcon";
 import { MahjongIcon } from "./mahjong/MahjongIcon";
 import { MemoryIcon } from "./memory/MemoryIcon";
+import { WhackIcon } from "./whack/WhackIcon";
 import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
 
 // 수박게임은 물리 엔진(matter.js)을 쓰므로 별도 청크로 분리하고 SSR 을 끈다.
@@ -30,6 +31,9 @@ const DinoGame = dynamic(() => import("./dino/DinoGame"), { ssr: false, loading:
 
 // 카드 짝맞추기는 마운트 시 카드를 섞으므로(Math.random) SSR 을 끈다.
 const MemoryGame = dynamic(() => import("./memory/MemoryGame"), { ssr: false, loading: spinner });
+
+// 두더지 잡기도 rAF/랜덤 등장이라 서버에서 렌더할 것이 없다.
+const WhackGame = dynamic(() => import("./whack/WhackGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -99,6 +103,20 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "팁", text: "다른 카드를 뒤집을 때 위치를 기억해두면 나중에 한 번에 맞출 수 있어요." },
       ],
       tip: "처음 몇 장은 어차피 모르니 빠르게 넘기고, 위치가 쌓이면 확실한 짝부터 지우세요.",
+    },
+  },
+  whack: {
+    Play: WhackGame,
+    Icon: WhackIcon,
+    info: {
+      rows: [
+        { label: "목표", text: "구멍에서 튀어나오는 과일을 제한 시간 안에 최대한 많이 잡으세요." },
+        { label: "조작", text: "과일이 나온 구멍을 탭합니다. 잠깐 나왔다 사라지니 재빨리 눌러야 해요." },
+        { label: "규칙", text: "가끔 폭탄이 섞여 나옵니다. 폭탄을 누르면 점수가 2점 깎이니 건드리지 마세요." },
+        { label: "점수", text: "잡은 과일 하나당 1점. 시간이 갈수록 더 빨리, 더 많이 튀어나옵니다." },
+        { label: "종료", text: "시작을 누른 순간부터 30초. 시간이 다 되면 그때 점수가 기록됩니다." },
+      ],
+      tip: "한곳만 노려보지 말고 판 전체를 넓게 보세요. 폭탄은 그냥 두면 알아서 사라집니다.",
     },
   },
   dino: {
