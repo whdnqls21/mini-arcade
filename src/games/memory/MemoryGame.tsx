@@ -46,7 +46,6 @@ export default function MemoryGame({ onGameOver, bestScore, submitting }: GamePl
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef(0);
   const reported = useRef(false);
-  const locked = useRef(false);
   const flipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 빠르게 두 장을 연속으로 누르면 tap 이 아직 반영 안 된 state 를 읽어 첫 장이 사라진다.
   // ref 를 동기 원본으로 두고 화면엔 state 로 미러링한다.
@@ -71,7 +70,6 @@ export default function MemoryGame({ onGameOver, bestScore, submitting }: GamePl
     setDone(false);
     setElapsed(0);
     reported.current = false;
-    locked.current = false;
   }, [commitFlipped, commitMatched]);
 
   // 첫 뒤집기부터 시간을 잰다(카드는 다 덮여 있어 미리 봐도 이득이 없으니 시작 버튼은 없다).
@@ -88,8 +86,17 @@ export default function MemoryGame({ onGameOver, bestScore, submitting }: GamePl
   }, []);
 
   function tap(i: number) {
-    if (done || locked.current) return;
-    if (matchedRef.current.has(i) || flippedRef.current.includes(i)) return;
+    if (done) return;
+    if (matchedRef.current.has(i)) return;
+
+    // 틀린 두 장이 떠 있는 상태(자동 복귀 대기 중)에서 새 카드를 누르면 즉시 덮고 새로 시작한다.
+    // 800ms 를 기다리며 탭이 먹히는 답답함을 없앤다 — 빠르게 칠수록 체감이 크다.
+    if (flippedRef.current.length >= 2) {
+      if (flipTimer.current) clearTimeout(flipTimer.current);
+      commitFlipped([]);
+    }
+
+    if (flippedRef.current.includes(i)) return; // 이미 뒤집힌 첫 장을 또 누르면 무시
 
     if (!started) {
       startRef.current = performance.now();
@@ -113,10 +120,9 @@ export default function MemoryGame({ onGameOver, bestScore, submitting }: GamePl
       tone({ freq: semitone(660, nm.size), type: "triangle", gain: 0.14, dur: 0.14 });
       if (nm.size === deck.length) finish();
     } else {
-      locked.current = true;
+      // 틀림 — 잠깐 보여주고 자동으로 덮는다(그 전에 새 카드를 누르면 위에서 즉시 덮음).
       flipTimer.current = setTimeout(() => {
         commitFlipped([]);
-        locked.current = false;
       }, FLIP_BACK_MS);
     }
   }
