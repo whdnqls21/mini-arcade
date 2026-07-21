@@ -10,6 +10,7 @@ import { formatScore } from "@/lib/format";
 export default function GamesPage() {
   const { state } = useAppState();
   if (!state) return null;
+  const solo = state.session?.solo ?? false;
 
   return (
     <div className="flex flex-col gap-4">
@@ -45,18 +46,25 @@ export default function GamesPage() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between border-t border-pitch-line pt-3 text-xs">
-                <span className="text-ink-dim">
-                  🏆 1위{" "}
-                  {top ? (
-                    <>
-                      <b className="text-ink">{top.name}</b>{" "}
-                      <span className="tabular text-gold">{formatScore(g.scoring, top.best)}</span>
-                    </>
-                  ) : (
-                    <span className="text-ink-faint">아직 없음</span>
-                  )}
-                </span>
+              <div
+                className={`flex items-center border-t border-pitch-line pt-3 text-xs ${
+                  solo ? "justify-end" : "justify-between"
+                }`}
+              >
+                {/* 솔로모드에서는 남의 1위 기록을 숨긴다. */}
+                {!solo && (
+                  <span className="text-ink-dim">
+                    🏆 1위{" "}
+                    {top ? (
+                      <>
+                        <b className="text-ink">{top.name}</b>{" "}
+                        <span className="tabular text-gold">{formatScore(g.scoring, top.best)}</span>
+                      </>
+                    ) : (
+                      <span className="text-ink-faint">아직 없음</span>
+                    )}
+                  </span>
+                )}
                 <span className="text-ink-dim">
                   내 기록{" "}
                   <span className="tabular text-grass">
