@@ -188,11 +188,11 @@ export default function MemoryGame({ onGameOver, bestScore, submitting }: GamePl
                 }`}
               >
                 {faceUp ? (
-                  <span className={isMatched ? "opacity-60" : ""}>
+                  <span className={`pointer-events-none ${isMatched ? "opacity-60" : ""}`}>
                     <FruitIcon index={card.fruit} size={44} />
                   </span>
                 ) : (
-                  <span className="opacity-40">
+                  <span className="pointer-events-none opacity-40">
                     <BrainMark size={24} />
                   </span>
                 )}
