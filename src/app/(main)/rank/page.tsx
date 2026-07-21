@@ -10,6 +10,7 @@ export default function RankPage() {
   const { state } = useAppState();
   if (!state) return null;
   const meId = state.session?.id;
+  const solo = state.session?.solo ?? false;
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,7 +36,19 @@ export default function RankPage() {
               플레이 →
             </Link>
           </div>
-          {g.leaderboard.length === 0 ? (
+          {solo ? (
+            // 솔로모드 — 남의 기록은 숨기고 내 기록만.
+            g.myBest == null ? (
+              <p className="text-sm text-ink-dim">아직 기록이 없어요</p>
+            ) : (
+              <div className="flex items-center gap-2 rounded-lg bg-grass/10 px-2.5 py-1.5 text-sm">
+                <span className="flex-1 text-ink">
+                  내 기록<span className="ml-1 text-[10px] text-grass">나</span>
+                </span>
+                <span className="tabular text-gold">{formatScore(g.scoring, g.myBest)}</span>
+              </div>
+            )
+          ) : g.leaderboard.length === 0 ? (
             <p className="text-sm text-ink-dim">기록 없음</p>
           ) : (
             <ul className="flex flex-col gap-1.5">

@@ -107,6 +107,28 @@ function Leaderboard({ slug }: { slug: string }) {
   const game = state?.games.find((g) => g.slug === slug);
   if (!game) return null;
   const meId = state?.session?.id;
+  const solo = state?.session?.solo ?? false;
+
+  // 솔로모드 — 남의 기록은 숨기고 내 기록만 보여준다.
+  if (solo) {
+    return (
+      <Card className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg text-ink">내 기록</h2>
+          <span className="text-[11px] text-ink-faint">솔로모드</span>
+        </div>
+        {game.myBest == null ? (
+          <p className="text-sm text-ink-dim">아직 기록이 없어요. 편하게 도전해보세요!</p>
+        ) : (
+          <div className="flex items-center gap-3 rounded-xl border border-grass/40 bg-grass/10 px-3 py-2 text-sm">
+            <span className="flex-1 font-display text-ink">내 최고 기록</span>
+            <span className="tabular text-gold">{formatScore(game.scoring, game.myBest)}</span>
+          </div>
+        )}
+        <p className="text-[12px] text-ink-faint">솔로모드에서는 다른 사람 기록이 보이지 않아요.</p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="flex flex-col gap-3">
