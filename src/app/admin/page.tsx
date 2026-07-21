@@ -127,6 +127,64 @@ function AdminLogin({ onDone }: { onDone: () => void }) {
   );
 }
 
+// 공지 작성 — 관리자 세션이 살아 있는 이 화면에서만 쓸 수 있다.
+function NoticeForm() {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    if (!title.trim() || !body.trim() || busy) return;
+    setBusy(true);
+    setErr(null);
+    setMsg(null);
+    try {
+      await postJSON("/api/board", { category: "notice", title: title.trim(), body: body.trim() });
+      setTitle("");
+      setBody("");
+      setMsg("공지를 올렸어요. 게시판 상단에 표시됩니다.");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "작성 실패");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="flex flex-col gap-3 border-gold/30">
+      <h2 className="font-display text-lg text-ink">
+        공지 작성 <span className="text-sm text-ink-faint">게시판 상단</span>
+      </h2>
+      <input
+        value={title}
+        maxLength={40}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="공지 제목"
+        className="rounded-xl border border-pitch-line bg-black/20 px-3 py-2.5 text-ink outline-none focus:border-gold"
+      />
+      <textarea
+        value={body}
+        maxLength={1000}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="공지 내용"
+        rows={4}
+        className="resize-none rounded-xl border border-pitch-line bg-black/20 px-3 py-2.5 text-sm text-ink outline-none focus:border-gold"
+      />
+      <button
+        onClick={submit}
+        disabled={!title.trim() || !body.trim() || busy}
+        className="rounded-xl bg-gold py-2.5 font-display text-pitch-base disabled:opacity-40"
+      >
+        {busy ? "올리는 중…" : "공지 올리기"}
+      </button>
+      {msg && <p className="text-center text-sm text-grass">{msg}</p>}
+      {err && <p className="text-center text-sm text-danger">{err}</p>}
+    </Card>
+  );
+}
+
 function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +218,10 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
           {error}
         </div>
       )}
+
+      {/* 공지 작성 — 게시판 상단에 뜬다. 관리자 세션은 이 화면을 벗어나면 끊기므로
+          공지는 여기서 쓴다(게시판 글쓰기에는 공지 옵션이 뜨지 않는다). */}
+      <NoticeForm />
 
       {/* 계정 관리 */}
       <Card className="flex flex-col gap-3">

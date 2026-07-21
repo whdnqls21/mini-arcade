@@ -98,7 +98,6 @@ export default function BoardPage() {
 
       {writing && (
         <WriteModal
-          isAdmin={data.isAdmin}
           onClose={() => setWriting(false)}
           onDone={async () => {
             setWriting(false);
@@ -130,15 +129,14 @@ function Header({ onWrite, canWrite }: { onWrite: () => void; canWrite: boolean 
 }
 
 function WriteModal({
-  isAdmin,
   onClose,
   onDone,
 }: {
-  isAdmin: boolean;
   onClose: () => void;
   onDone: () => void;
 }) {
-  const categories: PostCategory[] = isAdmin ? ["notice", ...SUGGESTION_CATEGORIES] : SUGGESTION_CATEGORIES;
+  // 공지는 관리자 화면에서 쓴다(관리자 세션이 게시판에선 유지되지 않음). 여기선 제안 분류만.
+  const categories = SUGGESTION_CATEGORIES;
   const [category, setCategory] = useState<PostCategory>(categories[0]);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
