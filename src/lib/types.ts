@@ -30,3 +30,22 @@ export interface Score {
   meta: Record<string, unknown> | null;
   created_at: string;
 }
+
+export type PostCategory = "notice" | "game" | "balance" | "etc";
+export type PostStatus = "reviewing" | "planned" | "done" | "declined";
+
+// 클라이언트로 내려보내는 게시글 (계정 참조 대신 이름 스냅샷/내 글 여부만 노출)
+export interface PostView {
+  id: string;
+  category: PostCategory;
+  title: string;
+  body: string;
+  authorName: string;
+  isNotice: boolean;
+  pinned: boolean;
+  status: PostStatus | null;
+  votes: number;
+  voted: boolean; // 내가 추천했는지
+  mine: boolean; // 내가 쓴 글인지(삭제 권한)
+  createdAt: string;
+}

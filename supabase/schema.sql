@@ -18,6 +18,8 @@ begin
 end;
 $$;
 
+drop table if exists public.ma_post_votes cascade;
+drop table if exists public.ma_posts cascade;
 drop table if exists public.ma_scores cascade;
 drop table if exists public.ma_games cascade;
 drop table if exists public.ma_accounts cascade;
@@ -69,11 +71,38 @@ create table public.ma_scores (
 create index ma_scores_game_idx on public.ma_scores (game_slug);
 create index ma_scores_account_idx on public.ma_scores (account_id);
 
+-- 게시판 (사용자 제안 · 관리자 공지)
+create table public.ma_posts (
+  id          uuid primary key default gen_random_uuid(),
+  account_id  uuid references public.ma_accounts(id) on delete set null, -- null = 운영자(관리자) 글
+  author_name text not null,                     -- 작성 시점 이름 스냅샷(이름 변경/삭제에 안 흔들림)
+  category    text not null default 'etc',        -- 'notice'(공지) | 'game'(게임 추천) | 'balance'(밸런스) | 'etc'(기타)
+  title       text not null,
+  body        text not null,
+  is_notice   boolean not null default false,     -- 관리자 공지 → 상단
+  pinned      boolean not null default false,     -- 관리자 고정
+  status      text,                               -- 제안 처리 상태: null | 'reviewing' | 'planned' | 'done' | 'declined'
+  created_at  timestamptz not null default now(),
+  constraint ma_posts_category_valid check (category in ('notice','game','balance','etc')),
+  constraint ma_posts_status_valid check (status is null or status in ('reviewing','planned','done','declined'))
+);
+create index ma_posts_created_idx on public.ma_posts (created_at desc);
+
+-- 추천(👍) — 계정당 글마다 한 번
+create table public.ma_post_votes (
+  post_id    uuid not null references public.ma_posts(id) on delete cascade,
+  account_id uuid not null references public.ma_accounts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (post_id, account_id)
+);
+
 -- RLS: 전부 잠금 (서버 service_role 로만 접근)
-alter table public.ma_accounts enable row level security;
-alter table public.ma_settings enable row level security;
-alter table public.ma_games    enable row level security;
-alter table public.ma_scores   enable row level security;
+alter table public.ma_accounts   enable row level security;
+alter table public.ma_settings   enable row level security;
+alter table public.ma_games      enable row level security;
+alter table public.ma_scores     enable row level security;
+alter table public.ma_posts      enable row level security;
+alter table public.ma_post_votes enable row level security;
 
 -- 시드: 첫 게임 2048 + settings 단일 행
 insert into public.ma_settings (id) values (1) on conflict (id) do nothing;
@@ -97,4 +126,9 @@ on conflict (slug) do nothing;
 --   alter table public.ma_games
 --     add column if not exists reset_at   timestamptz,
 --     add column if not exists reset_note text;
+--
+-- 운영 DB 에 게시판을 추가할 때(이 파일 전체 재실행 금지) — 위 create table 두 개를
+-- create table if not exists 로 바꿔 그대로 실행하고, 아래 RLS 도 함께 실행:
+--   alter table public.ma_posts      enable row level security;
+--   alter table public.ma_post_votes enable row level security;
 -- ────────────────────────────────────────────────────────────────────────

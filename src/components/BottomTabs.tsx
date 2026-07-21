@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/", label: "게임", icon: GameIcon },
   { href: "/rank", label: "순위", icon: RankIcon },
+  { href: "/board", label: "게시판", icon: BoardIcon },
   { href: "/me", label: "내정보", icon: MeIcon },
 ] as const;
 
@@ -49,6 +50,14 @@ function RankIcon({ active }: IconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 21V11M12 21V4M18 21v-7" />
+    </svg>
+  );
+}
+function BoardIcon({ active }: IconProps) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="3" />
+      <path d="M8 9h8M8 13h8M8 17h5" />
     </svg>
   );
 }
