@@ -3,11 +3,13 @@
 import type { ReactNode } from "react";
 
 import { Card } from "@/components/Card";
+import ForceRename from "@/components/ForceRename";
 import LoginScreen from "@/components/LoginScreen";
 import { StateProvider, useAppState } from "@/components/StateProvider";
+import { validateName } from "@/lib/name";
 
 function Gate({ children }: { children: ReactNode }) {
-  const { state, loading, error } = useAppState();
+  const { state, loading, error, refresh } = useAppState();
 
   if (loading) {
     return (
@@ -30,6 +32,12 @@ function Gate({ children }: { children: ReactNode }) {
 
   if (!state?.session) {
     return <LoginScreen />;
+  }
+
+  // 이름이 규칙에 어긋나면(예: 옛날에 만든 '.') 앱 대신 강제 개명 화면.
+  // 로그인 순간이 아니라 앱을 열 때마다 검사하므로, 세션이 살아 있어도 걸린다.
+  if (!validateName(state.session.name).ok) {
+    return <ForceRename currentName={state.session.name} onDone={refresh} />;
   }
 
   return <>{children}</>;
