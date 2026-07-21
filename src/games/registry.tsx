@@ -6,6 +6,7 @@ import { Icon2048 } from "./2048/Icon2048";
 import { AppleIcon } from "./apple/AppleIcon";
 import { DinoIcon } from "./dino/DinoIcon";
 import { MahjongIcon } from "./mahjong/MahjongIcon";
+import { MemoryIcon } from "./memory/MemoryIcon";
 import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
 
 // 수박게임은 물리 엔진(matter.js)을 쓰므로 별도 청크로 분리하고 SSR 을 끈다.
@@ -26,6 +27,9 @@ const MahjongGame = dynamic(() => import("./mahjong/MahjongGame"), { ssr: false,
 
 // 크롬 다이노도 캔버스 + rAF 라 서버에서 렌더할 것이 없다.
 const DinoGame = dynamic(() => import("./dino/DinoGame"), { ssr: false, loading: spinner });
+
+// 카드 짝맞추기는 마운트 시 카드를 섞으므로(Math.random) SSR 을 끈다.
+const MemoryGame = dynamic(() => import("./memory/MemoryGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -82,6 +86,19 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "막힘", text: "이을 수 있는 짝이 하나도 없으면 남은 패를 자동으로 다시 깝니다. 따로 할 일은 없고, 그동안에도 시간은 흘러갑니다." },
       ],
       tip: "가장자리 패부터 걷어내면 안쪽 길이 열립니다. 눈에 보이는 짝을 아무거나 지우기보다, 여러 겹 쌓인 줄을 먼저 뚫는 편이 빠릅니다.",
+    },
+  },
+  memory: {
+    Play: MemoryGame,
+    Icon: MemoryIcon,
+    info: {
+      rows: [
+        { label: "목표", text: "카드를 뒤집어 같은 과일 짝을 모두 맞추세요." },
+        { label: "조작", text: "카드를 탭해 뒤집습니다. 두 장이 같으면 그대로, 다르면 다시 덮입니다." },
+        { label: "기록", text: "10쌍을 모두 맞추는 데 걸린 시간이 기록입니다. 짧을수록 상위!" },
+        { label: "팁", text: "다른 카드를 뒤집을 때 위치를 기억해두면 나중에 한 번에 맞출 수 있어요." },
+      ],
+      tip: "처음 몇 장은 어차피 모르니 빠르게 넘기고, 위치가 쌓이면 확실한 짝부터 지우세요.",
     },
   },
   dino: {
