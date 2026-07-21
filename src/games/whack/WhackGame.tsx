@@ -7,9 +7,9 @@ import { BadMoleIcon, MoleIcon } from "@/games/whack/MoleArt";
 import type { GamePlayProps } from "@/games/types";
 import { semitone, sequence, thud, tone } from "@/games/sound";
 
-const COLS = 3;
-const ROWS = 4;
-const HOLES = COLS * ROWS; // 12구멍
+const COLS = 4;
+const ROWS = 5;
+const HOLES = COLS * ROWS; // 20구멍
 const GAME_MS = 30000; // 30초 승부
 const VARIANTS = 3; // 좋은 두더지 털색 변주 수(MoleArt 의 FUR 길이)
 
@@ -89,7 +89,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
       // 난이도 곡선: 후반일수록 짧게 보이고(반응 속도), 여러 개가 동시에(주의 분산) 뜬다.
       const life = 900 - 430 * r; // 등장 유지 시간(ms): 900 → 470
       const badP = 0.2 + 0.16 * r; // 나쁜 두더지 비율: 0.20 → 0.36
-      const targetActive = 1 + Math.round(r * 4); // 동시 등장 목표: 1 → 5
+      const targetActive = 2 + Math.round(r * 4); // 동시 등장 목표: 2 → 6 (20구멍이라 조금 넉넉히)
       const spawnGate = 0.5 + 0.5 * r; // 목표까지 채우는 속도(초반은 천천히): 0.5 → 1.0
 
       const next = molesRef.current.map((m) => (m && now >= m.expire ? null : m));
@@ -199,10 +199,14 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
               {m && (
                 <span
                   key={m.id}
-                  className="relative"
+                  className="pointer-events-none relative aspect-square w-[82%]"
                   style={{ animation: "whack-pop 150ms ease-out" }}
                 >
-                  {m.kind === "good" ? <MoleIcon variant={m.variant} size={40} /> : <BadMoleIcon size={40} />}
+                  {m.kind === "good" ? (
+                    <MoleIcon variant={m.variant} size="100%" />
+                  ) : (
+                    <BadMoleIcon size="100%" />
+                  )}
                 </span>
               )}
               {flash === i && <span className="absolute inset-0 rounded-2xl bg-danger/40" />}

@@ -12,7 +12,7 @@ const FUR = [
   { body: "#a5754a", face: "#bd9166" },
 ];
 
-export function MoleIcon({ size = 40, variant = 0 }: { size?: number; variant?: number }) {
+export function MoleIcon({ size = 40, variant = 0 }: { size?: number | string; variant?: number }) {
   const c = FUR[variant % FUR.length];
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
@@ -53,7 +53,7 @@ export function MoleIcon({ size = 40, variant = 0 }: { size?: number; variant?: 
   );
 }
 
-export function BadMoleIcon({ size = 40 }: { size?: number }) {
+export function BadMoleIcon({ size = 40 }: { size?: number | string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
       {/* 앞발 + 날카로운 발톱 */}
