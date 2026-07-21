@@ -59,7 +59,13 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
   }, []);
 
   // 제한 시간이 있는 게임이라 판을 본 순간부터 재면 불공평하다. 시작을 누른 시점부터 잰다.
+  // 또한 시작할 때 판을 새로 깐다 — 시작 전 블러 너머로 유리한 판을 엿보고 '새 게임'을
+  // 반복해 고르는 어뷰징을 막는다.
   const begin = useCallback(() => {
+    setBoard(newBoard());
+    setDrag(null);
+    setHint(null);
+    lastTickSec.current = 0;
     endAtRef.current = performance.now() + TIME_LIMIT_MS;
     setLeftMs(TIME_LIMIT_MS);
     setStarted(true);
@@ -265,6 +271,9 @@ export default function AppleGame({ onGameOver, bestScore, submitting }: GamePla
           style={{ aspectRatio: `${W} / ${H}` }}
           className="w-full touch-none select-none rounded-xl bg-black/25"
         />
+
+        {/* 시작 전엔 판을 불투명하게 가린다 — 블러 너머로 배치를 엿보고 고르는 걸 막는다. */}
+        {!started && !over && <div className="absolute inset-0 z-10 rounded-xl bg-pitch-base" />}
 
         {!started && !over && (
           <StartGate

@@ -53,11 +53,17 @@ export default function MahjongGame({ onGameOver, submitting }: GamePlayProps) {
   }, []);
 
   // 시간 기록 게임이라 판을 본 순간부터 재면 불공평하다. 시작을 누른 시점부터 잰다.
+  // 또한 시작할 때 판을 새로 깐다 — 시작 전 블러 너머로 유리한 배치를 엿보고 '새 게임'을
+  // 반복해 고르는 어뷰징을 막는다(무엇을 고르든 시작 순간 새 무작위 판으로 바뀐다).
   const begin = useCallback(() => {
+    setBoard(newBoard());
+    pick(null);
+    setPath(null);
+    setShuffled(false);
     startRef.current = performance.now();
     setElapsed(0);
     setStarted(true);
-  }, []);
+  }, [pick]);
 
   const reset = useCallback(() => {
     setBoard(newBoard());
@@ -266,6 +272,9 @@ export default function MahjongGame({ onGameOver, submitting }: GamePlayProps) {
             />
           </svg>
         )}
+
+        {/* 시작 전엔 판을 불투명하게 가린다 — 블러 너머로 배치를 엿보고 고르는 걸 막는다. */}
+        {!started && !done && <div className="absolute inset-0 z-10 rounded-xl bg-pitch-base" />}
 
         {!started && !done && (
           <StartGate
