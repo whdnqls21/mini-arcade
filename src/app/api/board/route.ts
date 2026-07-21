@@ -6,7 +6,7 @@ import type { PostCategory, PostView } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const CATEGORIES: PostCategory[] = ["notice", "game", "balance", "etc"];
+const CATEGORIES: PostCategory[] = ["notice", "game", "balance", "bug", "etc"];
 
 interface PostRow {
   id: string;

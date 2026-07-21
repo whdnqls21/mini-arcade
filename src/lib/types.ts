@@ -32,7 +32,7 @@ export interface Score {
   created_at: string;
 }
 
-export type PostCategory = "notice" | "game" | "balance" | "etc";
+export type PostCategory = "notice" | "game" | "balance" | "bug" | "etc";
 export type PostStatus = "reviewing" | "planned" | "done" | "declined";
 
 // 클라이언트로 내려보내는 게시글 (계정 참조 대신 이름 스냅샷/내 글 여부만 노출)

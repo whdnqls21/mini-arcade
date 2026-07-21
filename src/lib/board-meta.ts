@@ -5,11 +5,12 @@ export const CATEGORY_LABEL: Record<PostCategory, string> = {
   notice: "공지",
   game: "게임 추천",
   balance: "밸런스 제안",
+  bug: "오류제보",
   etc: "기타",
 };
 
 // 사용자가 고를 수 있는 제안 분류(공지 제외).
-export const SUGGESTION_CATEGORIES: PostCategory[] = ["game", "balance", "etc"];
+export const SUGGESTION_CATEGORIES: PostCategory[] = ["game", "balance", "bug", "etc"];
 
 export const STATUS_LABEL: Record<PostStatus, string> = {
   reviewing: "검토중",
