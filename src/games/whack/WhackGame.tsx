@@ -96,9 +96,9 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
       }
       const r = elapsed / GAME_MS; // 0 → 1
       // 난이도 곡선: 후반일수록 짧게 보이고(반응 속도), 여러 개가 동시에(주의 분산) 뜬다.
-      const life = 900 - 430 * r; // 등장 유지 시간(ms): 900 → 470
-      const badP = 0.2 + 0.16 * r; // 나쁜 두더지 비율: 0.20 → 0.36
-      const targetActive = 2 + Math.round(r * 4); // 동시 등장 목표: 2 → 6 (20구멍이라 조금 넉넉히)
+      const life = 900 - 350 * r; // 등장 유지 시간(ms): 900 → 550 (후반 반응 시간 여유)
+      const badP = 0.18 + 0.1 * r; // 나쁜 두더지 비율: 0.18 → 0.28 (후반 폭탄 완화)
+      const targetActive = 2 + Math.round(r * 3); // 동시 등장 목표: 2 → 5 (후반 주의 분산 완화)
       const spawnGate = 0.5 + 0.5 * r; // 목표까지 채우는 속도(초반은 천천히): 0.5 → 1.0
 
       const next = molesRef.current.map((m) => (m && now >= m.expire ? null : m));
