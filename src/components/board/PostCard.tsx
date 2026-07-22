@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Card } from "@/components/Card";
 import { CATEGORY_LABEL, STATUS_LABEL, STATUS_STYLE } from "@/lib/board-meta";
@@ -182,28 +182,38 @@ function CommentInput({
   onSubmit: (body: string) => Promise<void> | void;
 }) {
   const [val, setVal] = useState("");
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // 내용에 맞춰 높이 자동 조절(최대 120px).
+  const grow = () => {
+    const t = taRef.current;
+    if (!t) return;
+    t.style.height = "auto";
+    t.style.height = `${Math.min(t.scrollHeight, 120)}px`;
+  };
 
   const send = async () => {
     const text = val.trim();
     if (!text || busy) return;
     await onSubmit(text);
     setVal(""); // 성공 후 입력창 비우기(reload 되어도 유지되는 로컬 상태라 직접 비운다)
+    if (taRef.current) taRef.current.style.height = "auto";
   };
 
   return (
-    <div className="flex gap-2">
-      <input
+    <div className="flex items-end gap-2">
+      {/* textarea 라 Enter 로 줄바꿈된다. 제출은 등록 버튼. */}
+      <textarea
+        ref={taRef}
         value={val}
         maxLength={500}
-        onChange={(e) => setVal(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            send();
-          }
+        rows={1}
+        onChange={(e) => {
+          setVal(e.target.value);
+          grow();
         }}
         placeholder="댓글 달기…"
-        className="min-w-0 flex-1 rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink outline-none focus:border-grass"
+        className="min-w-0 flex-1 resize-none rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm leading-relaxed text-ink outline-none focus:border-grass"
       />
       <button
         onClick={send}
