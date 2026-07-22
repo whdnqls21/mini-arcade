@@ -35,6 +35,15 @@ export interface Score {
 export type PostCategory = "notice" | "game" | "balance" | "bug" | "etc";
 export type PostStatus = "reviewing" | "planned" | "done" | "declined";
 
+// 클라이언트로 내려보내는 댓글
+export interface CommentView {
+  id: string;
+  authorName: string;
+  body: string;
+  mine: boolean; // 내가 쓴 댓글인지(삭제 권한)
+  createdAt: string;
+}
+
 // 클라이언트로 내려보내는 게시글 (계정 참조 대신 이름 스냅샷/내 글 여부만 노출)
 export interface PostView {
   id: string;
@@ -48,5 +57,6 @@ export interface PostView {
   votes: number;
   voted: boolean; // 내가 추천했는지
   mine: boolean; // 내가 쓴 글인지(삭제 권한)
+  comments: CommentView[];
   createdAt: string;
 }

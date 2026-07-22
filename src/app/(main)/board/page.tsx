@@ -98,6 +98,7 @@ export default function BoardPage() {
               open={openId === p.id}
               onToggle={() => setOpenId((cur) => (cur === p.id ? null : p.id))}
               reload={load}
+              sessionId={data.session?.id ?? null}
             />
           ))}
         </div>

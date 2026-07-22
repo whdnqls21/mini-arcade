@@ -15,11 +15,13 @@ export function PostCard({
   open,
   onToggle,
   reload,
+  sessionId,
 }: {
   post: PostView;
   open: boolean;
   onToggle: () => void;
   reload: () => Promise<void> | void;
+  sessionId: string | null;
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -61,6 +63,9 @@ export function PostCard({
           {open ? post.title : <span className="line-clamp-1">{post.title}</span>}
         </h2>
 
+        {post.comments.length > 0 && (
+          <span className="shrink-0 text-[11px] text-ink-faint">💬 {post.comments.length}</span>
+        )}
         <span className="shrink-0 text-[11px] text-ink-faint">{timeAgo(post.createdAt)}</span>
         <svg
           width="16"
@@ -118,8 +123,95 @@ export function PostCard({
               )}
             </div>
           </div>
+
+          {/* 댓글 */}
+          <div className="mt-1 flex flex-col gap-2 border-t border-pitch-line pt-3">
+            {post.comments.length > 0 && (
+              <ul className="flex flex-col gap-2">
+                {post.comments.map((c) => (
+                  <li key={c.id} className="rounded-lg bg-black/15 px-3 py-2">
+                    <div className="flex items-center gap-2 text-[11px] text-ink-faint">
+                      <span className="text-ink-dim">{c.authorName}</span>
+                      <span>{timeAgo(c.createdAt)}</span>
+                      {c.mine && (
+                        <button
+                          disabled={busy}
+                          onClick={() => {
+                            if (confirm("이 댓글을 삭제할까요?")) {
+                              run(() =>
+                                postJSON("/api/board/comment", { action: "delete", commentId: c.id })
+                              );
+                            }
+                          }}
+                          className="ml-auto text-danger disabled:opacity-40"
+                        >
+                          삭제
+                        </button>
+                      )}
+                    </div>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-dim">
+                      {c.body}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {sessionId ? (
+              <CommentInput
+                busy={busy}
+                onSubmit={(text) =>
+                  run(() => postJSON("/api/board/comment", { action: "add", postId: post.id, body: text }))
+                }
+              />
+            ) : (
+              <p className="text-[11px] text-ink-faint">댓글을 쓰려면 로그인하세요.</p>
+            )}
+          </div>
         </>
       )}
     </Card>
+  );
+}
+
+function CommentInput({
+  busy,
+  onSubmit,
+}: {
+  busy: boolean;
+  onSubmit: (body: string) => Promise<void> | void;
+}) {
+  const [val, setVal] = useState("");
+
+  const send = async () => {
+    const text = val.trim();
+    if (!text || busy) return;
+    await onSubmit(text);
+    setVal(""); // 성공 후 입력창 비우기(reload 되어도 유지되는 로컬 상태라 직접 비운다)
+  };
+
+  return (
+    <div className="flex gap-2">
+      <input
+        value={val}
+        maxLength={500}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            send();
+          }
+        }}
+        placeholder="댓글 달기…"
+        className="min-w-0 flex-1 rounded-lg border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink outline-none focus:border-grass"
+      />
+      <button
+        onClick={send}
+        disabled={!val.trim() || busy}
+        className="shrink-0 rounded-lg bg-grass px-3 py-2 text-sm font-medium text-pitch-base disabled:opacity-40"
+      >
+        등록
+      </button>
+    </div>
   );
 }

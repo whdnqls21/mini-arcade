@@ -97,13 +97,25 @@ create table public.ma_post_votes (
   primary key (post_id, account_id)
 );
 
+-- 댓글 (글마다 여러 개. 작성자 이름은 스냅샷으로 저장해 이름 변경/삭제에 안 흔들림)
+create table public.ma_post_comments (
+  id          uuid primary key default gen_random_uuid(),
+  post_id     uuid not null references public.ma_posts(id) on delete cascade,
+  account_id  uuid references public.ma_accounts(id) on delete set null, -- null = 운영자
+  author_name text not null,
+  body        text not null,
+  created_at  timestamptz not null default now()
+);
+create index ma_post_comments_post_idx on public.ma_post_comments (post_id, created_at);
+
 -- RLS: 전부 잠금 (서버 service_role 로만 접근)
-alter table public.ma_accounts   enable row level security;
-alter table public.ma_settings   enable row level security;
-alter table public.ma_games      enable row level security;
-alter table public.ma_scores     enable row level security;
-alter table public.ma_posts      enable row level security;
-alter table public.ma_post_votes enable row level security;
+alter table public.ma_accounts      enable row level security;
+alter table public.ma_settings      enable row level security;
+alter table public.ma_games         enable row level security;
+alter table public.ma_scores        enable row level security;
+alter table public.ma_posts         enable row level security;
+alter table public.ma_post_votes    enable row level security;
+alter table public.ma_post_comments enable row level security;
 
 -- 시드: 첫 게임 2048 + settings 단일 행
 insert into public.ma_settings (id) values (1) on conflict (id) do nothing;
@@ -139,6 +151,18 @@ on conflict (slug) do nothing;
 --   alter table public.ma_posts drop constraint if exists ma_posts_category_valid;
 --   alter table public.ma_posts add constraint ma_posts_category_valid
 --     check (category in ('notice','game','balance','bug','etc'));
+--
+-- 게시판에 댓글을 추가할 때(이 파일 전체 재실행 금지) — 아래 한 벌만 실행:
+--   create table if not exists public.ma_post_comments (
+--     id          uuid primary key default gen_random_uuid(),
+--     post_id     uuid not null references public.ma_posts(id) on delete cascade,
+--     account_id  uuid references public.ma_accounts(id) on delete set null,
+--     author_name text not null,
+--     body        text not null,
+--     created_at  timestamptz not null default now()
+--   );
+--   create index if not exists ma_post_comments_post_idx on public.ma_post_comments (post_id, created_at);
+--   alter table public.ma_post_comments enable row level security;
 --
 -- 운영 DB 에 게시판을 추가할 때(이 파일 전체 재실행 금지) — 위 create table 두 개를
 -- create table if not exists 로 바꿔 그대로 실행하고, 아래 RLS 도 함께 실행:
