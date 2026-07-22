@@ -17,9 +17,9 @@ export const JUMP_V = 347; // units/s
 export const AIRTIME = (2 * JUMP_V) / GRAVITY;
 export const JUMP_PEAK = (JUMP_V * JUMP_V) / (2 * GRAVITY);
 
-export const SPEED_START = 180; // units/s
-export const SPEED_MAX = 420;
-export const SPEED_RAMP = 12; // 초당 증가
+export const SPEED_START = 190; // units/s
+export const SPEED_MAX = 480;
+export const SPEED_RAMP = 17; // 초당 증가
 
 // 충돌 판정은 보이는 것보다 조금 너그럽게 준다.
 const FORGIVE = 2.5;
@@ -145,7 +145,7 @@ export function step(s: DinoState, dtSec: number, rnd: () => number = Math.rando
   if (s.gapLeft <= 0) {
     s.obstacles.push(makeObstacle(rnd, s.speed));
     const base = minGap(s.speed);
-    s.gapLeft = base + rnd() * base * 0.7;
+    s.gapLeft = base + rnd() * base * 0.4;
   }
 
   // 충돌 — 세로로 [발, 발+높이] 와 장애물 [base, base+h] 가 겹치는지

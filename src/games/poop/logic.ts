@@ -10,7 +10,7 @@ export const GROUND = H - 10; // 발이 닿는 y
 export const POOP_R = 13;
 
 const MOVE_SPEED = 250; // 좌우 이동 속도(px/s)
-const RAMP_SEC = 50; // 이 시간에 걸쳐 최고 난이도까지 오른다
+const RAMP_SEC = 30; // 이 시간에 걸쳐 최고 난이도까지 오른다
 
 export interface Poop {
   x: number;
@@ -50,8 +50,8 @@ export function step(s: PoopState, dt: number): void {
 
   // 난이도 곡선(0→1)
   const r = Math.min(s.elapsed / RAMP_SEC, 1);
-  const fallSpeed = 190 + 300 * r; // 190 → 490 px/s
-  const interval = 0.75 - 0.5 * r; // 0.75 → 0.25 s
+  const fallSpeed = 270 + 400 * r; // 270 → 670 px/s
+  const interval = 0.42 - 0.3 * r; // 0.42 → 0.12 s (후반 촘촘하게)
 
   // 똥 생성
   s.spawnTimer -= dt;
