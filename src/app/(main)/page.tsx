@@ -9,14 +9,15 @@ import { GAME_REGISTRY } from "@/games/registry";
 import { formatScore } from "@/lib/format";
 import type { GameTag } from "@/games/types";
 
-// 상단 태그 필터 칩(순서 고정). 여러 개를 켜면 그 태그를 모두 가진 게임만 보인다(AND).
-const GAME_TAGS: { key: GameTag; label: string }[] = [
-  { key: "merge", label: "합치기" },
-  { key: "clear", label: "시간클리어" },
-  { key: "reaction", label: "반응" },
-  { key: "match", label: "기억매칭" },
-  { key: "focus", label: "집중" },
-];
+// 태그 한글 라벨 + 필터 칩 순서. 여러 개를 켜면 그 태그를 모두 가진 게임만 보인다(AND).
+const TAG_LABEL: Record<GameTag, string> = {
+  merge: "합치기",
+  clear: "시간클리어",
+  reaction: "반응",
+  match: "기억매칭",
+  focus: "집중",
+};
+const TAG_ORDER: GameTag[] = ["merge", "clear", "reaction", "match", "focus"];
 
 export default function GamesPage() {
   const { state } = useAppState();
@@ -59,17 +60,17 @@ export default function GamesPage() {
         >
           전체
         </button>
-        {GAME_TAGS.map((t) => (
+        {TAG_ORDER.map((t) => (
           <button
-            key={t.key}
-            onClick={() => toggle(t.key)}
+            key={t}
+            onClick={() => toggle(t)}
             className={`rounded-full px-3 py-1 text-xs transition-colors ${
-              sel.has(t.key)
+              sel.has(t)
                 ? "bg-grass/15 text-grass"
                 : "border border-pitch-line text-ink-faint hover:text-ink-dim"
             }`}
           >
-            {t.label}
+            #{TAG_LABEL[t]}
           </button>
         ))}
       </div>
@@ -99,6 +100,16 @@ export default function GamesPage() {
                   {g.description && (
                     <p className="mt-0.5 text-xs text-ink-faint">{g.description}</p>
                   )}
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {(GAME_REGISTRY[g.slug]?.tags ?? []).map((t) => (
+                      <span
+                        key={t}
+                        className="rounded-full bg-pitch-line/60 px-1.5 py-0.5 text-[10px] text-ink-faint"
+                      >
+                        #{TAG_LABEL[t]}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <span className="shrink-0 rounded-lg bg-grass/15 px-3 py-1.5 text-sm font-medium text-grass">
                   플레이 →
