@@ -16,11 +16,23 @@ interface BoardData {
 }
 
 type Sort = "recent" | "top";
+type CatFilter = PostCategory | "all";
+
+// 상단 분류 필터 칩(순서 고정).
+const CAT_FILTERS: { key: CatFilter; label: string }[] = [
+  { key: "all", label: "전체" },
+  { key: "notice", label: CATEGORY_LABEL.notice },
+  { key: "game", label: CATEGORY_LABEL.game },
+  { key: "balance", label: CATEGORY_LABEL.balance },
+  { key: "bug", label: CATEGORY_LABEL.bug },
+  { key: "etc", label: CATEGORY_LABEL.etc },
+];
 
 export default function BoardPage() {
   const [data, setData] = useState<BoardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>("recent");
+  const [cat, setCat] = useState<CatFilter>("all");
   const [writing, setWriting] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -55,9 +67,10 @@ export default function BoardPage() {
     );
   }
 
-  // 공지·고정 글이 항상 위. 그 아래는 정렬 선택(최신순/추천순).
-  const notices = data.posts.filter((p) => p.isNotice || p.pinned);
-  const rest = data.posts.filter((p) => !p.isNotice && !p.pinned);
+  // 분류 필터 먼저 적용. 그다음 공지·고정 글이 위, 나머지는 정렬(최신순/추천순).
+  const visible = cat === "all" ? data.posts : data.posts.filter((p) => p.category === cat);
+  const notices = visible.filter((p) => p.isNotice || p.pinned);
+  const rest = visible.filter((p) => !p.isNotice && !p.pinned);
   rest.sort((a, b) =>
     sort === "top"
       ? b.votes - a.votes || +new Date(b.createdAt) - +new Date(a.createdAt)
@@ -70,6 +83,23 @@ export default function BoardPage() {
       <Header onWrite={() => setWriting(true)} canWrite={!!data.session || data.isAdmin} />
 
       {error && <p className="text-center text-sm text-danger">{error}</p>}
+
+      {/* 분류 필터 */}
+      <div className="flex flex-wrap gap-1.5">
+        {CAT_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setCat(f.key)}
+            className={`rounded-full px-3 py-1 text-xs transition-colors ${
+              cat === f.key
+                ? "bg-grass/15 text-grass"
+                : "border border-pitch-line text-ink-faint hover:text-ink-dim"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
       <div className="flex gap-1.5">
         {(["recent", "top"] as const).map((s) => (
@@ -87,7 +117,7 @@ export default function BoardPage() {
 
       {ordered.length === 0 ? (
         <Card className="py-10 text-center text-sm text-ink-dim">
-          아직 글이 없어요. 첫 제안을 남겨보세요!
+          {cat === "all" ? "아직 글이 없어요. 첫 제안을 남겨보세요!" : "이 분류에 아직 글이 없어요."}
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
