@@ -163,7 +163,7 @@ export default function MemoryGame({ onGameOver, bestScore, submitting }: GamePl
 
       <div className="relative mx-auto w-full max-w-[22rem]">
         <div
-          className="grid gap-2 rounded-xl bg-black/25 p-2"
+          className="grid touch-none select-none gap-2 rounded-xl bg-black/25 p-2"
           style={{
             aspectRatio: "320 / 440",
             gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
@@ -179,7 +179,7 @@ export default function MemoryGame({ onGameOver, bestScore, submitting }: GamePl
                 onClick={() => tap(i)}
                 disabled={done}
                 aria-label={faceUp ? "뒤집힌 카드" : "덮인 카드"}
-                className={`relative flex items-center justify-center overflow-hidden rounded-lg border transition-colors ${
+                className={`relative flex touch-none items-center justify-center overflow-hidden rounded-lg border transition-colors ${
                   isMatched
                     ? "border-grass/50 bg-grass/10"
                     : faceUp

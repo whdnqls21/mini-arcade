@@ -211,7 +211,7 @@ function CommandButton({
       onPointerLeave={onRelease}
       onPointerCancel={onRelease}
       onContextMenu={(e) => e.preventDefault()}
-      className="flex flex-1 select-none items-center justify-center gap-2 rounded-xl border border-pitch-line bg-black/25 py-3.5 font-display text-lg text-ink-dim transition-colors active:border-grass/50 active:bg-grass/10 active:text-grass"
+      className="flex flex-1 touch-none select-none items-center justify-center gap-2 rounded-xl border border-pitch-line bg-black/25 py-3.5 font-display text-lg text-ink-dim transition-colors active:border-grass/50 active:bg-grass/10 active:text-grass"
     >
       <span className="text-base">{icon}</span>
       {label}
