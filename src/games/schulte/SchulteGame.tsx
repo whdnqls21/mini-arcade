@@ -12,22 +12,24 @@ const GRID = COLS * ROWS; // 한 번에 보이는 25칸
 const MAX = 50; // 1~50
 const WRONG_FLASH_MS = 260;
 
-// 처음엔 1~25 를 섞어 깐다. 낮은 수를 누르면 그 칸이 +25 숫자로 바뀌어(≤50) 25칸이 계속 유지되고,
-// 후반(26~50)을 누르면 칸이 비면서 1→50 까지 진행한다.
-function shuffled(): number[] {
-  const arr = Array.from({ length: GRID }, (_, i) => i + 1);
+// 처음엔 1~25 를 섞어 깐다. 낮은 수를 누르면 그 칸에 "아직 안 나온 큰 수(26~50)"가 랜덤으로
+// 하나 등장해 25칸이 계속 유지되고, 후반(26~50)을 누르면 칸이 비면서 1→50 까지 진행한다.
+// (25개를 다 누르는 동안 26~50 이 모두 올라오므로, 등장 순서는 아무래도 상관없다.)
+function shuffle<T>(arr: T[]): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
 }
+const initialCells = () => shuffle(Array.from({ length: GRID }, (_, i) => i + 1));
+const highPool = () => shuffle(Array.from({ length: MAX - GRID }, (_, i) => GRID + 1 + i)); // 26~50 섞어서
 
 type Cell = number | null; // null = 빈 칸
 type Phase = "ready" | "playing" | "done";
 
 export default function SchulteGame({ onGameOver, bestScore, submitting }: GamePlayProps) {
-  const [cells, setCells] = useState<Cell[]>(() => shuffled());
+  const [cells, setCells] = useState<Cell[]>(() => initialCells());
   const [next, setNext] = useState(1); // 다음에 눌러야 할 숫자 (1~50)
   const [phase, setPhase] = useState<Phase>("ready");
   const [elapsed, setElapsed] = useState(0);
@@ -36,6 +38,7 @@ export default function SchulteGame({ onGameOver, bestScore, submitting }: GameP
   const startRef = useRef(0);
   const reported = useRef(false);
   const wrongTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const poolRef = useRef<number[]>([]); // 아직 안 나온 큰 수(26~50), 누를 때마다 랜덤으로 하나씩 등장
 
   useEffect(() => {
     if (phase !== "playing") return;
@@ -51,7 +54,8 @@ export default function SchulteGame({ onGameOver, bestScore, submitting }: GameP
 
   // 시작할 때 새로 섞는다 — 시작 전 배치를 미리 외우거나 '새 게임'으로 쉬운 판을 고르는 걸 막는다.
   const start = useCallback(() => {
-    setCells(shuffled());
+    setCells(initialCells());
+    poolRef.current = highPool();
     setNext(1);
     setWrong(null);
     setElapsed(0);
@@ -91,8 +95,8 @@ export default function SchulteGame({ onGameOver, bestScore, submitting }: GameP
 
     if (v === next) {
       tone({ freq: semitone(440, Math.min(next, 24)), type: "triangle", gain: 0.13, dur: 0.09 });
-      // 이 칸을 +25 숫자로 교체(≤50), 넘으면 빈 칸으로.
-      const replacement = next + GRID <= MAX ? next + GRID : null;
+      // 이 칸에 아직 안 나온 큰 수를 랜덤으로 하나 띄운다(다 나왔으면 빈 칸).
+      const replacement = poolRef.current.length ? (poolRef.current.pop() as number) : null;
       setCells((prev) => {
         const nx = prev.slice();
         nx[i] = replacement;
@@ -168,7 +172,7 @@ export default function SchulteGame({ onGameOver, bestScore, submitting }: GameP
         {phase === "ready" && (
           <StartGate
             title="1 to 50"
-            lines={["1부터 50까지 순서대로 빠르게 탭!", "누른 칸은 25 큰 숫자로 바뀝니다.", "시작을 누르면 시간이 흐릅니다."]}
+            lines={["1부터 50까지 순서대로 빠르게 탭!", "누른 칸엔 새로운 숫자가 나타납니다.", "시작을 누르면 시간이 흐릅니다."]}
             onStart={start}
           />
         )}
