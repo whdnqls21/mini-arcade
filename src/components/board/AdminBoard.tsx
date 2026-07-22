@@ -127,9 +127,84 @@ export function AdminBoard() {
                 삭제
               </button>
             </div>
+
+            {/* 댓글 — 운영자로 답변 달기 + 아무 댓글이나 삭제 */}
+            <div className="flex flex-col gap-1.5 border-t border-pitch-line pt-2">
+              {p.comments.map((c) => (
+                <div key={c.id} className="flex items-start gap-2 text-[11px]">
+                  <span className="shrink-0 text-ink-dim">{c.authorName}</span>
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-ink-dim">
+                    {c.body}
+                  </span>
+                  <span className="shrink-0 text-ink-faint">{timeAgo(c.createdAt)}</span>
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      act(p.id, () =>
+                        postJSON("/api/board/comment", { action: "delete", commentId: c.id })
+                      )
+                    }
+                    className="shrink-0 text-danger disabled:opacity-40"
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+              <AdminCommentInput
+                busy={busy}
+                onAdd={(text) =>
+                  act(p.id, () =>
+                    postJSON("/api/board/comment", { action: "add", postId: p.id, body: text })
+                  )
+                }
+              />
+            </div>
           </div>
         );
       })}
     </Card>
+  );
+}
+
+// 운영자 댓글 입력 — 관리자 화면에서 달면 '운영자'로 등록된다.
+function AdminCommentInput({
+  busy,
+  onAdd,
+}: {
+  busy: boolean;
+  onAdd: (body: string) => Promise<void> | void;
+}) {
+  const [val, setVal] = useState("");
+
+  const send = async () => {
+    const text = val.trim();
+    if (!text || busy) return;
+    await onAdd(text);
+    setVal("");
+  };
+
+  return (
+    <div className="flex gap-1.5">
+      <input
+        value={val}
+        maxLength={500}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            send();
+          }
+        }}
+        placeholder="운영자로 답변 달기…"
+        className="min-w-0 flex-1 rounded-lg border border-pitch-line bg-black/20 px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-grass"
+      />
+      <button
+        onClick={send}
+        disabled={!val.trim() || busy}
+        className="shrink-0 rounded-lg bg-grass px-2.5 py-1.5 text-[11px] font-medium text-pitch-base disabled:opacity-40"
+      >
+        등록
+      </button>
+    </div>
   );
 }

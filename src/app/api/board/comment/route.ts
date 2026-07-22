@@ -13,10 +13,12 @@ export async function POST(req: NextRequest) {
   const action = body?.action;
   const sb = createServiceClient();
 
-  // ── 작성 (로그인 사용자) ──────────────────────────────────────────
+  // ── 작성 (로그인 사용자 또는 관리자) ─────────────────────────────
   if (action === "add") {
-    const session = await getAccountSession();
-    if (!session) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+    const [session, admin] = await Promise.all([getAccountSession(), isAdmin()]);
+    if (!session && !admin) {
+      return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+    }
 
     const postId = body?.postId;
     const text = typeof body?.body === "string" ? body.body.trim() : "";
@@ -31,10 +33,11 @@ export async function POST(req: NextRequest) {
     const { data: post } = await sb.from("ma_posts").select("id").eq("id", postId).maybeSingle();
     if (!post) return NextResponse.json({ error: "글을 찾을 수 없습니다." }, { status: 404 });
 
+    // 관리자 화면(관리자 세션)에서 달면 '운영자', 일반 사용자는 본인 이름 스냅샷.
     const { error } = await sb.from("ma_post_comments").insert({
       post_id: postId,
-      account_id: session.id,
-      author_name: session.name, // 이름 스냅샷
+      account_id: admin ? null : session!.id,
+      author_name: admin ? "운영자" : session!.name,
       body: text,
     });
     if (error) {
