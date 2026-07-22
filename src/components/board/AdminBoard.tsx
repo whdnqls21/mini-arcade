@@ -73,7 +73,10 @@ export function AdminBoard() {
               </span>
             </div>
 
-            <p className="text-sm text-ink">{p.title}</p>
+            <p className="font-display text-sm text-ink">{p.title}</p>
+            <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink-dim">
+              {p.body}
+            </p>
 
             <div className="flex flex-wrap items-center gap-1.5">
               {/* 상태 라벨은 제안 글에만 */}
