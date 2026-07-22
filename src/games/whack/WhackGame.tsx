@@ -28,14 +28,15 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
   const [score, setScore] = useState(0);
   const [phase, setPhase] = useState<Phase>("ready");
   const [remain, setRemain] = useState(GAME_MS);
-  const [flash, setFlash] = useState<number | null>(null); // 나쁜 두더지 눌렀을 때 붉은 표시
+  const [fx, setFx] = useState<{ id: number; i: number; kind: Kind }[]>([]); // 타격 이펙트(링·점수 팝)
 
   const molesRef = useRef<(Mole | null)[]>(Array(HOLES).fill(null));
   const scoreRef = useRef(0);
   const startRef = useRef(0);
   const idRef = useRef(0);
   const reported = useRef(false);
-  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fxId = useRef(0);
+  const fxTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const lastTickSec = useRef(0); // 초읽기 틱 중복 방지
 
   // moles 는 setInterval 콜백에서도 최신값이 필요해 ref 를 원본으로 두고 화면엔 미러링한다.
@@ -130,10 +131,23 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
   }, [phase, finish, commitMoles]);
 
   useEffect(() => {
+    const timers = fxTimers.current;
     return () => {
-      if (flashTimer.current) clearTimeout(flashTimer.current);
+      timers.forEach(clearTimeout);
     };
   }, []);
+
+  // 타격 이펙트 추가 — 링·점수 팝을 잠깐 띄우고 자동 제거. 빠른 연타에도 여러 개가 겹칠 수 있다.
+  function addFx(i: number, kind: Kind) {
+    fxId.current += 1;
+    const id = fxId.current;
+    setFx((prev) => [...prev, { id, i, kind }]);
+    const t = setTimeout(() => {
+      setFx((prev) => prev.filter((f) => f.id !== id));
+      fxTimers.current.delete(t);
+    }, 500);
+    fxTimers.current.add(t);
+  }
 
   function tap(i: number) {
     if (phase !== "playing") return;
@@ -147,13 +161,12 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
       scoreRef.current += 1;
       setScore(scoreRef.current);
       tone({ freq: semitone(660, Math.min(scoreRef.current, 12)), type: "triangle", gain: 0.14, dur: 0.1 });
+      addFx(i, "good");
     } else {
       scoreRef.current = Math.max(0, scoreRef.current - 2);
       setScore(scoreRef.current);
       thud(0.22, 0.18);
-      setFlash(i);
-      if (flashTimer.current) clearTimeout(flashTimer.current);
-      flashTimer.current = setTimeout(() => setFlash((f) => (f === i ? null : f)), 220);
+      addFx(i, "bad");
     }
   }
 
@@ -161,7 +174,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
 
   return (
     <div className="flex flex-col gap-3">
-      <style>{`@keyframes whack-pop{0%{transform:scale(.35);opacity:0}55%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}`}</style>
+      <style>{`@keyframes whack-pop{0%{transform:scale(.35);opacity:0}55%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}@keyframes whack-ring{0%{transform:scale(.5);opacity:.9}100%{transform:scale(1.15);opacity:0}}@keyframes whack-float{0%{transform:translateY(0) scale(.7);opacity:0}30%{opacity:1}100%{transform:translateY(-16px) scale(1.05);opacity:0}}@keyframes whack-badflash{0%{opacity:.6}100%{opacity:0}}@keyframes whack-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}`}</style>
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-2">
@@ -195,32 +208,39 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
             gridTemplateRows: `repeat(${ROWS}, 1fr)`,
           }}
         >
-          {moles.map((m, i) => (
-            <button
-              key={i}
-              onClick={() => tap(i)}
-              data-kind={m ? m.kind : "empty"}
-              aria-label={m ? (m.kind === "bad" ? "나쁜 두더지" : "두더지") : "빈 구멍"}
-              className="relative flex touch-none items-center justify-center overflow-hidden rounded-2xl border border-pitch-line bg-gradient-to-b from-[#0f1720] to-[#05090d] active:scale-95"
-            >
-              {/* 구멍 안쪽 그림자 */}
-              <span className="pointer-events-none absolute inset-x-2 bottom-1 h-3 rounded-full bg-black/40 blur-[2px]" />
-              {m && (
-                <span
-                  key={m.id}
-                  className="pointer-events-none relative aspect-square w-[82%]"
-                  style={{ animation: "whack-pop 150ms ease-out" }}
-                >
-                  {m.kind === "good" ? (
-                    <MoleIcon variant={m.variant} size="100%" />
-                  ) : (
-                    <BadMoleIcon size="100%" />
-                  )}
-                </span>
-              )}
-              {flash === i && <span className="absolute inset-0 rounded-2xl bg-danger/40" />}
-            </button>
-          ))}
+          {moles.map((m, i) => {
+            const holeFx = fx.filter((f) => f.i === i);
+            const badHit = holeFx.some((f) => f.kind === "bad");
+            return (
+              <button
+                key={i}
+                onClick={() => tap(i)}
+                data-kind={m ? m.kind : "empty"}
+                aria-label={m ? (m.kind === "bad" ? "나쁜 두더지" : "두더지") : "빈 구멍"}
+                style={badHit ? { animation: "whack-shake 300ms ease-in-out" } : undefined}
+                className="relative flex touch-none items-center justify-center overflow-hidden rounded-2xl border border-pitch-line bg-gradient-to-b from-[#0f1720] to-[#05090d] active:scale-95"
+              >
+                {/* 구멍 안쪽 그림자 */}
+                <span className="pointer-events-none absolute inset-x-2 bottom-1 h-3 rounded-full bg-black/40 blur-[2px]" />
+                {m && (
+                  <span
+                    key={m.id}
+                    className="pointer-events-none relative aspect-square w-[82%]"
+                    style={{ animation: "whack-pop 150ms ease-out" }}
+                  >
+                    {m.kind === "good" ? (
+                      <MoleIcon variant={m.variant} size="100%" />
+                    ) : (
+                      <BadMoleIcon size="100%" />
+                    )}
+                  </span>
+                )}
+                {holeFx.map((f) => (
+                  <HitFx key={f.id} kind={f.kind} />
+                ))}
+              </button>
+            );
+          })}
         </div>
 
         {phase === "ready" && (
@@ -242,6 +262,33 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
         )}
       </div>
     </div>
+  );
+}
+
+// 타격 이펙트 — 구멍 위에 잠깐 뜨는 충격파 링 + 점수 팝. 좋은=초록/+1, 나쁜=빨강/−2.
+function HitFx({ kind }: { kind: Kind }) {
+  const good = kind === "good";
+  return (
+    <>
+      <span
+        className={`pointer-events-none absolute inset-0 rounded-2xl border-2 ${good ? "border-grass" : "border-danger"}`}
+        style={{ animation: "whack-ring 450ms ease-out forwards" }}
+      />
+      {!good && (
+        <span
+          className="pointer-events-none absolute inset-0 rounded-2xl bg-danger/40"
+          style={{ animation: "whack-badflash 300ms ease-out forwards" }}
+        />
+      )}
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span
+          className={`font-display text-xl font-bold ${good ? "text-grass" : "text-danger"}`}
+          style={{ animation: "whack-float 500ms ease-out forwards" }}
+        >
+          {good ? "+1" : "−2"}
+        </span>
+      </span>
+    </>
   );
 }
 
