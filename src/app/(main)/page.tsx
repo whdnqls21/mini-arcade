@@ -96,19 +96,20 @@ export default function GamesPage() {
                   </span>
                 )}
                 <div className="min-w-0 flex-1">
-                  <h2 className="font-display text-xl text-ink">{g.name}</h2>
-                  {g.description && (
-                    <p className="mt-0.5 text-xs text-ink-faint">{g.description}</p>
-                  )}
-                  <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                  {/* 제목 + 태그를 한 줄에 */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <h2 className="font-display text-xl text-ink">{g.name}</h2>
                     {(GAME_REGISTRY[g.slug]?.tags ?? []).map((t) => (
                       <span key={t} className="text-[11px] font-medium text-grass/70">
                         #{TAG_LABEL[t]}
                       </span>
                     ))}
                   </div>
+                  {g.description && (
+                    <p className="mt-0.5 text-xs text-ink-faint">{g.description}</p>
+                  )}
                 </div>
-                <span className="shrink-0 rounded-lg bg-grass/15 px-3 py-1.5 text-sm font-medium text-grass">
+                <span className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-grass/15 px-4 text-sm font-medium text-grass">
                   플레이 →
                 </span>
               </div>
