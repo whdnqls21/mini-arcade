@@ -57,7 +57,7 @@ create table public.ma_games (
   reset_at    timestamptz,                       -- 마지막 기록 초기화 시각(안내용). null 이면 초기화 이력 없음
   reset_note  text,                              -- 초기화 사유(예: '밸런스 조정'). 사용자에게 보여준다
   created_at  timestamptz not null default now(),
-  constraint ma_games_scoring_valid check (scoring in ('high','low','time'))
+  constraint ma_games_scoring_valid check (scoring in ('high','low','time','htime'))
 );
 
 -- 기록 (계정 × 게임, 여러 판. 리더보드는 계정별 베스트로 계산)
@@ -128,7 +128,7 @@ insert into public.ma_games (slug, name, description, scoring, sort) values
   ('memory', '카드 짝맞추기', '같은 과일 카드를 기억해 짝을 맞추세요. 빠를수록 상위!', 'time', 5),
   ('whack', '두더지 잡기', '구멍에서 튀어나오는 두더지를 재빨리 잡으세요. 나쁜 두더지는 조심!', 'high', 6),
   ('schulte', '1 to 50', '1부터 50까지 순서대로 가장 빠르게! 집중력 게임.', 'time', 7),
-  ('poop', '똥 피하기', '떨어지는 똥을 피해 오래 버티세요! 졸라맨을 좌우로 움직여요.', 'high', 8)
+  ('poop', '똥 피하기', '떨어지는 똥을 피해 오래 버티세요! 졸라맨을 좌우로 움직여요.', 'htime', 8)
 on conflict (slug) do nothing;
 
 -- ────────────────────────────────────────────────────────────────────────
@@ -139,8 +139,15 @@ on conflict (slug) do nothing;
 --     ('memory', '카드 짝맞추기', '같은 과일 카드를 기억해 짝을 맞추세요. 빠를수록 상위!', 'time', 5),
 --     ('whack', '두더지 잡기', '구멍에서 튀어나오는 두더지를 재빨리 잡으세요. 나쁜 두더지는 조심!', 'high', 6),
 --     ('schulte', '1 to 50', '1부터 50까지 순서대로 가장 빠르게! 집중력 게임.', 'time', 7),
---     ('poop', '똥 피하기', '떨어지는 똥을 피해 오래 버티세요! 졸라맨을 좌우로 움직여요.', 'high', 8)
+--     ('poop', '똥 피하기', '떨어지는 똥을 피해 오래 버티세요! 졸라맨을 좌우로 움직여요.', 'htime', 8)
 --   on conflict (slug) do nothing;
+--
+-- 똥 피하기 기록을 초.소수2자리로 바꿀 때(scoring 을 htime 로, 저장은 ms 로):
+--   alter table public.ma_games drop constraint if exists ma_games_scoring_valid;
+--   alter table public.ma_games add constraint ma_games_scoring_valid
+--     check (scoring in ('high','low','time','htime'));
+--   update public.ma_games  set scoring = 'htime'   where slug = 'poop';
+--   update public.ma_scores set score = score * 1000 where game_slug = 'poop'; -- 기존 '초' 기록을 ms 로
 --
 -- 운영 DB 에 기록 초기화 안내 컬럼을 추가할 때(이 파일 전체 재실행 금지):
 --   alter table public.ma_games

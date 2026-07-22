@@ -1,6 +1,11 @@
 // Supabase 테이블 행 타입 (schema.sql, prefix ma_).
 
-export type Scoring = "high" | "low" | "time"; // 정렬 방향
+// 정렬/표시 방식. time·htime 은 ms 로 저장하고 '초'로 표시.
+//  high  = 높을수록 상위(숫자 그대로)
+//  low   = 낮을수록 상위
+//  time  = 짧을수록 상위(완주 시간)
+//  htime = 길수록 상위(버틴 시간) — 초 표시
+export type Scoring = "high" | "low" | "time" | "htime";
 
 export interface Account {
   id: string;

@@ -24,9 +24,11 @@ export interface AppState {
   games: GameView[];
 }
 
+// high·htime 은 클수록 상위, time·low 는 작을수록 상위.
+const isHigh = (scoring: Scoring) => scoring === "high" || scoring === "htime";
 const better = (scoring: Scoring, a: number, b: number) =>
-  scoring === "high" ? Math.max(a, b) : Math.min(a, b);
-const sortDir = (scoring: Scoring) => (scoring === "high" ? -1 : 1); // high=내림차순
+  isHigh(scoring) ? Math.max(a, b) : Math.min(a, b);
+const sortDir = (scoring: Scoring) => (isHigh(scoring) ? -1 : 1); // 내림차순=상위 먼저
 
 export async function buildState(): Promise<AppState> {
   const sb = createServiceClient();

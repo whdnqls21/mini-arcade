@@ -140,8 +140,13 @@ export default function PoopGame({ onGameOver, bestScore, submitting }: GamePlay
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-2">
-          <Stat label="버틴 시간" value={`${score}초`} width="6rem" />
-          <Stat label="베스트" value={bestScore != null ? `${bestScore}초` : "-"} width="6rem" accent />
+          <Stat label="버틴 시간" value={`${(score / 1000).toFixed(2)}초`} width="6rem" />
+          <Stat
+            label="베스트"
+            value={bestScore != null ? `${(bestScore / 1000).toFixed(2)}초` : "-"}
+            width="6rem"
+            accent
+          />
         </div>
         <button
           onClick={reset}
@@ -171,7 +176,7 @@ export default function PoopGame({ onGameOver, bestScore, submitting }: GamePlay
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/80">
             <p className="font-display text-2xl text-ink">똥 맞았다! 💩</p>
             <p className="text-sm text-ink-dim">
-              버틴 시간 <span className="tabular text-gold">{score}초</span>
+              버틴 시간 <span className="tabular text-gold">{(score / 1000).toFixed(2)}초</span>
             </p>
             <RetryButton submitting={submitting} onRetry={begin} />
           </div>

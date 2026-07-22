@@ -83,7 +83,7 @@ export function step(s: PoopState, dt: number): void {
   s.poops = s.poops.filter((p) => p.y < H + p.r * 2);
 }
 
-// 점수 = 버틴 시간(초, 정수).
+// 점수 = 버틴 시간(ms). 초.소수2자리로 표시(scoring 'htime').
 export function scoreOf(s: PoopState): number {
-  return Math.floor(s.elapsed);
+  return Math.round(s.elapsed * 1000);
 }
