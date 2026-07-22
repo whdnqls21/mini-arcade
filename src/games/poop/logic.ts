@@ -22,6 +22,7 @@ export interface Poop {
 export interface PoopState {
   px: number; // 졸라맨 중심 x
   dir: -1 | 0 | 1; // 현재 이동 방향(버튼)
+  runPhase: number; // 달리기 모션 위상(이동 중일 때만 증가)
   poops: Poop[];
   elapsed: number; // 버틴 시간(초)
   spawnTimer: number; // 다음 똥까지 남은 시간
@@ -31,7 +32,7 @@ export interface PoopState {
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export function newState(): PoopState {
-  return { px: W / 2, dir: 0, poops: [], elapsed: 0, spawnTimer: 0.6, dead: false };
+  return { px: W / 2, dir: 0, runPhase: 0, poops: [], elapsed: 0, spawnTimer: 0.6, dead: false };
 }
 
 export function setDir(s: PoopState, d: -1 | 0 | 1): void {
@@ -45,10 +46,11 @@ export function step(s: PoopState, dt: number): void {
   // 이동
   const half = PLAYER_W / 2;
   s.px = clamp(s.px + s.dir * MOVE_SPEED * dt, half, W - half);
+  if (s.dir !== 0) s.runPhase += dt * 14; // 달릴 때만 다리·팔이 스윙
 
   // 난이도 곡선(0→1)
   const r = Math.min(s.elapsed / RAMP_SEC, 1);
-  const fallSpeed = 150 + 260 * r; // 150 → 410 px/s
+  const fallSpeed = 190 + 300 * r; // 190 → 490 px/s
   const interval = 0.75 - 0.5 * r; // 0.75 → 0.25 s
 
   // 똥 생성

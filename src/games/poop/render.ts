@@ -22,10 +22,16 @@ export function drawScene(
   ctx.stroke();
 
   for (const p of s.poops) drawPoop(ctx, p.x, p.y, p.r);
-  drawStick(ctx, s.px, s.dead);
+  drawStick(ctx, s.px, s.dir, s.runPhase, s.dead);
 }
 
-function drawStick(ctx: CanvasRenderingContext2D, px: number, dead: boolean): void {
+function drawStick(
+  ctx: CanvasRenderingContext2D,
+  px: number,
+  dir: number,
+  phase: number,
+  dead: boolean
+): void {
   const feetTop = GROUND - PLAYER_H;
   const col = dead ? "#ff6b6b" : "#e8edf2";
   ctx.strokeStyle = col;
@@ -34,33 +40,44 @@ function drawStick(ctx: CanvasRenderingContext2D, px: number, dead: boolean): vo
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  const headR = 6;
-  const headY = feetTop + headR;
-  const neck = headY + headR;
-  const hip = feetTop + 30;
+  const moving = dir !== 0 && !dead;
+  const sw = moving ? Math.sin(phase) : 0; // 스윙(-1~1)
+  const lean = dir * 2; // 이동 방향으로 살짝 기울임
+
+  const headR = 4.5; // 얼굴 작게
+  const headCy = feetTop + headR;
+  const neckY = feetTop + 2 * headR; // 머리 아래
+  const shoulderY = neckY + 2;
+  const hipY = feetTop + 26;
+  const footY = GROUND; // 다리 길게(hip→foot ~20)
 
   // 머리
   ctx.beginPath();
-  ctx.arc(px, headY, headR, 0, Math.PI * 2);
+  ctx.arc(px + lean, headCy, headR, 0, Math.PI * 2);
   ctx.fill();
-  // 몸통
+
+  // 몸통 (살짝 기울임)
   ctx.beginPath();
-  ctx.moveTo(px, neck);
-  ctx.lineTo(px, hip);
+  ctx.moveTo(px + lean, neckY);
+  ctx.lineTo(px, hipY);
   ctx.stroke();
-  // 팔 (만세 — 똥을 막는 느낌)
+
+  // 팔 (길게, 달릴 때 앞뒤로 스윙)
+  const armSwing = sw * 7;
   ctx.beginPath();
-  ctx.moveTo(px, neck + 3);
-  ctx.lineTo(px - 9, neck - 4);
-  ctx.moveTo(px, neck + 3);
-  ctx.lineTo(px + 9, neck - 4);
+  ctx.moveTo(px + lean, shoulderY);
+  ctx.lineTo(px - 11, shoulderY + 11 - armSwing);
+  ctx.moveTo(px + lean, shoulderY);
+  ctx.lineTo(px + 11, shoulderY + 11 + armSwing);
   ctx.stroke();
-  // 다리
+
+  // 다리 (길게, 달릴 때 성큼성큼 벌어짐 / 멈추면 어깨너비 스탠스)
+  const spread = moving ? sw * 11 : 6.5;
   ctx.beginPath();
-  ctx.moveTo(px, hip);
-  ctx.lineTo(px - 8, GROUND);
-  ctx.moveTo(px, hip);
-  ctx.lineTo(px + 8, GROUND);
+  ctx.moveTo(px, hipY);
+  ctx.lineTo(px - spread, footY);
+  ctx.moveTo(px, hipY);
+  ctx.lineTo(px + spread, footY);
   ctx.stroke();
 }
 
