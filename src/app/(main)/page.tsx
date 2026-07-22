@@ -7,13 +7,10 @@ import { Card } from "@/components/Card";
 import { useAppState } from "@/components/StateProvider";
 import { GAME_REGISTRY } from "@/games/registry";
 import { formatScore } from "@/lib/format";
-import type { GameCategory } from "@/games/types";
+import type { GameTag } from "@/games/types";
 
-type CatKey = GameCategory | "all";
-
-// 상단 분류 필터 칩(순서 고정).
-const GAME_CATS: { key: CatKey; label: string }[] = [
-  { key: "all", label: "전체" },
+// 상단 태그 필터 칩(순서 고정). 여러 개를 켜면 그 태그를 모두 가진 게임만 보인다(AND).
+const GAME_TAGS: { key: GameTag; label: string }[] = [
   { key: "merge", label: "합치기" },
   { key: "clear", label: "시간클리어" },
   { key: "reaction", label: "반응" },
@@ -23,14 +20,25 @@ const GAME_CATS: { key: CatKey; label: string }[] = [
 
 export default function GamesPage() {
   const { state } = useAppState();
-  const [cat, setCat] = useState<CatKey>("all");
+  const [sel, setSel] = useState<Set<GameTag>>(new Set());
   if (!state) return null;
   const solo = state.session?.solo ?? false;
 
+  const toggle = (t: GameTag) =>
+    setSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      return next;
+    });
+
   const games =
-    cat === "all"
+    sel.size === 0
       ? state.games
-      : state.games.filter((g) => GAME_REGISTRY[g.slug]?.category === cat);
+      : state.games.filter((g) => {
+          const tags = GAME_REGISTRY[g.slug]?.tags ?? [];
+          return [...sel].every((t) => tags.includes(t));
+        });
 
   return (
     <div className="flex flex-col gap-4">
@@ -39,19 +47,29 @@ export default function GamesPage() {
         <h1 className="font-display text-2xl text-ink">{state.session?.name}님, 플레이!</h1>
       </div>
 
-      {/* 분류 필터 */}
+      {/* 태그 필터 — 여러 개 선택 시 모두 만족하는 게임만(AND) */}
       <div className="flex flex-wrap gap-1.5">
-        {GAME_CATS.map((f) => (
+        <button
+          onClick={() => setSel(new Set())}
+          className={`rounded-full px-3 py-1 text-xs transition-colors ${
+            sel.size === 0
+              ? "bg-grass/15 text-grass"
+              : "border border-pitch-line text-ink-faint hover:text-ink-dim"
+          }`}
+        >
+          전체
+        </button>
+        {GAME_TAGS.map((t) => (
           <button
-            key={f.key}
-            onClick={() => setCat(f.key)}
+            key={t.key}
+            onClick={() => toggle(t.key)}
             className={`rounded-full px-3 py-1 text-xs transition-colors ${
-              cat === f.key
+              sel.has(t.key)
                 ? "bg-grass/15 text-grass"
                 : "border border-pitch-line text-ink-faint hover:text-ink-dim"
             }`}
           >
-            {f.label}
+            {t.label}
           </button>
         ))}
       </div>
@@ -59,7 +77,9 @@ export default function GamesPage() {
       {state.games.length === 0 ? (
         <Card className="py-10 text-center text-sm text-ink-dim">아직 열린 게임이 없어요.</Card>
       ) : games.length === 0 ? (
-        <Card className="py-10 text-center text-sm text-ink-dim">이 분류에 게임이 없어요.</Card>
+        <Card className="py-10 text-center text-sm text-ink-dim">
+          선택한 태그를 모두 가진 게임이 없어요.
+        </Card>
       ) : null}
 
       {games.map((g) => {

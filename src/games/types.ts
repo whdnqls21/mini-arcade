@@ -19,13 +19,13 @@ export interface GameInfo {
   Visual?: ComponentType;
 }
 
-// 게임 목록 필터용 분류.
-export type GameCategory = "merge" | "clear" | "reaction" | "match" | "focus";
+// 게임 목록 필터용 태그. 게임 하나에 여러 개 붙일 수 있다.
+export type GameTag = "merge" | "clear" | "reaction" | "match" | "focus";
 
 export interface GameEntry {
   Play: ComponentType<GamePlayProps>;
   info?: GameInfo;
   // 게임 목록에 쓰는 아이콘. 게임에서 실제로 보게 될 것을 축소해 보여준다.
   Icon?: ComponentType<{ size?: number }>;
-  category: GameCategory;
+  tags: GameTag[];
 }
