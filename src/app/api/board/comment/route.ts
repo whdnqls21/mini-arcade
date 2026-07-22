@@ -33,11 +33,11 @@ export async function POST(req: NextRequest) {
     const { data: post } = await sb.from("ma_posts").select("id").eq("id", postId).maybeSingle();
     if (!post) return NextResponse.json({ error: "글을 찾을 수 없습니다." }, { status: 404 });
 
-    // 관리자 화면(관리자 세션)에서 달면 '운영자', 일반 사용자는 본인 이름 스냅샷.
+    // 관리자 화면(관리자 세션)에서 달면 '관리자', 일반 사용자는 본인 이름 스냅샷.
     const { error } = await sb.from("ma_post_comments").insert({
       post_id: postId,
       account_id: admin ? null : session!.id,
-      author_name: admin ? "운영자" : session!.name,
+      author_name: admin ? "관리자" : session!.name,
       body: text,
     });
     if (error) {
