@@ -48,6 +48,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   "2048": {
     Play: Game2048,
     Icon: Icon2048,
+    category: "merge",
     info: {
       rows: [
         { label: "목표", text: "같은 숫자끼리 합쳐 2048 타일을 만드세요." },
@@ -61,6 +62,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   suika: {
     Play: SuikaGame,
     Icon: SuikaIcon,
+    category: "merge",
     info: {
       rows: [
         { label: "목표", text: "같은 과일끼리 닿게 해 더 큰 과일로 키우고, 마지막 수박까지 가보세요." },
@@ -75,6 +77,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   apple: {
     Play: AppleGame,
     Icon: AppleIcon,
+    category: "clear",
     info: {
       rows: [
         { label: "목표", text: "제한 시간 안에 사과를 최대한 많이 지우세요." },
@@ -89,6 +92,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   mahjong: {
     Play: MahjongGame,
     Icon: MahjongIcon,
+    category: "clear",
     info: {
       rows: [
         { label: "목표", text: "48장을 모두 지우세요. 다 지우는 데 걸린 시간이 기록입니다." },
@@ -103,6 +107,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   memory: {
     Play: MemoryGame,
     Icon: MemoryIcon,
+    category: "match",
     info: {
       rows: [
         { label: "목표", text: "카드를 뒤집어 같은 과일 짝을 모두 맞추세요." },
@@ -116,6 +121,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   whack: {
     Play: WhackGame,
     Icon: WhackIcon,
+    category: "reaction",
     info: {
       rows: [
         { label: "목표", text: "구멍에서 튀어나오는 두더지를 제한 시간 안에 최대한 많이 잡으세요." },
@@ -130,6 +136,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   schulte: {
     Play: SchulteGame,
     Icon: SchulteIcon,
+    category: "focus",
     info: {
       rows: [
         { label: "목표", text: "1부터 50까지 순서대로 모두 탭하세요. 걸린 시간이 기록입니다." },
@@ -144,6 +151,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   poop: {
     Play: PoopGame,
     Icon: PoopIcon,
+    category: "reaction",
     info: {
       rows: [
         { label: "목표", text: "위에서 떨어지는 똥을 피해 최대한 오래 버티세요." },
@@ -157,6 +165,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   dino: {
     Play: DinoGame,
     Icon: DinoIcon,
+    category: "reaction",
     info: {
       rows: [
         { label: "목표", text: "장애물을 뛰어넘으며 최대한 멀리 달리세요." },
