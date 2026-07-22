@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
   const admin = await isAdmin();
 
   if (category === "notice") {
-    // 공지는 관리자만. 작성자는 '운영자', 계정 참조 없음.
+    // 공지는 관리자만. 작성자는 '관리자', 계정 참조 없음.
     if (!admin) {
       return NextResponse.json({ error: "공지는 관리자만 쓸 수 있습니다." }, { status: 403 });
     }

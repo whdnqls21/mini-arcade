@@ -128,7 +128,7 @@ export function AdminBoard() {
               </button>
             </div>
 
-            {/* 댓글 — 운영자로 답변 달기 + 아무 댓글이나 삭제 */}
+            {/* 댓글 — 관리자로 답변 달기 + 아무 댓글이나 삭제 */}
             <div className="flex flex-col gap-1.5 border-t border-pitch-line pt-2">
               {p.comments.map((c) => (
                 <div key={c.id} className="flex items-start gap-2 text-[11px]">
@@ -166,7 +166,7 @@ export function AdminBoard() {
   );
 }
 
-// 운영자 댓글 입력 — 관리자 화면에서 달면 '운영자'로 등록된다.
+// 관리자 댓글 입력 — 관리자 화면에서 달면 '관리자'로 등록된다.
 function AdminCommentInput({
   busy,
   onAdd,
@@ -195,7 +195,7 @@ function AdminCommentInput({
             send();
           }
         }}
-        placeholder="운영자로 답변 달기…"
+        placeholder="관리자로 답변 달기…"
         className="min-w-0 flex-1 rounded-lg border border-pitch-line bg-black/20 px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-grass"
       />
       <button
