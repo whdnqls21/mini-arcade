@@ -7,6 +7,7 @@ import { AppleIcon } from "./apple/AppleIcon";
 import { DinoIcon } from "./dino/DinoIcon";
 import { MahjongIcon } from "./mahjong/MahjongIcon";
 import { MemoryIcon } from "./memory/MemoryIcon";
+import { PoopIcon } from "./poop/PoopIcon";
 import { SchulteIcon } from "./schulte/SchulteIcon";
 import { WhackIcon } from "./whack/WhackIcon";
 import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
@@ -38,6 +39,9 @@ const WhackGame = dynamic(() => import("./whack/WhackGame"), { ssr: false, loadi
 
 // 1 to 30 은 마운트 시 숫자를 섞으므로(Math.random) SSR 을 끈다.
 const SchulteGame = dynamic(() => import("./schulte/SchulteGame"), { ssr: false, loading: spinner });
+
+// 똥 피하기도 캔버스 + rAF 라 서버에서 렌더할 것이 없다.
+const PoopGame = dynamic(() => import("./poop/PoopGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -135,6 +139,19 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "종료", text: "50을 누르면 끝납니다. 시작 전 배치는 가려지고, 시작할 때마다 새로 섞입니다." },
       ],
       tip: "한 칸만 뚫어져라 보지 말고 판 전체를 시야에 담으세요. 다음 숫자 몇 개를 미리 찾아두면 훨씬 빨라집니다.",
+    },
+  },
+  poop: {
+    Play: PoopGame,
+    Icon: PoopIcon,
+    info: {
+      rows: [
+        { label: "목표", text: "위에서 떨어지는 똥을 피해 최대한 오래 버티세요." },
+        { label: "조작", text: "아래 ◀ ▶ 버튼을 누르는 동안 졸라맨이 그 방향으로 움직입니다. 키보드는 좌우 화살표." },
+        { label: "점수", text: "버틴 시간(초)이 그대로 점수입니다. 시간이 갈수록 똥이 더 빨리, 더 많이 떨어져요." },
+        { label: "종료", text: "똥에 한 번이라도 맞으면 끝나고, 그때까지 버틴 시간이 기록됩니다." },
+      ],
+      tip: "한쪽 끝에 몰리면 피할 공간이 없어요. 가운데를 기준으로 최소한만 움직이며 틈을 노리세요.",
     },
   },
   dino: {
