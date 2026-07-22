@@ -11,13 +11,13 @@ import type { GameTag } from "@/games/types";
 
 // 태그 한글 라벨 + 필터 칩 순서. 여러 개를 켜면 그 태그를 모두 가진 게임만 보인다(AND).
 const TAG_LABEL: Record<GameTag, string> = {
-  merge: "합치기",
-  clear: "시간클리어",
-  reaction: "반응",
-  match: "기억매칭",
-  focus: "집중",
+  reflex: "순발력",
+  memory: "기억력",
+  focus: "집중력",
+  calc: "계산",
+  strategy: "전략",
 };
-const TAG_ORDER: GameTag[] = ["merge", "clear", "reaction", "match", "focus"];
+const TAG_ORDER: GameTag[] = ["reflex", "memory", "focus", "calc", "strategy"];
 
 export default function GamesPage() {
   const { state } = useAppState();
@@ -100,12 +100,9 @@ export default function GamesPage() {
                   {g.description && (
                     <p className="mt-0.5 text-xs text-ink-faint">{g.description}</p>
                   )}
-                  <div className="mt-1.5 flex flex-wrap gap-1">
+                  <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5">
                     {(GAME_REGISTRY[g.slug]?.tags ?? []).map((t) => (
-                      <span
-                        key={t}
-                        className="rounded-full bg-pitch-line/60 px-1.5 py-0.5 text-[10px] text-ink-faint"
-                      >
+                      <span key={t} className="text-[11px] font-medium text-grass/70">
                         #{TAG_LABEL[t]}
                       </span>
                     ))}
