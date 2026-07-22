@@ -16,23 +16,22 @@ interface BoardData {
 }
 
 type Sort = "recent" | "top";
-type CatFilter = PostCategory | "all";
+type CatKey = "all" | "notice" | "suggest" | "bug" | "etc";
 
-// 상단 분류 필터 칩(순서 고정).
-const CAT_FILTERS: { key: CatFilter; label: string }[] = [
-  { key: "all", label: "전체" },
-  { key: "notice", label: CATEGORY_LABEL.notice },
-  { key: "game", label: CATEGORY_LABEL.game },
-  { key: "balance", label: CATEGORY_LABEL.balance },
-  { key: "bug", label: CATEGORY_LABEL.bug },
-  { key: "etc", label: CATEGORY_LABEL.etc },
+// 상단 분류 필터 칩. '제안'은 옛 game/balance 를 함께 묶는다.
+const CAT_FILTERS: { key: CatKey; label: string; cats: PostCategory[] | null }[] = [
+  { key: "all", label: "전체", cats: null },
+  { key: "notice", label: "공지", cats: ["notice"] },
+  { key: "suggest", label: "제안", cats: ["game", "balance"] },
+  { key: "bug", label: "오류제보", cats: ["bug"] },
+  { key: "etc", label: "기타", cats: ["etc"] },
 ];
 
 export default function BoardPage() {
   const [data, setData] = useState<BoardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>("recent");
-  const [cat, setCat] = useState<CatFilter>("all");
+  const [cat, setCat] = useState<CatKey>("all");
   const [writing, setWriting] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -68,7 +67,8 @@ export default function BoardPage() {
   }
 
   // 분류 필터 먼저 적용. 그다음 공지·고정 글이 위, 나머지는 정렬(최신순/추천순).
-  const visible = cat === "all" ? data.posts : data.posts.filter((p) => p.category === cat);
+  const activeCats = CAT_FILTERS.find((f) => f.key === cat)?.cats ?? null;
+  const visible = activeCats ? data.posts.filter((p) => activeCats.includes(p.category)) : data.posts;
   const notices = visible.filter((p) => p.isNotice || p.pinned);
   const rest = visible.filter((p) => !p.isNotice && !p.pinned);
   rest.sort((a, b) =>
@@ -150,10 +150,7 @@ export default function BoardPage() {
 function Header({ onWrite, canWrite }: { onWrite: () => void; canWrite: boolean }) {
   return (
     <div className="flex items-end justify-between pt-1">
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-grass">게시판</p>
-        <h1 className="font-display text-2xl text-ink">제안 · 공지</h1>
-      </div>
+      <h1 className="font-display text-2xl text-ink">게시판</h1>
       {canWrite && (
         <button
           onClick={onWrite}
