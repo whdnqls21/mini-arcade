@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
     }
     const { error } = await sb.from("ma_posts").insert({
       account_id: null,
-      author_name: "운영자",
+      author_name: "관리자",
       category,
       title,
       body: text,
