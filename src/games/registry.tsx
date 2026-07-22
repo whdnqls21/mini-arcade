@@ -7,6 +7,7 @@ import { AppleIcon } from "./apple/AppleIcon";
 import { DinoIcon } from "./dino/DinoIcon";
 import { MahjongIcon } from "./mahjong/MahjongIcon";
 import { MemoryIcon } from "./memory/MemoryIcon";
+import { SchulteIcon } from "./schulte/SchulteIcon";
 import { WhackIcon } from "./whack/WhackIcon";
 import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
 
@@ -34,6 +35,9 @@ const MemoryGame = dynamic(() => import("./memory/MemoryGame"), { ssr: false, lo
 
 // 두더지 잡기도 rAF/랜덤 등장이라 서버에서 렌더할 것이 없다.
 const WhackGame = dynamic(() => import("./whack/WhackGame"), { ssr: false, loading: spinner });
+
+// 1 to 30 은 마운트 시 숫자를 섞으므로(Math.random) SSR 을 끈다.
+const SchulteGame = dynamic(() => import("./schulte/SchulteGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -117,6 +121,20 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "종료", text: "시작을 누른 순간부터 30초. 시간이 다 되면 그때 점수가 기록됩니다." },
       ],
       tip: "한곳만 노려보지 말고 판 전체를 넓게 보세요. 나쁜 두더지는 그냥 두면 알아서 사라집니다.",
+    },
+  },
+  schulte: {
+    Play: SchulteGame,
+    Icon: SchulteIcon,
+    info: {
+      rows: [
+        { label: "목표", text: "1부터 50까지 순서대로 모두 탭하세요. 걸린 시간이 기록입니다." },
+        { label: "조작", text: "시작을 누른 뒤 숫자를 1→2→3… 순서로 탭합니다. 다음에 찾을 숫자는 위 '다음'에 표시돼요." },
+        { label: "규칙", text: "5×5 판에 25개가 보이고, 누른 칸은 25 큰 숫자로 바뀝니다(1→26, 2→27…). 후반 26~50은 누르면 빈칸이 돼요." },
+        { label: "기록", text: "50까지 다 누른 시간이 기록입니다. 짧을수록 상위! 순서가 틀리면 잠깐 빨갛게 표시될 뿐 감점은 없어요." },
+        { label: "종료", text: "50을 누르면 끝납니다. 시작 전 배치는 가려지고, 시작할 때마다 새로 섞입니다." },
+      ],
+      tip: "한 칸만 뚫어져라 보지 말고 판 전체를 시야에 담으세요. 다음 숫자 몇 개를 미리 찾아두면 훨씬 빨라집니다.",
     },
   },
   dino: {

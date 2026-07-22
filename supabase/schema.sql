@@ -126,7 +126,8 @@ insert into public.ma_games (slug, name, description, scoring, sort) values
   ('mahjong', '사천성', '같은 패를 이어 모두 지우세요. 빠를수록 상위!', 'time', 3),
   ('dino', '크롬 다이노', '장애물을 뛰어넘으며 최대한 멀리! 달릴수록 빨라집니다.', 'high', 4),
   ('memory', '카드 짝맞추기', '같은 과일 카드를 기억해 짝을 맞추세요. 빠를수록 상위!', 'time', 5),
-  ('whack', '두더지 잡기', '구멍에서 튀어나오는 두더지를 재빨리 잡으세요. 나쁜 두더지는 조심!', 'high', 6)
+  ('whack', '두더지 잡기', '구멍에서 튀어나오는 두더지를 재빨리 잡으세요. 나쁜 두더지는 조심!', 'high', 6),
+  ('schulte', '1 to 50', '1부터 50까지 순서대로 가장 빠르게! 집중력 게임.', 'time', 7)
 on conflict (slug) do nothing;
 
 -- ────────────────────────────────────────────────────────────────────────
@@ -135,7 +136,8 @@ on conflict (slug) do nothing;
 --
 --   insert into public.ma_games (slug, name, description, scoring, sort) values
 --     ('memory', '카드 짝맞추기', '같은 과일 카드를 기억해 짝을 맞추세요. 빠를수록 상위!', 'time', 5),
---     ('whack', '두더지 잡기', '구멍에서 튀어나오는 두더지를 재빨리 잡으세요. 나쁜 두더지는 조심!', 'high', 6)
+--     ('whack', '두더지 잡기', '구멍에서 튀어나오는 두더지를 재빨리 잡으세요. 나쁜 두더지는 조심!', 'high', 6),
+--     ('schulte', '1 to 50', '1부터 50까지 순서대로 가장 빠르게! 집중력 게임.', 'time', 7)
 --   on conflict (slug) do nothing;
 --
 -- 운영 DB 에 기록 초기화 안내 컬럼을 추가할 때(이 파일 전체 재실행 금지):
