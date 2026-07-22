@@ -14,6 +14,7 @@ export function AdminBoard() {
   const [posts, setPosts] = useState<PostView[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null); // 펼친 글(아코디언)
 
   const load = useCallback(async () => {
     try {
@@ -55,6 +56,7 @@ export function AdminBoard() {
 
       {posts?.map((p) => {
         const busy = busyId === p.id;
+        const open = openId === p.id;
         return (
           <div
             key={p.id}
@@ -62,23 +64,53 @@ export function AdminBoard() {
               p.isNotice ? "border-gold/30 bg-gold/5" : "border-pitch-line bg-black/10"
             }`}
           >
-            <div className="flex items-center gap-2 text-[11px] text-ink-faint">
-              <span className="rounded-full bg-pitch-line px-2 py-0.5 text-ink-dim">
-                {CATEGORY_LABEL[p.category]}
-              </span>
-              {!p.isNotice && <span>👍 {p.votes}</span>}
-              {p.pinned && <span className="text-gold">고정됨</span>}
-              <span className="ml-auto">
-                {p.authorName} · {timeAgo(p.createdAt)}
-              </span>
-            </div>
+            <button
+              type="button"
+              onClick={() => setOpenId((cur) => (cur === p.id ? null : p.id))}
+              aria-expanded={open}
+              className="flex flex-col gap-2 text-left"
+            >
+              <div className="flex items-center gap-2 text-[11px] text-ink-faint">
+                <span className="rounded-full bg-pitch-line px-2 py-0.5 text-ink-dim">
+                  {CATEGORY_LABEL[p.category]}
+                </span>
+                {!p.isNotice && <span>👍 {p.votes}</span>}
+                {p.pinned && <span className="text-gold">고정됨</span>}
+                <span className="ml-auto">
+                  {p.authorName} · {timeAgo(p.createdAt)}
+                </span>
+              </div>
 
-            <p className="font-display text-sm text-ink">{p.title}</p>
-            <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink-dim">
-              {p.body}
-            </p>
+              <div className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 font-display text-sm text-ink">
+                  {open ? p.title : <span className="line-clamp-1">{p.title}</span>}
+                </span>
+                {p.comments.length > 0 && (
+                  <span className="shrink-0 text-[11px] text-ink-faint">💬 {p.comments.length}</span>
+                )}
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`shrink-0 text-ink-faint transition-transform ${open ? "rotate-180" : ""}`}
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </div>
+            </button>
 
-            <div className="flex flex-wrap items-center gap-1.5">
+            {open && (
+              <>
+                <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink-dim">
+                  {p.body}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-1.5">
               {/* 상태 라벨은 제안 글에만 */}
               {!p.isNotice && (
                 <select
@@ -153,15 +185,17 @@ export function AdminBoard() {
                   </button>
                 </div>
               ))}
-              <AdminCommentInput
-                busy={busy}
-                onAdd={(text) =>
-                  act(p.id, () =>
-                    postJSON("/api/board/comment", { action: "add", postId: p.id, body: text })
-                  )
-                }
-              />
-            </div>
+                  <AdminCommentInput
+                    busy={busy}
+                    onAdd={(text) =>
+                      act(p.id, () =>
+                        postJSON("/api/board/comment", { action: "add", postId: p.id, body: text })
+                      )
+                    }
+                  />
+                </div>
+              </>
+            )}
           </div>
         );
       })}
