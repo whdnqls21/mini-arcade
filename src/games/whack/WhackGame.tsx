@@ -188,7 +188,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
 
       <div className="relative mx-auto w-full max-w-[22rem]">
         <div
-          className="grid gap-2 rounded-xl bg-black/25 p-3"
+          className="grid touch-none select-none gap-2 rounded-xl bg-black/25 p-3"
           style={{
             aspectRatio: "320 / 440",
             gridTemplateColumns: `repeat(${COLS}, 1fr)`,
@@ -201,7 +201,7 @@ export default function WhackGame({ onGameOver, bestScore, submitting }: GamePla
               onClick={() => tap(i)}
               data-kind={m ? m.kind : "empty"}
               aria-label={m ? (m.kind === "bad" ? "나쁜 두더지" : "두더지") : "빈 구멍"}
-              className="relative flex items-center justify-center overflow-hidden rounded-2xl border border-pitch-line bg-gradient-to-b from-[#0f1720] to-[#05090d] active:scale-95"
+              className="relative flex touch-none items-center justify-center overflow-hidden rounded-2xl border border-pitch-line bg-gradient-to-b from-[#0f1720] to-[#05090d] active:scale-95"
             >
               {/* 구멍 안쪽 그림자 */}
               <span className="pointer-events-none absolute inset-x-2 bottom-1 h-3 rounded-full bg-black/40 blur-[2px]" />
