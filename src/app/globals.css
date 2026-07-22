@@ -14,6 +14,18 @@
 
 * {
   -webkit-tap-highlight-color: transparent;
+  /* 게임 PWA — 버튼 연타 중 글자가 선택되거나 iOS 복사/찾아보기 콜아웃이 뜨지 않게 전역 차단. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 입력 필드는 예외 — 텍스트 선택/입력 허용(로그인 PIN·이름·게시판 글·댓글). */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 html {
