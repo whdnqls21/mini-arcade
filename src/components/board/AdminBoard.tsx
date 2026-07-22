@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/Card";
 import { CATEGORY_LABEL, STATUS_LABEL, STATUS_ORDER } from "@/lib/board-meta";
@@ -212,28 +212,38 @@ function AdminCommentInput({
   onAdd: (body: string) => Promise<void> | void;
 }) {
   const [val, setVal] = useState("");
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // 내용에 맞춰 높이 자동 조절(최대 120px).
+  const grow = () => {
+    const t = taRef.current;
+    if (!t) return;
+    t.style.height = "auto";
+    t.style.height = `${Math.min(t.scrollHeight, 120)}px`;
+  };
 
   const send = async () => {
     const text = val.trim();
     if (!text || busy) return;
     await onAdd(text);
     setVal("");
+    if (taRef.current) taRef.current.style.height = "auto";
   };
 
   return (
-    <div className="flex gap-1.5">
-      <input
+    <div className="flex items-end gap-1.5">
+      {/* textarea 라 Enter 로 줄바꿈된다. 제출은 등록 버튼. */}
+      <textarea
+        ref={taRef}
         value={val}
         maxLength={500}
-        onChange={(e) => setVal(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            send();
-          }
+        rows={1}
+        onChange={(e) => {
+          setVal(e.target.value);
+          grow();
         }}
         placeholder="관리자로 답변 달기…"
-        className="min-w-0 flex-1 rounded-lg border border-pitch-line bg-black/20 px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-grass"
+        className="min-w-0 flex-1 resize-none rounded-lg border border-pitch-line bg-black/20 px-2.5 py-1.5 text-[12px] leading-relaxed text-ink outline-none focus:border-grass"
       />
       <button
         onClick={send}
