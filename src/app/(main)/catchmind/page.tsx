@@ -322,11 +322,10 @@ function Guess({ onFinished, onEmpty }: { onFinished: (quizId: string) => void; 
         className="mx-auto w-full max-w-[20rem] rounded-xl border border-pitch-line bg-white"
         style={{ aspectRatio: "1 / 1" }}
       />
-      <div className="flex items-center justify-between text-sm">
+      <div className="text-sm">
         <span className="text-ink-dim">
           남은 기회 <b className="text-ink">{remaining}</b>
         </span>
-        <span className="text-ink-faint">정답 {quiz.length}글자</span>
       </div>
       {hint && (
         <Card className="py-2.5 text-center">
