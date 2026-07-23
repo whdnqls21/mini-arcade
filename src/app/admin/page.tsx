@@ -7,6 +7,7 @@ import { Card } from "@/components/Card";
 import { AdminBoard } from "@/components/board/AdminBoard";
 import { postJSON } from "@/lib/client-api";
 import type { AdminState } from "@/lib/state";
+import type { PostCategory } from "@/lib/types";
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -128,13 +129,21 @@ function AdminLogin({ onDone }: { onDone: () => void }) {
   );
 }
 
-// 공지 작성 — 관리자 세션이 살아 있는 이 화면에서만 쓸 수 있다.
+// 관리자 글 작성(공지 / 업데이트) — 관리자 세션이 살아 있는 이 화면에서만 쓸 수 있다.
+const ADMIN_POST_KINDS: { value: PostCategory; label: string; placeholder: string }[] = [
+  { value: "notice", label: "공지", placeholder: "공지 내용" },
+  { value: "update", label: "업데이트", placeholder: "새 게임 출시 · 패치 내용" },
+];
+
 function NoticeForm() {
+  const [category, setCategory] = useState<PostCategory>("notice");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  const kind = ADMIN_POST_KINDS.find((k) => k.value === category) ?? ADMIN_POST_KINDS[0];
 
   async function submit() {
     if (!title.trim() || !body.trim() || busy) return;
@@ -142,10 +151,10 @@ function NoticeForm() {
     setErr(null);
     setMsg(null);
     try {
-      await postJSON("/api/board", { category: "notice", title: title.trim(), body: body.trim() });
+      await postJSON("/api/board", { category, title: title.trim(), body: body.trim() });
       setTitle("");
       setBody("");
-      setMsg("공지를 올렸어요. 게시판 상단에 표시됩니다.");
+      setMsg(`${kind.label} 글을 올렸어요. 게시판 상단에 표시됩니다.`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "작성 실패");
     } finally {
@@ -156,29 +165,49 @@ function NoticeForm() {
   return (
     <Card className="flex flex-col gap-3 border-gold/30">
       <h2 className="font-display text-lg text-ink">
-        공지 작성 <span className="text-sm text-ink-faint">게시판 상단</span>
+        관리자 글 작성 <span className="text-sm text-ink-faint">게시판 상단</span>
       </h2>
+      {/* 분류: 공지 / 업데이트 */}
+      <div className="flex gap-1.5">
+        {ADMIN_POST_KINDS.map((k) => (
+          <button
+            key={k.value}
+            onClick={() => setCategory(k.value)}
+            className={`flex-1 rounded-lg py-2 text-sm transition-colors ${
+              category === k.value
+                ? k.value === "update"
+                  ? "bg-grass/15 text-grass"
+                  : "bg-gold/15 text-gold"
+                : "border border-pitch-line text-ink-faint hover:text-ink-dim"
+            }`}
+          >
+            {k.label}
+          </button>
+        ))}
+      </div>
       <input
         value={title}
         maxLength={40}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="공지 제목"
+        placeholder={`${kind.label} 제목`}
         className="rounded-xl border border-pitch-line bg-black/20 px-3 py-2.5 text-ink outline-none focus:border-gold"
       />
       <textarea
         value={body}
         maxLength={1000}
         onChange={(e) => setBody(e.target.value)}
-        placeholder="공지 내용"
+        placeholder={kind.placeholder}
         rows={4}
         className="resize-none rounded-xl border border-pitch-line bg-black/20 px-3 py-2.5 text-sm text-ink outline-none focus:border-gold"
       />
       <button
         onClick={submit}
         disabled={!title.trim() || !body.trim() || busy}
-        className="rounded-xl bg-gold py-2.5 font-display text-pitch-base disabled:opacity-40"
+        className={`rounded-xl py-2.5 font-display text-pitch-base disabled:opacity-40 ${
+          category === "update" ? "bg-grass" : "bg-gold"
+        }`}
       >
-        {busy ? "올리는 중…" : "공지 올리기"}
+        {busy ? "올리는 중…" : `${kind.label} 올리기`}
       </button>
       {msg && <p className="text-center text-sm text-grass">{msg}</p>}
       {err && <p className="text-center text-sm text-danger">{err}</p>}

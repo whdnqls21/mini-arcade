@@ -37,7 +37,7 @@ export interface Score {
   created_at: string;
 }
 
-export type PostCategory = "notice" | "game" | "balance" | "bug" | "etc";
+export type PostCategory = "notice" | "update" | "game" | "balance" | "bug" | "etc";
 export type PostStatus = "reviewing" | "planned" | "done" | "declined";
 
 // 클라이언트로 내려보내는 댓글

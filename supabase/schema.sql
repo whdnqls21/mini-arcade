@@ -77,14 +77,14 @@ create table public.ma_posts (
   id          uuid primary key default gen_random_uuid(),
   account_id  uuid references public.ma_accounts(id) on delete set null, -- null = 운영자(관리자) 글
   author_name text not null,                     -- 작성 시점 이름 스냅샷(이름 변경/삭제에 안 흔들림)
-  category    text not null default 'etc',        -- 'notice'(공지) | 'game'(게임 추천) | 'balance'(밸런스) | 'bug'(오류제보) | 'etc'(기타)
+  category    text not null default 'etc',        -- 'notice'(공지) | 'update'(업데이트) | 'game'(게임 추천) | 'balance'(밸런스) | 'bug'(오류제보) | 'etc'(기타)
   title       text not null,
   body        text not null,
-  is_notice   boolean not null default false,     -- 관리자 공지 → 상단
+  is_notice   boolean not null default false,     -- 관리자 공지·업데이트 → 상단
   pinned      boolean not null default false,     -- 관리자 고정
   status      text,                               -- 제안 처리 상태: null | 'reviewing' | 'planned' | 'done' | 'declined'
   created_at  timestamptz not null default now(),
-  constraint ma_posts_category_valid check (category in ('notice','game','balance','bug','etc')),
+  constraint ma_posts_category_valid check (category in ('notice','update','game','balance','bug','etc')),
   constraint ma_posts_status_valid check (status is null or status in ('reviewing','planned','done','declined'))
 );
 create index ma_posts_created_idx on public.ma_posts (created_at desc);
@@ -164,6 +164,11 @@ on conflict (slug) do nothing;
 --   alter table public.ma_posts drop constraint if exists ma_posts_category_valid;
 --   alter table public.ma_posts add constraint ma_posts_category_valid
 --     check (category in ('notice','game','balance','bug','etc'));
+--
+-- 게시판 분류에 업데이트(update)를 추가할 때(이 파일 전체 재실행 금지):
+--   alter table public.ma_posts drop constraint if exists ma_posts_category_valid;
+--   alter table public.ma_posts add constraint ma_posts_category_valid
+--     check (category in ('notice','update','game','balance','bug','etc'));
 --
 -- 게시판에 댓글을 추가할 때(이 파일 전체 재실행 금지) — 아래 한 벌만 실행:
 --   create table if not exists public.ma_post_comments (

@@ -3,6 +3,7 @@ import type { PostCategory, PostStatus } from "@/lib/types";
 // 분류 라벨. notice(공지)는 관리자만 쓸 수 있어 작성 폼에서는 조건부로 노출.
 export const CATEGORY_LABEL: Record<PostCategory, string> = {
   notice: "공지",
+  update: "업데이트", // 새 게임 출시 · 패치 소식(관리자 전용)
   game: "제안", // 게임 추천 + 밸런스 제안을 '제안' 하나로 통합
   balance: "제안", // 옛 balance 글도 '제안'으로 표시
   bug: "오류제보",

@@ -16,12 +16,13 @@ interface BoardData {
 }
 
 type Sort = "recent" | "top";
-type CatKey = "all" | "notice" | "suggest" | "bug" | "etc";
+type CatKey = "all" | "notice" | "update" | "suggest" | "bug" | "etc";
 
 // 상단 분류 필터 칩. '제안'은 옛 game/balance 를 함께 묶는다.
 const CAT_FILTERS: { key: CatKey; label: string; cats: PostCategory[] | null }[] = [
   { key: "all", label: "전체", cats: null },
   { key: "notice", label: "공지", cats: ["notice"] },
+  { key: "update", label: "업데이트", cats: ["update"] },
   { key: "suggest", label: "제안", cats: ["game", "balance"] },
   { key: "bug", label: "오류제보", cats: ["bug"] },
   { key: "etc", label: "기타", cats: ["etc"] },

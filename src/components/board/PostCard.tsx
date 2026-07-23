@@ -35,8 +35,21 @@ export function PostCard({
     }
   };
 
+  // 공지=금색, 업데이트=민트로 상단 강조를 구분한다.
+  const isUpdate = post.category === "update";
+  const cardHighlight = isUpdate
+    ? "border-grass/40 bg-grass/5"
+    : post.isNotice
+      ? "border-gold/40 bg-gold/5"
+      : "";
+  const chipStyle = isUpdate
+    ? "bg-grass/20 text-grass"
+    : post.isNotice
+      ? "bg-gold/20 text-gold"
+      : "bg-pitch-line text-ink-dim";
+
   return (
-    <Card className={`flex flex-col gap-2 ${post.isNotice ? "border-gold/40 bg-gold/5" : ""}`}>
+    <Card className={`flex flex-col gap-2 ${cardHighlight}`}>
       {/* 헤더 — 라벨과 제목을 한 줄에. 탭하면 펼침/접힘. */}
       <button
         type="button"
@@ -44,11 +57,7 @@ export function PostCard({
         aria-expanded={open}
         className="flex items-start gap-2 text-left"
       >
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
-            post.isNotice ? "bg-gold/20 text-gold" : "bg-pitch-line text-ink-dim"
-          }`}
-        >
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${chipStyle}`}>
           {CATEGORY_LABEL[post.category]}
         </span>
         {post.status && (

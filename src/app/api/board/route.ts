@@ -6,7 +6,7 @@ import type { CommentView, PostCategory, PostView } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const CATEGORIES: PostCategory[] = ["notice", "game", "balance", "bug", "etc"];
+const CATEGORIES: PostCategory[] = ["notice", "update", "game", "balance", "bug", "etc"];
 
 interface PostRow {
   id: string;
@@ -119,10 +119,10 @@ export async function POST(req: NextRequest) {
   const sb = createServiceClient();
   const admin = await isAdmin();
 
-  if (category === "notice") {
-    // 공지는 관리자만. 작성자는 '관리자', 계정 참조 없음.
+  if (category === "notice" || category === "update") {
+    // 공지·업데이트는 관리자만. 작성자는 '관리자', 계정 참조 없음. 상단 강조(is_notice).
     if (!admin) {
-      return NextResponse.json({ error: "공지는 관리자만 쓸 수 있습니다." }, { status: 403 });
+      return NextResponse.json({ error: "공지·업데이트는 관리자만 쓸 수 있습니다." }, { status: 403 });
     }
     const { error } = await sb.from("ma_posts").insert({
       account_id: null,
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
       is_notice: true,
     });
     if (error) {
-      console.error("공지 작성 실패", error);
+      console.error("공지/업데이트 작성 실패", error);
       return NextResponse.json({ error: "작성에 실패했습니다." }, { status: 500 });
     }
     return NextResponse.json({ ok: true });
