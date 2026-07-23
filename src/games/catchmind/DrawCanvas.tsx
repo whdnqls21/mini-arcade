@@ -44,6 +44,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle>(function DrawCanvas(_prop
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const strokesRef = useRef<Stroke[]>([]);
   const drawingRef = useRef<Stroke | null>(null);
+  const clearedRef = useRef<Stroke[] | null>(null); // 전체 지우기 직전 상태(되돌리기용)
   const [color, setColor] = useState(COLORS[0]);
   const [width, setWidth] = useState(WIDTHS[1]);
   const [eraser, setEraser] = useState(false);
@@ -109,6 +110,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle>(function DrawCanvas(_prop
     };
     drawingRef.current = stroke;
     strokesRef.current.push(stroke);
+    clearedRef.current = null; // 새로 그리기 시작하면 '전체 지우기 되돌리기'는 무효
     redraw();
   };
 
@@ -127,17 +129,26 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle>(function DrawCanvas(_prop
   };
 
   const undo = () => {
-    strokesRef.current.pop();
+    // 방금 전체 지우기를 했다면(획은 비었고 백업이 있음) 그 상태를 통째로 복구.
+    if (strokesRef.current.length === 0 && clearedRef.current) {
+      strokesRef.current = clearedRef.current;
+      clearedRef.current = null;
+    } else {
+      strokesRef.current.pop();
+    }
     redraw();
     force((n) => n + 1);
   };
   const clearAll = () => {
+    if (strokesRef.current.length === 0) return;
+    clearedRef.current = strokesRef.current; // 되돌리기로 복구할 수 있게 백업
     strokesRef.current = [];
     redraw();
     force((n) => n + 1);
   };
 
   const empty = strokesRef.current.length === 0;
+  const canUndo = strokesRef.current.length > 0 || clearedRef.current != null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -198,7 +209,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle>(function DrawCanvas(_prop
       <div className="flex items-center justify-center gap-2">
         <button
           onClick={undo}
-          disabled={empty}
+          disabled={!canUndo}
           className="h-9 rounded-lg border border-pitch-line px-4 text-sm text-ink-dim disabled:opacity-40"
         >
           되돌리기
