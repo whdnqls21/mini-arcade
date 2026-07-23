@@ -15,6 +15,7 @@ export function AdminBoard() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null); // 펼친 글(아코디언)
+  const [showDone, setShowDone] = useState(false); // 반영됨 글은 기본으로 숨긴다
 
   const load = useCallback(async () => {
     try {
@@ -44,17 +45,33 @@ export function AdminBoard() {
     }
   }
 
+  const doneCount = posts?.filter((p) => p.status === "done").length ?? 0;
+  const shown = (posts ?? []).filter((p) => showDone || p.status !== "done");
+
   return (
     <Card className="flex flex-col gap-3">
-      <h2 className="font-display text-lg text-ink">
-        게시판 <span className="text-sm text-ink-faint">{posts ? `${posts.length}개` : ""}</span>
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-display text-lg text-ink">
+          게시판 <span className="text-sm text-ink-faint">{posts ? `${shown.length}개` : ""}</span>
+        </h2>
+        {posts && doneCount > 0 && (
+          <button
+            onClick={() => setShowDone((v) => !v)}
+            className="shrink-0 rounded-full border border-pitch-line px-2.5 py-1 text-[11px] text-ink-faint hover:text-ink-dim"
+          >
+            {showDone ? "반영됨 숨기기" : `반영됨 보기 (${doneCount})`}
+          </button>
+        )}
+      </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {!posts && !error && <p className="text-sm text-ink-dim">불러오는 중…</p>}
       {posts && posts.length === 0 && <p className="text-sm text-ink-dim">글이 없어요.</p>}
+      {posts && posts.length > 0 && shown.length === 0 && (
+        <p className="text-sm text-ink-dim">표시할 글이 없어요. (반영됨만 있음)</p>
+      )}
 
-      {posts?.map((p) => {
+      {shown.map((p) => {
         const busy = busyId === p.id;
         const open = openId === p.id;
         return (
