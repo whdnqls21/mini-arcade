@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 
 import { Card } from "@/components/Card";
+import { Heart } from "@/components/board/Heart";
 import { CATEGORY_LABEL, STATUS_LABEL, STATUS_STYLE } from "@/lib/board-meta";
 import { postJSON } from "@/lib/client-api";
 import { timeAgo } from "@/lib/format";
@@ -113,7 +114,7 @@ export function PostCard({
                       : "border-pitch-line text-ink-dim hover:text-ink"
                   }`}
                 >
-                  <span>👍</span>
+                  <Heart filled={post.voted} className="h-3.5 w-3.5" />
                   <span className="tabular">{post.votes}</span>
                 </button>
               )}
@@ -142,21 +143,38 @@ export function PostCard({
                     <div className="flex items-center gap-2 text-[11px] text-ink-faint">
                       <span className="text-ink-dim">{c.authorName}</span>
                       <span>{timeAgo(c.createdAt)}</span>
-                      {c.mine && (
+                      <div className="ml-auto flex items-center gap-2">
                         <button
-                          disabled={busy}
-                          onClick={() => {
-                            if (confirm("이 댓글을 삭제할까요?")) {
-                              run(() =>
-                                postJSON("/api/board/comment", { action: "delete", commentId: c.id })
-                              );
-                            }
-                          }}
-                          className="ml-auto text-danger disabled:opacity-40"
+                          disabled={busy || !sessionId}
+                          onClick={() =>
+                            run(() =>
+                              postJSON("/api/board/comment", { action: "vote", commentId: c.id })
+                            )
+                          }
+                          aria-label="댓글 좋아요"
+                          className={`flex items-center gap-1 rounded-full px-2 py-0.5 transition-colors disabled:opacity-60 ${
+                            c.liked ? "text-grass" : "text-ink-faint hover:text-ink-dim"
+                          }`}
                         >
-                          삭제
+                          <Heart filled={c.liked} className="h-3 w-3" />
+                          {c.likes > 0 && <span className="tabular">{c.likes}</span>}
                         </button>
-                      )}
+                        {c.mine && (
+                          <button
+                            disabled={busy}
+                            onClick={() => {
+                              if (confirm("이 댓글을 삭제할까요?")) {
+                                run(() =>
+                                  postJSON("/api/board/comment", { action: "delete", commentId: c.id })
+                                );
+                              }
+                            }}
+                            className="text-danger disabled:opacity-40"
+                          >
+                            삭제
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-dim">
                       {c.body}

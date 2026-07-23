@@ -33,13 +33,15 @@ interface CommentRow {
 // 목록 — 로그인 없이도 볼 수 있게 한다(작성/추천만 로그인 필요).
 export async function GET() {
   const sb = createServiceClient();
-  const [session, admin, pRes, vRes, cRes] = await Promise.all([
+  const [session, admin, pRes, vRes, cRes, cvRes] = await Promise.all([
     getAccountSession(),
     isAdmin(),
     sb.from("ma_posts").select("*").order("created_at", { ascending: false }),
     sb.from("ma_post_votes").select("post_id,account_id"),
     // 댓글 테이블이 아직 없어도(마이그레이션 전) 게시판은 동작해야 하므로 에러는 무시한다.
     sb.from("ma_post_comments").select("*").order("created_at", { ascending: true }),
+    // 댓글 좋아요 테이블도 마이그레이션 전이면 조용히 빈 값으로.
+    sb.from("ma_post_comment_votes").select("comment_id,account_id"),
   ]);
 
   // 테이블이 없으면(마이그레이션 전) 조용히 빈 목록으로 보이지 않게 원인을 알린다.
@@ -62,7 +64,18 @@ export async function GET() {
   }
 
   if (cRes.error) console.error("댓글 조회 실패(무시)", cRes.error);
+  if (cvRes.error) console.error("댓글 좋아요 조회 실패(무시)", cvRes.error);
   const comments = (cRes.data ?? []) as CommentRow[];
+
+  // 댓글 좋아요 집계
+  const cVotes = (cvRes.data ?? []) as { comment_id: string; account_id: string }[];
+  const cLikeCount = new Map<string, number>();
+  const myCLikes = new Set<string>();
+  for (const v of cVotes) {
+    cLikeCount.set(v.comment_id, (cLikeCount.get(v.comment_id) ?? 0) + 1);
+    if (session && v.account_id === session.id) myCLikes.add(v.comment_id);
+  }
+
   const commentsByPost = new Map<string, CommentView[]>();
   for (const c of comments) {
     const list = commentsByPost.get(c.post_id) ?? [];
@@ -71,6 +84,8 @@ export async function GET() {
       authorName: c.author_name,
       body: c.body,
       mine: !!session && c.account_id === session.id,
+      likes: cLikeCount.get(c.id) ?? 0,
+      liked: myCLikes.has(c.id),
       createdAt: c.created_at,
     });
     commentsByPost.set(c.post_id, list);

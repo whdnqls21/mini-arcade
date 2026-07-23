@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/Card";
+import { Heart } from "@/components/board/Heart";
 import { CATEGORY_LABEL, STATUS_LABEL, STATUS_ORDER } from "@/lib/board-meta";
 import { postJSON } from "@/lib/client-api";
 import { timeAgo } from "@/lib/format";
@@ -91,7 +92,11 @@ export function AdminBoard() {
                 <span className="rounded-full bg-pitch-line px-2 py-0.5 text-ink-dim">
                   {CATEGORY_LABEL[p.category]}
                 </span>
-                {!p.isNotice && <span>👍 {p.votes}</span>}
+                {!p.isNotice && (
+                  <span className="flex items-center gap-1">
+                    <Heart filled className="h-3 w-3 text-grass" /> {p.votes}
+                  </span>
+                )}
                 {p.pinned && <span className="text-gold">고정됨</span>}
                 <span className="ml-auto">
                   {p.authorName} · {timeAgo(p.createdAt)}
@@ -188,6 +193,12 @@ export function AdminBoard() {
                   <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-ink-dim">
                     {c.body}
                   </span>
+                  {c.likes > 0 && (
+                    <span className="flex shrink-0 items-center gap-0.5 text-ink-faint">
+                      <Heart filled className="h-2.5 w-2.5 text-grass" />
+                      {c.likes}
+                    </span>
+                  )}
                   <span className="shrink-0 text-ink-faint">{timeAgo(c.createdAt)}</span>
                   <button
                     disabled={busy}

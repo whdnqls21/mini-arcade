@@ -47,6 +47,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // ── 좋아요 토글 (로그인 사용자) ───────────────────────────────────
+  if (action === "vote") {
+    const session = await getAccountSession();
+    if (!session) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+    const commentId = body?.commentId;
+    if (typeof commentId !== "string") {
+      return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    }
+    const { data: existing } = await sb
+      .from("ma_post_comment_votes")
+      .select("comment_id")
+      .eq("comment_id", commentId)
+      .eq("account_id", session.id)
+      .maybeSingle();
+    if (existing) {
+      await sb
+        .from("ma_post_comment_votes")
+        .delete()
+        .eq("comment_id", commentId)
+        .eq("account_id", session.id);
+      return NextResponse.json({ ok: true, liked: false });
+    }
+    const { error } = await sb
+      .from("ma_post_comment_votes")
+      .insert({ comment_id: commentId, account_id: session.id });
+    // 동시 클릭으로 이미 있으면(unique 위반) 좋아요된 상태로 본다.
+    if (error && error.code !== "23505") {
+      console.error("댓글 좋아요 실패", error);
+      return NextResponse.json({ error: "좋아요에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, liked: true });
+  }
+
   // ── 삭제 (본인 댓글 또는 관리자) ──────────────────────────────────
   if (action === "delete") {
     const commentId = body?.commentId;

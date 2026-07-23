@@ -46,6 +46,8 @@ export interface CommentView {
   authorName: string;
   body: string;
   mine: boolean; // 내가 쓴 댓글인지(삭제 권한)
+  likes: number; // 좋아요 수
+  liked: boolean; // 내가 좋아요 눌렀는지
   createdAt: string;
 }
 

@@ -89,7 +89,7 @@ create table public.ma_posts (
 );
 create index ma_posts_created_idx on public.ma_posts (created_at desc);
 
--- 추천(👍) — 계정당 글마다 한 번
+-- 추천(♥ 좋아요) — 계정당 글마다 한 번
 create table public.ma_post_votes (
   post_id    uuid not null references public.ma_posts(id) on delete cascade,
   account_id uuid not null references public.ma_accounts(id) on delete cascade,
@@ -108,6 +108,15 @@ create table public.ma_post_comments (
 );
 create index ma_post_comments_post_idx on public.ma_post_comments (post_id, created_at);
 
+-- 댓글 좋아요(♥) — 계정당 댓글마다 한 번
+create table public.ma_post_comment_votes (
+  comment_id uuid not null references public.ma_post_comments(id) on delete cascade,
+  account_id uuid not null references public.ma_accounts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (comment_id, account_id)
+);
+create index ma_post_comment_votes_comment_idx on public.ma_post_comment_votes (comment_id);
+
 -- RLS: 전부 잠금 (서버 service_role 로만 접근)
 alter table public.ma_accounts      enable row level security;
 alter table public.ma_settings      enable row level security;
@@ -116,6 +125,7 @@ alter table public.ma_scores        enable row level security;
 alter table public.ma_posts         enable row level security;
 alter table public.ma_post_votes    enable row level security;
 alter table public.ma_post_comments enable row level security;
+alter table public.ma_post_comment_votes enable row level security;
 
 -- 시드: 첫 게임 2048 + settings 단일 행
 insert into public.ma_settings (id) values (1) on conflict (id) do nothing;
@@ -181,6 +191,16 @@ on conflict (slug) do nothing;
 --   );
 --   create index if not exists ma_post_comments_post_idx on public.ma_post_comments (post_id, created_at);
 --   alter table public.ma_post_comments enable row level security;
+--
+-- 게시판 댓글 좋아요를 추가할 때(이 파일 전체 재실행 금지) — 아래 한 벌만 실행:
+--   create table if not exists public.ma_post_comment_votes (
+--     comment_id uuid not null references public.ma_post_comments(id) on delete cascade,
+--     account_id uuid not null references public.ma_accounts(id) on delete cascade,
+--     created_at timestamptz not null default now(),
+--     primary key (comment_id, account_id)
+--   );
+--   create index if not exists ma_post_comment_votes_comment_idx on public.ma_post_comment_votes (comment_id);
+--   alter table public.ma_post_comment_votes enable row level security;
 --
 -- 캐치마인드(그림퀴즈)를 추가할 때 — 별도 파일 supabase/catchmind.sql 을 그대로
 -- SQL Editor 에 붙여넣고 Run(create table if not exists 라 안전). 실행 후 Storage 에
