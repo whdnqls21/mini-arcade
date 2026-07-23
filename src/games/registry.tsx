@@ -5,6 +5,7 @@ import Game2048 from "./2048/Game2048";
 import { Icon2048 } from "./2048/Icon2048";
 import { AppleIcon } from "./apple/AppleIcon";
 import { DinoIcon } from "./dino/DinoIcon";
+import { GreenlightIcon } from "./greenlight/GreenlightIcon";
 import { MahjongIcon } from "./mahjong/MahjongIcon";
 import { MemoryIcon } from "./memory/MemoryIcon";
 import { PoopIcon } from "./poop/PoopIcon";
@@ -42,6 +43,9 @@ const SchulteGame = dynamic(() => import("./schulte/SchulteGame"), { ssr: false,
 
 // 똥 피하기도 캔버스 + rAF 라 서버에서 렌더할 것이 없다.
 const PoopGame = dynamic(() => import("./poop/PoopGame"), { ssr: false, loading: spinner });
+
+// 그린라이트는 타이머/랜덤 기반이라 SSR 을 끈다.
+const GreenlightGame = dynamic(() => import("./greenlight/GreenlightGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -175,6 +179,21 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "종료", text: "장애물에 부딪히면 끝나고, 그때 점수가 기록됩니다." },
       ],
       tip: "장애물이 눈앞에 올 때까지 기다렸다 뛰는 편이 안전합니다. 너무 일찍 뛰면 도착 전에 내려앉아 부딪힙니다.",
+    },
+  },
+  greenlight: {
+    Play: GreenlightGame,
+    Icon: GreenlightIcon,
+    tags: ["reflex"],
+    info: {
+      rows: [
+        { label: "목표", text: "빨간 화면이 초록으로 바뀌는 순간을 최대한 빨리 탭하세요." },
+        { label: "조작", text: "화면 아무 데나 탭. 3라운드를 하고 각 반응 시간을 합산합니다." },
+        { label: "규칙", text: "초록으로 바뀌기 전에 누르면 '너무 빨라요!'가 뜨고 그 라운드를 다시 합니다(감점 없음)." },
+        { label: "기록", text: "3라운드 합산 시간이 기록입니다. 짧을수록 상위!" },
+        { label: "종료", text: "3라운드를 마치면 합산 시간이 기록됩니다. 중간에 그만두면 기록되지 않아요." },
+      ],
+      tip: "초록을 '예상'하지 말고 '반응'하세요. 미리 누르려다 성급 판정만 받습니다. 손가락은 화면 근처에 대기.",
     },
   },
 };
