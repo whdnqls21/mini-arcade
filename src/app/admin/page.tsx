@@ -186,9 +186,13 @@ function NoticeForm() {
   );
 }
 
+type Tab = "board" | "accounts" | "games" | "review";
+
 function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 검토할 그림이 있으면 그 탭부터 연다.
+  const [tab, setTab] = useState<Tab>(admin.hiddenQuizzes.length > 0 ? "review" : "board");
 
   async function run(fn: () => Promise<unknown>) {
     setBusy(true);
@@ -203,14 +207,43 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
     }
   }
 
+  const TABS: { key: Tab; label: string; badge?: number }[] = [
+    { key: "board", label: "게시판" },
+    { key: "accounts", label: "계정", badge: admin.accounts.length },
+    { key: "games", label: "게임" },
+    { key: "review", label: "검토", badge: admin.hiddenQuizzes.length },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
+      <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 gap-1">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`relative flex-1 rounded-lg py-2 text-sm transition-colors ${
+                tab === t.key ? "bg-grass/15 text-grass" : "border border-pitch-line text-ink-faint hover:text-ink-dim"
+              }`}
+            >
+              {t.label}
+              {t.badge != null && t.badge > 0 && (
+                <span
+                  className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${
+                    t.key === "review" ? "bg-danger/20 text-danger" : "text-ink-faint"
+                  }`}
+                >
+                  {t.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
         <button
           onClick={() => run(() => postJSON("/api/admin/logout", {}))}
-          className="rounded-full border border-pitch-line px-3 py-1 text-xs text-ink-dim hover:text-ink"
+          className="shrink-0 rounded-full border border-pitch-line px-3 py-1 text-xs text-ink-dim hover:text-ink"
         >
-          관리자 로그아웃
+          로그아웃
         </button>
       </div>
 
@@ -220,119 +253,219 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
         </div>
       )}
 
-      {/* 게시판 — 공지 작성과 글 관리(상태·고정·삭제)를 여기 모은다.
+      {/* 게시판 — 공지 작성과 글 관리(상태·고정·삭제).
           관리자 세션은 이 화면을 벗어나면 끊기므로 게시판엔 관리 버튼을 두지 않는다. */}
-      <NoticeForm />
-      <AdminBoard />
+      {tab === "board" && (
+        <>
+          <NoticeForm />
+          <AdminBoard />
+        </>
+      )}
 
-      {/* 계정 관리 */}
-      <Card className="flex flex-col gap-3">
-        <h2 className="font-display text-lg text-ink">
-          계정 <span className="text-sm text-ink-faint">{admin.accounts.length}명</span>
-        </h2>
-        {admin.accounts.length === 0 && (
-          <p className="text-sm text-ink-dim">아직 가입한 계정이 없어요.</p>
-        )}
-        {admin.accounts.map((a) => (
-          <div
-            key={a.id}
-            className="flex items-center gap-2 rounded-lg border border-pitch-line bg-black/10 px-3 py-2"
-          >
-            <span className={`font-display ${a.active ? "text-ink" : "text-ink-faint line-through"}`}>
-              {a.name}
-            </span>
-            <span className="text-[11px] text-ink-faint">{a.playCount}판</span>
-            {!a.active && <span className="text-[10px] text-danger">비활성</span>}
-            <div className="ml-auto flex gap-1.5">
-              <button
-                disabled={busy}
-                onClick={() =>
-                  run(() =>
-                    postJSON("/api/admin/action", {
-                      action: "accountActive",
-                      accountId: a.id,
-                      active: !a.active,
-                    })
-                  )
-                }
-                className="rounded-lg border border-pitch-line px-2.5 py-1 text-xs text-ink-dim disabled:opacity-40"
-              >
-                {a.active ? "비활성화" : "활성화"}
-              </button>
-              <button
-                disabled={busy}
-                onClick={() => {
-                  if (confirm(`'${a.name}' 계정과 모든 기록을 삭제할까요?`)) {
+      {tab === "accounts" && (
+        <Card className="flex flex-col gap-3">
+          <h2 className="font-display text-lg text-ink">
+            계정 <span className="text-sm text-ink-faint">{admin.accounts.length}명</span>
+          </h2>
+          {admin.accounts.length === 0 && (
+            <p className="text-sm text-ink-dim">아직 가입한 계정이 없어요.</p>
+          )}
+          {admin.accounts.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center gap-2 rounded-lg border border-pitch-line bg-black/10 px-3 py-2"
+            >
+              <span className={`font-display ${a.active ? "text-ink" : "text-ink-faint line-through"}`}>
+                {a.name}
+              </span>
+              <span className="text-[11px] text-ink-faint">{a.playCount}판</span>
+              {!a.active && <span className="text-[10px] text-danger">비활성</span>}
+              <div className="ml-auto flex gap-1.5">
+                <button
+                  disabled={busy}
+                  onClick={() =>
                     run(() =>
-                      postJSON("/api/admin/action", { action: "accountDelete", accountId: a.id })
-                    );
+                      postJSON("/api/admin/action", {
+                        action: "accountActive",
+                        accountId: a.id,
+                        active: !a.active,
+                      })
+                    )
                   }
-                }}
-                className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"
-              >
-                삭제
-              </button>
+                  className="rounded-lg border border-pitch-line px-2.5 py-1 text-xs text-ink-dim disabled:opacity-40"
+                >
+                  {a.active ? "비활성화" : "활성화"}
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    if (confirm(`'${a.name}' 계정과 모든 기록을 삭제할까요?`)) {
+                      run(() =>
+                        postJSON("/api/admin/action", { action: "accountDelete", accountId: a.id })
+                      );
+                    }
+                  }}
+                  className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"
+                >
+                  삭제
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </Card>
+          ))}
+        </Card>
+      )}
 
-      {/* 게임 노출 */}
-      <Card className="flex flex-col gap-3">
-        <h2 className="font-display text-lg text-ink">게임</h2>
-        {admin.games.map((g) => (
-          <div key={g.slug} className="flex items-center gap-2 text-sm">
-            <span className={g.active ? "text-ink" : "text-ink-faint"}>{g.name}</span>
-            <span className="text-[11px] text-ink-faint">
-              ({g.scoring}) · 기록 {g.scoreCount}개
-            </span>
-            <div className="ml-auto flex gap-1.5">
-              <button
-                disabled={busy}
-                onClick={() =>
-                  run(() =>
-                    postJSON("/api/admin/action", {
-                      action: "gameActive",
-                      slug: g.slug,
-                      active: !g.active,
-                    })
-                  )
-                }
-                className="rounded-lg border border-pitch-line px-2.5 py-1 text-xs text-ink-dim disabled:opacity-40"
-              >
-                {g.active ? "숨기기" : "노출"}
-              </button>
-              <button
-                disabled={busy || g.scoreCount === 0}
-                onClick={() => {
-                  // 되돌릴 수 없는 삭제 — 게임 이름을 그대로 입력해야 진행.
-                  const typed = prompt(
-                    `'${g.name}' 의 기록 ${g.scoreCount}개를 모두 삭제합니다.\n되돌릴 수 없습니다. 진행하려면 게임 이름을 입력하세요.`
-                  );
-                  if (typed === null) return;
-                  if (typed.trim() !== g.name) {
-                    alert("게임 이름이 일치하지 않아 취소했습니다.");
-                    return;
+      {tab === "games" && (
+        <Card className="flex flex-col gap-3">
+          <h2 className="font-display text-lg text-ink">게임</h2>
+          {admin.games.map((g) => (
+            <div key={g.slug} className="flex items-center gap-2 text-sm">
+              <span className={g.active ? "text-ink" : "text-ink-faint"}>{g.name}</span>
+              <span className="text-[11px] text-ink-faint">
+                ({g.scoring}) · 기록 {g.scoreCount}개
+              </span>
+              <div className="ml-auto flex gap-1.5">
+                <button
+                  disabled={busy}
+                  onClick={() =>
+                    run(() =>
+                      postJSON("/api/admin/action", {
+                        action: "gameActive",
+                        slug: g.slug,
+                        active: !g.active,
+                      })
+                    )
                   }
-                  // 사용자에게 보여줄 사유 — 비우면 '밸런스 조정'.
-                  const note = prompt("초기화 사유 (사용자에게 표시됩니다)", "밸런스 조정");
-                  if (note === null) return; // 사유 입력을 취소하면 초기화도 취소
-                  run(() =>
-                    postJSON("/api/admin/action", {
-                      action: "gameResetScores",
-                      slug: g.slug,
-                      note: note.trim(),
-                    })
-                  );
-                }}
-                className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"
-              >
-                기록 초기화
-              </button>
+                  className="rounded-lg border border-pitch-line px-2.5 py-1 text-xs text-ink-dim disabled:opacity-40"
+                >
+                  {g.active ? "숨기기" : "노출"}
+                </button>
+                <button
+                  disabled={busy || g.scoreCount === 0}
+                  onClick={() => {
+                    // 되돌릴 수 없는 삭제 — 게임 이름을 그대로 입력해야 진행.
+                    const typed = prompt(
+                      `'${g.name}' 의 기록 ${g.scoreCount}개를 모두 삭제합니다.\n되돌릴 수 없습니다. 진행하려면 게임 이름을 입력하세요.`
+                    );
+                    if (typed === null) return;
+                    if (typed.trim() !== g.name) {
+                      alert("게임 이름이 일치하지 않아 취소했습니다.");
+                      return;
+                    }
+                    // 사용자에게 보여줄 사유 — 비우면 '밸런스 조정'.
+                    const note = prompt("초기화 사유 (사용자에게 표시됩니다)", "밸런스 조정");
+                    if (note === null) return; // 사유 입력을 취소하면 초기화도 취소
+                    run(() =>
+                      postJSON("/api/admin/action", {
+                        action: "gameResetScores",
+                        slug: g.slug,
+                        note: note.trim(),
+                      })
+                    );
+                  }}
+                  className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"
+                >
+                  기록 초기화
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </Card>
+          ))}
+        </Card>
+      )}
+
+      {tab === "review" && <ReviewSection quizzes={admin.hiddenQuizzes} busy={busy} run={run} />}
     </div>
   );
+}
+
+// 신고 누적으로 숨겨진 캐치마인드 그림 검토 — 복구 / 영구삭제.
+function ReviewSection({
+  quizzes,
+  busy,
+  run,
+}: {
+  quizzes: AdminState["hiddenQuizzes"];
+  busy: boolean;
+  run: (fn: () => Promise<unknown>) => void;
+}) {
+  if (quizzes.length === 0) {
+    return (
+      <Card className="py-10 text-center text-sm text-ink-dim">검토할 숨겨진 그림이 없어요.</Card>
+    );
+  }
+  return (
+    <Card className="flex flex-col gap-3">
+      <div>
+        <h2 className="font-display text-lg text-ink">
+          숨겨진 그림 <span className="text-sm text-ink-faint">{quizzes.length}건</span>
+        </h2>
+        <p className="mt-0.5 text-xs text-ink-faint">
+          신고가 누적돼 자동 숨김된 그림이에요. 확인 후 복구하거나 영구 삭제하세요.
+        </p>
+      </div>
+      {quizzes.map((q) => (
+        <div key={q.id} className="flex gap-3 rounded-lg border border-pitch-line bg-black/10 p-3">
+          {q.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={q.imageUrl}
+              alt="신고된 그림"
+              className="h-24 w-24 shrink-0 rounded-lg border border-pitch-line bg-white object-contain"
+            />
+          ) : (
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-pitch-line bg-black/20 text-[11px] text-ink-faint">
+              이미지 없음
+            </div>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="text-sm">
+              <span className="text-ink-faint">정답</span> <b className="text-ink">{q.word}</b>
+            </div>
+            <div className="text-[11px] text-ink-faint">
+              {q.authorName} · 신고 {q.reportCount}회
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {reasonChips(q.reasons).map((r) => (
+                <span
+                  key={r}
+                  className="rounded-full bg-danger/15 px-2 py-0.5 text-[10px] text-danger"
+                >
+                  {r}
+                </span>
+              ))}
+            </div>
+            <div className="mt-auto flex gap-1.5 pt-1">
+              <button
+                disabled={busy}
+                onClick={() =>
+                  run(() => postJSON("/api/admin/action", { action: "cmRestore", quizId: q.id }))
+                }
+                className="rounded-lg border border-pitch-line px-2.5 py-1 text-xs text-ink-dim disabled:opacity-40"
+              >
+                복구
+              </button>
+              <button
+                disabled={busy}
+                onClick={() => {
+                  if (confirm(`'${q.word}' 그림을 영구 삭제할까요? 되돌릴 수 없습니다.`)) {
+                    run(() => postJSON("/api/admin/action", { action: "cmDelete", quizId: q.id }));
+                  }
+                }}
+                className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"
+              >
+                영구삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+// 사유 라벨 배열 → "부적절 2 · 성의없음 1" 식 칩 문자열 배열
+function reasonChips(reasons: string[]): string[] {
+  const count = new Map<string, number>();
+  for (const r of reasons) count.set(r, (count.get(r) ?? 0) + 1);
+  return [...count.entries()].map(([label, n]) => (n > 1 ? `${label} ${n}` : label));
 }

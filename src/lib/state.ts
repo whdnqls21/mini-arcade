@@ -1,8 +1,11 @@
 import "server-only";
 
 import { getAccountSession, isAdmin } from "./auth";
+import { signDrawing } from "./catchmind/server";
 import { createServiceClient } from "./supabase/server";
 import type { Account, Game, Score, Scoring } from "./types";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface LeaderRow {
   accountId: string;
@@ -101,10 +104,78 @@ export interface AdminAccount {
 export interface AdminGame extends Game {
   scoreCount: number; // 이 게임에 쌓인 기록 수(초기화 시 지워질 양)
 }
+// 캐치마인드에서 신고 누적으로 자동 숨김된 그림(관리자 검토 대상)
+export interface AdminHiddenQuiz {
+  id: string;
+  authorName: string;
+  word: string;
+  reportCount: number;
+  reasons: string[]; // 신고 사유(한글 라벨)
+  imageUrl: string | null; // 서명 URL
+  createdAt: string;
+}
 export interface AdminState {
   adminPinSet: boolean;
   accounts: AdminAccount[];
   games: AdminGame[];
+  hiddenQuizzes: AdminHiddenQuiz[];
+}
+
+const CM_REASON_LABEL: Record<string, string> = {
+  lazy: "성의없음",
+  inappropriate: "부적절",
+  answer_leak: "정답유출",
+};
+
+// 신고 누적으로 숨겨진(미삭제) 그림들을 검토용으로 모은다. 테이블이 없으면 []（error 무시).
+async function buildHiddenQuizzes(
+  sb: SupabaseClient,
+  nameById: Map<string, string>
+): Promise<AdminHiddenQuiz[]> {
+  const { data } = await sb
+    .from("ma_cm_quizzes")
+    .select("id,author_id,word_id,image_path,report_count,created_at")
+    .eq("is_hidden", true)
+    .eq("is_deleted", false)
+    .order("report_count", { ascending: false });
+  const quizzes = (data ?? []) as {
+    id: string;
+    author_id: string;
+    word_id: number;
+    image_path: string;
+    report_count: number;
+    created_at: string;
+  }[];
+  if (quizzes.length === 0) return [];
+
+  const wordIds = [...new Set(quizzes.map((q) => q.word_id))];
+  const quizIds = quizzes.map((q) => q.id);
+  const [wRes, rRes] = await Promise.all([
+    sb.from("ma_cm_words").select("id,text").in("id", wordIds),
+    sb.from("ma_cm_reports").select("quiz_id,reason").in("quiz_id", quizIds),
+  ]);
+  const wordById = new Map(((wRes.data ?? []) as { id: number; text: string }[]).map((w) => [w.id, w.text]));
+  const reasonsByQuiz = new Map<string, string[]>();
+  for (const r of (rRes.data ?? []) as { quiz_id: string; reason: string | null }[]) {
+    const label = r.reason ? CM_REASON_LABEL[r.reason] ?? r.reason : "기타";
+    const arr = reasonsByQuiz.get(r.quiz_id) ?? [];
+    arr.push(label);
+    reasonsByQuiz.set(r.quiz_id, arr);
+  }
+
+  const out: AdminHiddenQuiz[] = [];
+  for (const q of quizzes) {
+    out.push({
+      id: q.id,
+      authorName: nameById.get(q.author_id) ?? "(탈퇴)",
+      word: wordById.get(q.word_id) ?? "",
+      reportCount: q.report_count,
+      reasons: reasonsByQuiz.get(q.id) ?? [],
+      imageUrl: await signDrawing(sb, q.image_path),
+      createdAt: q.created_at,
+    });
+  }
+  return out;
 }
 
 export async function buildAdminState(): Promise<AdminState> {
@@ -124,6 +195,9 @@ export async function buildAdminState(): Promise<AdminState> {
     scoreCount.set(s.game_slug, (scoreCount.get(s.game_slug) ?? 0) + 1);
   }
 
+  const nameById = new Map(accounts.map((a) => [a.id, a.name]));
+  const hiddenQuizzes = await buildHiddenQuizzes(sb, nameById);
+
   return {
     adminPinSet: !!(setRes.data as { admin_pin_hash: string | null } | null)?.admin_pin_hash,
     accounts: accounts.map((a) => ({
@@ -137,5 +211,6 @@ export async function buildAdminState(): Promise<AdminState> {
       ...g,
       scoreCount: scoreCount.get(g.slug) ?? 0,
     })),
+    hiddenQuizzes,
   };
 }
