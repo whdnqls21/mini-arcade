@@ -52,7 +52,7 @@ export default function MePage() {
               >
                 <span className="font-display text-ink">{game.name}</span>
                 <span className="text-ink-dim">
-                  <span className="tabular text-gold">{formatScore(game.scoring, best)}</span>{" "}
+                  <span className="tabular text-gold">{formatScore(game.scoring, best, game.slug)}</span>{" "}
                   {rank != null && <span className="text-xs text-ink-faint">({rank}위)</span>}
                 </span>
               </li>

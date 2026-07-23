@@ -126,7 +126,7 @@ export default function GamesPage() {
                     {top ? (
                       <>
                         <b className="text-ink">{top.name}</b>{" "}
-                        <span className="tabular text-gold">{formatScore(g.scoring, top.best)}</span>
+                        <span className="tabular text-gold">{formatScore(g.scoring, top.best, g.slug)}</span>
                       </>
                     ) : (
                       <span className="text-ink-faint">아직 없음</span>
@@ -136,7 +136,7 @@ export default function GamesPage() {
                 <span className="text-ink-dim">
                   내 기록{" "}
                   <span className="tabular text-grass">
-                    {g.myBest != null ? formatScore(g.scoring, g.myBest) : "-"}
+                    {g.myBest != null ? formatScore(g.scoring, g.myBest, g.slug) : "-"}
                   </span>
                 </span>
               </div>

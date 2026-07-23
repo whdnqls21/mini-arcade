@@ -1,8 +1,14 @@
 import type { Scoring } from "./types";
 
-// 점수 표시 (클라이언트/서버 공용). time·htime 은 ms → 초(소수점 2자리).
-export function formatScore(scoring: Scoring, v: number): string {
-  if (scoring === "time" || scoring === "htime") return `${(v / 1000).toFixed(2)}초`;
+// 게임별 초 표시 소수 자릿수(기본 2자리). 반응속도류는 ms 단위 변별이 필요해 3자리.
+const SECONDS_DECIMALS: Record<string, number> = { greenlight: 3 };
+
+// 점수 표시 (클라이언트/서버 공용). time·htime 은 ms → 초.
+export function formatScore(scoring: Scoring, v: number, slug?: string): string {
+  if (scoring === "time" || scoring === "htime") {
+    const digits = slug ? SECONDS_DECIMALS[slug] ?? 2 : 2;
+    return `${(v / 1000).toFixed(digits)}초`;
+  }
   return v.toLocaleString("en-US");
 }
 

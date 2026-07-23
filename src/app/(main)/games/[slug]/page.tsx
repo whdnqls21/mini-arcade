@@ -122,7 +122,7 @@ function Leaderboard({ slug }: { slug: string }) {
         ) : (
           <div className="flex items-center gap-3 rounded-xl border border-grass/40 bg-grass/10 px-3 py-2 text-sm">
             <span className="flex-1 font-display text-ink">내 최고 기록</span>
-            <span className="tabular text-gold">{formatScore(game.scoring, game.myBest)}</span>
+            <span className="tabular text-gold">{formatScore(game.scoring, game.myBest, game.slug)}</span>
           </div>
         )}
         <p className="text-[12px] text-ink-faint">솔로모드에서는 다른 사람 기록이 보이지 않아요.</p>
@@ -159,7 +159,7 @@ function Leaderboard({ slug }: { slug: string }) {
                   {isMe && <span className="ml-1 text-[10px] text-grass">나</span>}
                   {isFirst && " 👑"}
                 </span>
-                <span className="tabular text-gold">{formatScore(game.scoring, r.best)}</span>
+                <span className="tabular text-gold">{formatScore(game.scoring, r.best, game.slug)}</span>
               </li>
             );
           })}

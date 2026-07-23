@@ -184,14 +184,14 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   greenlight: {
     Play: GreenlightGame,
     Icon: GreenlightIcon,
-    tags: ["reflex"],
+    tags: ["reflex", "focus"],
     info: {
       rows: [
         { label: "목표", text: "빨간 화면이 초록으로 바뀌는 순간을 최대한 빨리 탭하세요." },
-        { label: "조작", text: "화면 아무 데나 탭. 3라운드를 하고 각 반응 시간을 합산합니다." },
+        { label: "조작", text: "화면 아무 데나 탭. 5라운드를 하고 각 반응 시간을 합산합니다." },
         { label: "규칙", text: "초록으로 바뀌기 전에 누르면 '너무 빨라요!'가 뜨고 그 라운드를 다시 합니다(감점 없음)." },
-        { label: "기록", text: "3라운드 합산 시간이 기록입니다. 짧을수록 상위!" },
-        { label: "종료", text: "3라운드를 마치면 합산 시간이 기록됩니다. 중간에 그만두면 기록되지 않아요." },
+        { label: "기록", text: "5라운드 합산 시간이 기록입니다. 짧을수록 상위!" },
+        { label: "종료", text: "5라운드를 마치면 합산 시간이 기록됩니다. 중간에 그만두면 기록되지 않아요." },
       ],
       tip: "초록을 '예상'하지 말고 '반응'하세요. 미리 누르려다 성급 판정만 받습니다. 손가락은 화면 근처에 대기.",
     },

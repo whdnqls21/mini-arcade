@@ -45,7 +45,7 @@ export default function RankPage() {
                 <span className="flex-1 text-ink">
                   내 기록<span className="ml-1 text-[10px] text-grass">나</span>
                 </span>
-                <span className="tabular text-gold">{formatScore(g.scoring, g.myBest)}</span>
+                <span className="tabular text-gold">{formatScore(g.scoring, g.myBest, g.slug)}</span>
               </div>
             )
           ) : g.leaderboard.length === 0 ? (
@@ -64,7 +64,7 @@ export default function RankPage() {
                     {r.name}
                     {r.accountId === meId && <span className="ml-1 text-[10px] text-grass">나</span>}
                   </span>
-                  <span className="tabular text-gold">{formatScore(g.scoring, r.best)}</span>
+                  <span className="tabular text-gold">{formatScore(g.scoring, r.best, g.slug)}</span>
                 </li>
               ))}
             </ul>
