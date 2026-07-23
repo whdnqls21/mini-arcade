@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Card } from "@/components/Card";
 import { useAppState } from "@/components/StateProvider";
+import { CatchmindIcon } from "@/games/catchmind/CatchmindIcon";
 import { GAME_REGISTRY } from "@/games/registry";
 import { formatScore } from "@/lib/format";
 import type { GameTag } from "@/games/types";
@@ -16,8 +17,13 @@ const TAG_LABEL: Record<GameTag, string> = {
   focus: "집중력",
   calc: "계산",
   strategy: "전략",
+  creative: "창의력",
 };
-const TAG_ORDER: GameTag[] = ["reflex", "memory", "focus", "calc", "strategy"];
+const TAG_ORDER: GameTag[] = ["reflex", "memory", "focus", "calc", "strategy", "creative"];
+
+// 캐치마인드는 점수 모델이 달라(누적 포인트) ma_games/리더보드에 넣지 않고
+// 목록엔 전용 카드로만 노출한다(자체 라우트 /catchmind). 태그는 창의력.
+const CATCHMIND_TAGS: GameTag[] = ["creative"];
 
 export default function GamesPage() {
   const { state } = useAppState();
@@ -40,6 +46,9 @@ export default function GamesPage() {
           const tags = GAME_REGISTRY[g.slug]?.tags ?? [];
           return [...sel].every((t) => tags.includes(t));
         });
+
+  // 캐치마인드 카드는 솔로모드면 숨기고, 필터가 걸리면 창의력만 만족할 때 노출(AND).
+  const showCatchmind = !solo && [...sel].every((t) => CATCHMIND_TAGS.includes(t));
 
   return (
     <div className="flex flex-col gap-4">
@@ -77,11 +86,40 @@ export default function GamesPage() {
 
       {state.games.length === 0 ? (
         <Card className="py-10 text-center text-sm text-ink-dim">아직 열린 게임이 없어요.</Card>
-      ) : games.length === 0 ? (
+      ) : games.length === 0 && !showCatchmind ? (
         <Card className="py-10 text-center text-sm text-ink-dim">
           선택한 태그를 모두 가진 게임이 없어요.
         </Card>
       ) : null}
+
+      {showCatchmind && (
+        <Link href="/catchmind">
+          <Card className="flex flex-col gap-3 transition-colors hover:border-grass/40">
+            <div className="flex items-start gap-3">
+              <span className="shrink-0">
+                <CatchmindIcon size={44} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <h2 className="font-display text-xl text-ink">캐치마인드</h2>
+                  {CATCHMIND_TAGS.map((t) => (
+                    <span key={t} className="text-[11px] font-medium text-grass/70">
+                      #{TAG_LABEL[t]}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-0.5 text-xs text-ink-faint">그림을 그려 내고, 남의 그림을 맞혀요.</p>
+              </div>
+              <span className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-grass/15 px-4 text-sm font-medium text-grass">
+                플레이 →
+              </span>
+            </div>
+            <div className="flex items-center justify-end border-t border-pitch-line pt-3 text-xs">
+              <span className="text-ink-dim">그리고 · 맞히고 · 순위 경쟁</span>
+            </div>
+          </Card>
+        </Link>
+      )}
 
       {games.map((g) => {
         const top = g.leaderboard[0];

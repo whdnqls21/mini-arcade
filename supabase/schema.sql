@@ -177,6 +177,10 @@ on conflict (slug) do nothing;
 --   create index if not exists ma_post_comments_post_idx on public.ma_post_comments (post_id, created_at);
 --   alter table public.ma_post_comments enable row level security;
 --
+-- 캐치마인드(그림퀴즈)를 추가할 때 — 별도 파일 supabase/catchmind.sql 을 그대로
+-- SQL Editor 에 붙여넣고 Run(create table if not exists 라 안전). 실행 후 Storage 에
+-- 비공개 버킷 'cm-drawings' 를 만들어야 그림 업로드가 된다. 자세한 건 그 파일 상단 참고.
+--
 -- 운영 DB 에 게시판을 추가할 때(이 파일 전체 재실행 금지) — 위 create table 두 개를
 -- create table if not exists 로 바꿔 그대로 실행하고, 아래 RLS 도 함께 실행:
 --   alter table public.ma_posts      enable row level security;

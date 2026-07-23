@@ -20,7 +20,7 @@ export interface GameInfo {
 }
 
 // 게임 목록 필터용 태그(두뇌 능력 축). 게임 하나에 여러 개 붙일 수 있다.
-export type GameTag = "reflex" | "memory" | "focus" | "calc" | "strategy";
+export type GameTag = "reflex" | "memory" | "focus" | "calc" | "strategy" | "creative";
 
 export interface GameEntry {
   Play: ComponentType<GamePlayProps>;
