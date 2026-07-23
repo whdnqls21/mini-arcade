@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAccountSession } from "@/lib/auth";
+import { signDrawing } from "@/lib/catchmind/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   const { data: quiz } = await sb
     .from("ma_cm_quizzes")
-    .select("word_id")
+    .select("word_id,image_path")
     .eq("id", quizId)
     .maybeSingle();
   if (!quiz) return NextResponse.json({ error: "문제를 찾을 수 없습니다." }, { status: 404 });
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest) {
     word: (wRes.data as { text: string } | null)?.text ?? "",
     correct: attempt.is_correct,
     myScore: attempt.solver_score,
+    imageUrl: await signDrawing(sb, quiz.image_path),
     wrongTop3,
     myStars: (rRes.data as { stars: number } | null)?.stars ?? null,
   });

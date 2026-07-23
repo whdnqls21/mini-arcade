@@ -38,6 +38,7 @@ export interface QuizResult {
   word: string;
   correct: boolean;
   myScore: number;
+  imageUrl: string | null; // 방금 푼 그림(서명 URL)
   wrongTop3: { guess: string; count: number }[];
   myStars: number | null;
 }
@@ -49,6 +50,7 @@ export interface CmStats {
   authorPoints: number;
   solvedCount: number;
   quizCount: number;
+  unsolvedCount: number; // 아직 안 푼(맞출 수 있는) 문제 수
 }
 
 // 순위 한 줄

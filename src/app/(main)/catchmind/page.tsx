@@ -111,7 +111,11 @@ function Home({ onPick, onGuess, onRank }: { onPick: () => void; onGuess: () => 
       </Card>
 
       <div className="grid grid-cols-2 gap-3">
-        <BigButton onClick={onGuess} title="맞추기" desc="남의 그림을 맞혀요" />
+        <BigButton
+          onClick={onGuess}
+          title="맞추기"
+          desc={stats ? `안 푼 문제 ${stats.unsolvedCount}개` : "남의 그림을 맞혀요"}
+        />
         <BigButton onClick={onPick} title="문제출제" desc="제시어를 그려요" />
       </div>
 
@@ -121,7 +125,7 @@ function Home({ onPick, onGuess, onRank }: { onPick: () => void; onGuess: () => 
 
       {stats && (
         <p className="text-center text-xs text-ink-faint">
-          맞힌 문제 {stats.solvedCount}개 · 낸 문제 {stats.quizCount}개
+          맞힌 문제 {stats.solvedCount}개 · 낸 문제 {stats.quizCount}개 · 안 푼 문제 {stats.unsolvedCount}개
         </p>
       )}
     </div>
@@ -413,6 +417,16 @@ function Result({ quizId, onNext }: { quizId: string; onNext: () => void }) {
           </p>
         )}
       </Card>
+
+      {r.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={r.imageUrl}
+          alt="방금 푼 그림"
+          className="mx-auto w-full max-w-[16rem] rounded-xl border border-pitch-line bg-white"
+          style={{ aspectRatio: "1 / 1" }}
+        />
+      )}
 
       {r.wrongTop3.length > 0 && (
         <Card className="flex flex-col gap-1.5 py-3">
