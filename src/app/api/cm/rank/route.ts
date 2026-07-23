@@ -11,7 +11,7 @@ interface Agg {
   author: number;
 }
 
-// point_logs 를 reason 으로 집계해 총점/정답왕/그림왕 3뷰. 솔로·비활성 계정 제외.
+// point_logs 를 reason 으로 집계해 총점/눈썰미/손재주 3뷰. 솔로·비활성 계정 제외.
 export async function GET() {
   const session = await getAccountSession();
   if (!session) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });

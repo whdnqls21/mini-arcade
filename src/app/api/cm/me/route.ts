@@ -5,7 +5,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-// 내 캐치마인드 통계 — 총점/정답왕/그림왕 + 맞힌 수/출제 수.
+// 내 캐치마인드 통계 — 총점/눈썰미/손재주 + 맞힌 수/출제 수.
 export async function GET() {
   const session = await getAccountSession();
   if (!session) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });

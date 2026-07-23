@@ -105,9 +105,9 @@ function Home({ onPick, onGuess, onRank }: { onPick: () => void; onGuess: () => 
       <Card className="flex items-center justify-around gap-2 py-4">
         <Stat label="총점" value={stats?.total ?? 0} accent />
         <Divider />
-        <Stat label="정답왕" value={stats?.solvePoints ?? 0} />
+        <Stat label="눈썰미" value={stats?.solvePoints ?? 0} />
         <Divider />
-        <Stat label="그림왕" value={stats?.authorPoints ?? 0} />
+        <Stat label="손재주" value={stats?.authorPoints ?? 0} />
       </Card>
 
       <div className="grid grid-cols-2 gap-3">
@@ -116,7 +116,7 @@ function Home({ onPick, onGuess, onRank }: { onPick: () => void; onGuess: () => 
       </div>
 
       <button onClick={onRank} className="rounded-xl border border-pitch-line py-3 text-sm text-ink-dim hover:text-ink">
-        🏆 순위 보기 (총점 · 정답왕 · 그림왕)
+        🏆 순위 보기 (총점 · 눈썰미 · 손재주)
       </button>
 
       {stats && (
@@ -487,8 +487,8 @@ function Rank() {
 
   const TABS: { key: keyof CmRank; label: string }[] = [
     { key: "total", label: "총점" },
-    { key: "solver", label: "정답왕" },
-    { key: "author", label: "그림왕" },
+    { key: "solver", label: "눈썰미" },
+    { key: "author", label: "손재주" },
   ];
   const rows = rank[tab];
 
