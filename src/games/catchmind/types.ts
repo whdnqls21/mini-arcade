@@ -38,6 +38,7 @@ export interface QuizResult {
   word: string;
   correct: boolean;
   myScore: number;
+  authorName: string; // 출제자 닉네임(정답 공개 후 표시)
   imageUrl: string | null; // 방금 푼 그림(서명 URL)
   wrongTop3: { guess: string; count: number }[];
   myStars: number | null;

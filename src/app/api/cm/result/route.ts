@@ -27,12 +27,12 @@ export async function GET(req: NextRequest) {
 
   const { data: quiz } = await sb
     .from("ma_cm_quizzes")
-    .select("word_id,image_path")
+    .select("word_id,image_path,author_id")
     .eq("id", quizId)
     .maybeSingle();
   if (!quiz) return NextResponse.json({ error: "문제를 찾을 수 없습니다." }, { status: 404 });
 
-  const [wRes, gRes, rRes] = await Promise.all([
+  const [wRes, gRes, rRes, authorRes] = await Promise.all([
     sb.from("ma_cm_words").select("text").eq("id", quiz.word_id).maybeSingle(),
     sb.from("ma_cm_guesses").select("guess").eq("quiz_id", quizId).eq("is_correct", false),
     sb
@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
       .eq("quiz_id", quizId)
       .eq("user_id", session.id)
       .maybeSingle(),
+    sb.from("ma_accounts").select("name").eq("id", quiz.author_id).maybeSingle(),
   ]);
 
   // 오답 집계 TOP3.
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
     word: (wRes.data as { text: string } | null)?.text ?? "",
     correct: attempt.is_correct,
     myScore: attempt.solver_score,
+    authorName: (authorRes.data as { name: string } | null)?.name ?? "(탈퇴)",
     imageUrl: await signDrawing(sb, quiz.image_path),
     wrongTop3,
     myStars: (rRes.data as { stars: number } | null)?.stars ?? null,

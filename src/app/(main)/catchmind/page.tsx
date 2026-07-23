@@ -410,6 +410,9 @@ function Result({ quizId, onNext }: { quizId: string; onNext: () => void }) {
         <p className="text-sm text-ink-dim">
           정답은 <b className="text-ink">{r.word}</b>
         </p>
+        <p className="text-xs text-ink-faint">
+          그린 사람 <span className="text-ink-dim">{r.authorName}</span>
+        </p>
         {r.correct && (
           <p className="text-sm text-gold">
             +{r.myScore}점 획득
