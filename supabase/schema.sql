@@ -127,6 +127,18 @@ alter table public.ma_post_votes    enable row level security;
 alter table public.ma_post_comments enable row level security;
 alter table public.ma_post_comment_votes enable row level security;
 
+-- 성능: (게임×계정)별 점수 집계 뷰 — 리더보드/베스트를 ma_scores 전량 조회 대신 이걸로.
+-- 행 수가 (계정×게임)으로 줄어 1000행 상한/전송량 문제를 없앤다.
+create or replace view public.ma_scores_agg as
+select game_slug, account_id,
+       max(score) as max_all,
+       min(score) as min_all,
+       max(score) filter (where meta->>'solo' = 'true') as max_solo,
+       min(score) filter (where meta->>'solo' = 'true') as min_solo,
+       count(*)   as plays
+from public.ma_scores
+group by game_slug, account_id;
+
 -- 시드: 첫 게임 2048 + settings 단일 행
 insert into public.ma_settings (id) values (1) on conflict (id) do nothing;
 insert into public.ma_games (slug, name, description, scoring, sort) values
@@ -201,6 +213,13 @@ on conflict (slug) do nothing;
 --   );
 --   create index if not exists ma_post_comment_votes_comment_idx on public.ma_post_comment_votes (comment_id);
 --   alter table public.ma_post_comment_votes enable row level security;
+--
+-- 성능: 점수 집계 뷰를 운영 DB 에 추가할 때(이 파일 전체 재실행 금지) — 아래 한 줄만 실행:
+--   create or replace view public.ma_scores_agg as
+--   select game_slug, account_id, max(score) as max_all, min(score) as min_all,
+--          max(score) filter (where meta->>'solo'='true') as max_solo,
+--          min(score) filter (where meta->>'solo'='true') as min_solo, count(*) as plays
+--   from public.ma_scores group by game_slug, account_id;
 --
 -- 캐치마인드(그림퀴즈)를 추가할 때 — 별도 파일 supabase/catchmind.sql 을 그대로
 -- SQL Editor 에 붙여넣고 Run(create table if not exists 라 안전). 실행 후 Storage 에

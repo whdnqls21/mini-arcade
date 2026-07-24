@@ -33,55 +33,97 @@ const better = (scoring: Scoring, a: number, b: number) =>
   isHigh(scoring) ? Math.max(a, b) : Math.min(a, b);
 const sortDir = (scoring: Scoring) => (isHigh(scoring) ? -1 : 1); // 내림차순=상위 먼저
 
+// (게임×계정)별 점수 집계. ma_scores 전량 조회 대신 DB 뷰(ma_scores_agg)에서 받는다.
+// 뷰가 없으면(마이그레이션 전) ma_scores 를 받아 JS 로 집계(폴백).
+interface ScoreAgg {
+  game_slug: string;
+  account_id: string;
+  max_all: number;
+  min_all: number;
+  max_solo: number | null;
+  min_solo: number | null;
+  plays: number;
+}
+
+async function fetchScoreAgg(sb: SupabaseClient): Promise<ScoreAgg[]> {
+  const viewRes = await sb
+    .from("ma_scores_agg")
+    .select("game_slug,account_id,max_all,min_all,max_solo,min_solo,plays");
+  if (!viewRes.error && viewRes.data) return viewRes.data as ScoreAgg[];
+
+  console.warn("ma_scores_agg 뷰 없음 — ma_scores 폴백", viewRes.error?.message);
+  const { data } = await sb.from("ma_scores").select("account_id,game_slug,score,meta");
+  const m = new Map<string, ScoreAgg>();
+  for (const s of (data ?? []) as {
+    account_id: string;
+    game_slug: string;
+    score: number;
+    meta: Record<string, unknown> | null;
+  }[]) {
+    const key = `${s.game_slug}|${s.account_id}`;
+    let r = m.get(key);
+    if (!r) {
+      r = { game_slug: s.game_slug, account_id: s.account_id, max_all: s.score, min_all: s.score, max_solo: null, min_solo: null, plays: 0 };
+      m.set(key, r);
+    }
+    r.max_all = Math.max(r.max_all, s.score);
+    r.min_all = Math.min(r.min_all, s.score);
+    r.plays += 1;
+    if (s.meta && s.meta.solo === true) {
+      r.max_solo = r.max_solo == null ? s.score : Math.max(r.max_solo, s.score);
+      r.min_solo = r.min_solo == null ? s.score : Math.min(r.min_solo, s.score);
+    }
+  }
+  return [...m.values()];
+}
+
 export async function buildState(): Promise<AppState> {
   const sb = createServiceClient();
-  const [session, admin, gRes, sRes, aRes] = await Promise.all([
+  const [session, admin, gRes, agg, aRes] = await Promise.all([
     getAccountSession(),
     isAdmin(),
     sb.from("ma_games").select("*").eq("active", true).order("sort"),
-    sb.from("ma_scores").select("*"),
+    fetchScoreAgg(sb),
     sb.from("ma_accounts").select("id,name,active,solo,created_at").eq("active", true),
   ]);
 
   const games = (gRes.data ?? []) as Game[];
-  const scores = (sRes.data ?? []) as Score[];
   const accounts = (aRes.data ?? []) as Account[];
   const nameById = new Map(accounts.map((a) => [a.id, a.name]));
   const soloById = new Map(accounts.map((a) => [a.id, a.solo]));
 
+  // 게임별 집계 행 묶기.
+  const aggByGame = new Map<string, ScoreAgg[]>();
+  for (const r of agg) {
+    const list = aggByGame.get(r.game_slug) ?? [];
+    list.push(r);
+    aggByGame.set(r.game_slug, list);
+  }
+
   const gameViews: GameView[] = games.map((g) => {
-    // 계정별 베스트 (활성 + 솔로모드 아닌 계정만) — 리더보드용.
-    const bestByAccount = new Map<string, number>();
-    // 내 베스트는 솔로 여부와 무관하게 항상 계산한다(내정보/게임 화면에서 보여준다).
+    const high = isHigh(g.scoring);
+    const bestAll = (r: ScoreAgg) => (high ? r.max_all : r.min_all);
+    const bestSolo = (r: ScoreAgg) => (high ? r.max_solo : r.min_solo);
+
+    // 내 베스트는 솔로 여부와 무관하게 계산. 솔로 베스트는 meta.solo 기록만.
     let myBest: number | null = null;
-    // 솔로모드에서 세운 기록만의 베스트(meta.solo === true).
     let mySoloBest: number | null = null;
-    for (const s of scores) {
-      if (s.game_slug !== g.slug) continue;
-      if (session && s.account_id === session.id) {
-        myBest = myBest == null ? s.score : better(g.scoring, myBest, s.score);
-        if (s.meta && (s.meta as Record<string, unknown>).solo === true) {
-          mySoloBest = mySoloBest == null ? s.score : better(g.scoring, mySoloBest, s.score);
-        }
+    const rows: LeaderRow[] = [];
+    for (const r of aggByGame.get(g.slug) ?? []) {
+      if (session && r.account_id === session.id) {
+        myBest = bestAll(r);
+        mySoloBest = bestSolo(r);
       }
-      if (!nameById.has(s.account_id)) continue; // 비활성/삭제 계정 제외
-      if (soloById.get(s.account_id)) continue; // 솔로모드 계정은 리더보드에서 제외
-      const cur = bestByAccount.get(s.account_id);
-      bestByAccount.set(s.account_id, cur == null ? s.score : better(g.scoring, cur, s.score));
+      if (!nameById.has(r.account_id)) continue; // 비활성/삭제 계정 제외
+      if (soloById.get(r.account_id)) continue; // 솔로모드 계정은 리더보드에서 제외
+      rows.push({ accountId: r.account_id, name: nameById.get(r.account_id) ?? "", best: bestAll(r), rank: 0 });
     }
-    const rows = [...bestByAccount.entries()]
-      .map(([accountId, best]) => ({ accountId, name: nameById.get(accountId) ?? "", best, rank: 0 }))
-      .sort((x, y) => (x.best - y.best) * sortDir(g.scoring));
+    rows.sort((x, y) => (x.best - y.best) * sortDir(g.scoring));
     rows.forEach((r, i) => {
       r.rank = i > 0 && rows[i - 1].best === r.best ? rows[i - 1].rank : i + 1;
     });
 
-    return {
-      ...g,
-      myBest,
-      mySoloBest,
-      leaderboard: rows,
-    };
+    return { ...g, myBest, mySoloBest, leaderboard: rows };
   });
 
   return {
@@ -180,19 +222,18 @@ async function buildHiddenQuizzes(
 
 export async function buildAdminState(): Promise<AdminState> {
   const sb = createServiceClient();
-  const [setRes, aRes, sRes, gRes] = await Promise.all([
+  const [setRes, aRes, agg, gRes] = await Promise.all([
     sb.from("ma_settings").select("admin_pin_hash").eq("id", 1).maybeSingle(),
     sb.from("ma_accounts").select("id,name,active,created_at").order("created_at"),
-    sb.from("ma_scores").select("account_id,game_slug"),
+    fetchScoreAgg(sb),
     sb.from("ma_games").select("*").order("sort"),
   ]);
   const accounts = (aRes.data ?? []) as Account[];
-  const scores = (sRes.data ?? []) as { account_id: string; game_slug: string }[];
   const playCount = new Map<string, number>();
   const scoreCount = new Map<string, number>();
-  for (const s of scores) {
-    playCount.set(s.account_id, (playCount.get(s.account_id) ?? 0) + 1);
-    scoreCount.set(s.game_slug, (scoreCount.get(s.game_slug) ?? 0) + 1);
+  for (const r of agg) {
+    playCount.set(r.account_id, (playCount.get(r.account_id) ?? 0) + r.plays);
+    scoreCount.set(r.game_slug, (scoreCount.get(r.game_slug) ?? 0) + r.plays);
   }
 
   const nameById = new Map(accounts.map((a) => [a.id, a.name]));
