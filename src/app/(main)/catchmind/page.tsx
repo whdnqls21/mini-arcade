@@ -1,13 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/Card";
 import { useAppState } from "@/components/StateProvider";
 import { DrawCanvas, type DrawCanvasHandle } from "@/games/catchmind/DrawCanvas";
-import { Gallery } from "@/games/catchmind/Gallery";
 import { REPORT_REASONS, type ReportReason } from "@/games/catchmind/types";
+
+// 갤러리는 진입 시에만 필요하니 지연 로드해 첫 진입 번들을 가볍게.
+const Gallery = dynamic(() => import("@/games/catchmind/Gallery").then((m) => m.Gallery), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-40 items-center justify-center">
+      <div className="h-7 w-7 animate-spin rounded-full border-2 border-pitch-line border-t-grass" />
+    </div>
+  ),
+});
 import type {
   CmRank,
   CmStats,

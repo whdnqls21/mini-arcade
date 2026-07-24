@@ -200,3 +200,29 @@ create index if not exists ma_cm_comment_votes_comment_idx on public.ma_cm_comme
 
 alter table public.ma_cm_comments       enable row level security;
 alter table public.ma_cm_comment_votes  enable row level security;
+
+-- ════════════════════════════════════════════════════════════════════════
+-- 성능 개선 (전체 테이블 스캔 → DB 집계/정렬). 운영 DB 에 아래 한 벌만 실행(재실행 안전).
+-- ────────────────────────────────────────────────────────────────────────
+-- 1) 순위 집계 뷰 — point_logs 전량 조회+JS합산 대신 사용자당 1행으로 집계.
+create or replace view public.ma_cm_rank as
+select user_id,
+       coalesce(sum(amount), 0)                                          as total,
+       coalesce(sum(amount) filter (where reason = 'solve'), 0)          as solve,
+       coalesce(sum(amount) filter (where reason = 'author_solved'), 0)  as author
+from public.ma_cm_point_logs
+group by user_id;
+
+-- 2) 맞추기 "덜 풀린 우선" 정렬용 카운트 — attempts 전량 스캔 대신 컬럼 + 트리거.
+alter table public.ma_cm_quizzes add column if not exists attempt_count int not null default 0;
+update public.ma_cm_quizzes q
+  set attempt_count = (select count(*) from public.ma_cm_attempts a where a.quiz_id = q.id);
+create or replace function public.ma_cm_bump_attempt_count()
+returns trigger language plpgsql as $$
+begin
+  update public.ma_cm_quizzes set attempt_count = attempt_count + 1 where id = new.quiz_id;
+  return new;
+end; $$;
+drop trigger if exists ma_cm_attempts_bump on public.ma_cm_attempts;
+create trigger ma_cm_attempts_bump after insert on public.ma_cm_attempts
+  for each row execute function public.ma_cm_bump_attempt_count();

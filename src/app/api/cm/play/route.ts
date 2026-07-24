@@ -13,45 +13,44 @@ export async function GET() {
 
   const sb = createServiceClient();
 
-  // 솔로체크를 본 쿼리와 병렬로.
-  const [qRes, myRes, allRes, solo] = await Promise.all([
-    sb
-      .from("ma_cm_quizzes")
-      .select("id,word_id,image_path")
-      .eq("is_hidden", false)
-      .eq("is_deleted", false)
-      .neq("author_id", session.id),
+  // 내 시도 + 솔로체크를 병렬로.
+  const [myRes, solo] = await Promise.all([
     sb.from("ma_cm_attempts").select("quiz_id,tries,finished").eq("user_id", session.id),
-    sb.from("ma_cm_attempts").select("quiz_id"),
     isSoloAccount(sb, session.id),
   ]);
   if (solo) {
     return NextResponse.json({ error: "솔로모드에서는 이용할 수 없어요." }, { status: 403 });
   }
 
-  const quizzes = qRes.data ?? [];
   const mine = (myRes.data ?? []) as { quiz_id: string; tries: number; finished: boolean }[];
-  const finished = new Set(mine.filter((a) => a.finished).map((a) => a.quiz_id));
+  const finishedIds = mine.filter((a) => a.finished).map((a) => a.quiz_id);
   const triesByQuiz = new Map(mine.map((a) => [a.quiz_id, a.tries]));
 
-  const attemptCount = new Map<string, number>();
-  for (const a of (allRes.data ?? []) as { quiz_id: string }[]) {
-    attemptCount.set(a.quiz_id, (attemptCount.get(a.quiz_id) ?? 0) + 1);
-  }
+  // 덜 풀린 문제 우선(attempt_count 오름차순) 중 내가 안 끝낸 것 몇 개만 DB에서 뽑는다.
+  // (attempts 전량 스캔 제거.) 그중 랜덤 1개로 변별력 확보.
+  const candQuery = (withOrder: boolean) => {
+    let q = sb
+      .from("ma_cm_quizzes")
+      .select("id,word_id,image_path")
+      .eq("is_hidden", false)
+      .eq("is_deleted", false)
+      .neq("author_id", session.id);
+    if (finishedIds.length > 0) q = q.not("id", "in", `(${finishedIds.join(",")})`);
+    if (withOrder) q = q.order("attempt_count", { ascending: true });
+    return q.limit(8);
+  };
 
-  const candidates = quizzes.filter((q) => !finished.has(q.id));
-  if (candidates.length === 0) {
+  let cand = await candQuery(true);
+  if (cand.error) {
+    // attempt_count 컬럼 없음(마이그레이션 전) → 정렬 없이 폴백.
+    console.warn("attempt_count 정렬 실패 — 폴백", cand.error.message);
+    cand = await candQuery(false);
+  }
+  const cands = (cand.data ?? []) as { id: string; word_id: number; image_path: string }[];
+  if (cands.length === 0) {
     return NextResponse.json({ quiz: null });
   }
-
-  // 덜 풀린 문제 우선 + 랜덤 타이브레이크.
-  candidates.sort((a, b) => {
-    const ca = attemptCount.get(a.id) ?? 0;
-    const cb = attemptCount.get(b.id) ?? 0;
-    if (ca !== cb) return ca - cb;
-    return Math.random() - 0.5;
-  });
-  const chosen = candidates[0];
+  const chosen = cands[Math.floor(Math.random() * cands.length)];
 
   const { data: word } = await sb
     .from("ma_cm_words")
