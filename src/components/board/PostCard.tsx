@@ -101,23 +101,21 @@ export function PostCard({
           <div className="flex items-center gap-2 pt-1 text-[11px] text-ink-faint">
             <span>{post.authorName}</span>
             <div className="ml-auto flex items-center gap-2">
-              {/* 공지엔 추천 버튼을 두지 않는다(제안용) */}
-              {!post.isNotice && (
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() => postJSON("/api/board/action", { action: "vote", postId: post.id }))
-                  }
-                  className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40 ${
-                    post.voted
-                      ? "border-grass/50 bg-grass/15 text-grass"
-                      : "border-pitch-line text-ink-dim hover:text-ink"
-                  }`}
-                >
-                  <Heart filled={post.voted} className="h-3.5 w-3.5" />
-                  <span className="tabular">{post.votes}</span>
-                </button>
-              )}
+              {/* 모든 글(공지·업데이트 포함)에 좋아요 */}
+              <button
+                disabled={busy}
+                onClick={() =>
+                  run(() => postJSON("/api/board/action", { action: "vote", postId: post.id }))
+                }
+                className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40 ${
+                  post.voted
+                    ? "border-grass/50 bg-grass/15 text-grass"
+                    : "border-pitch-line text-ink-dim hover:text-ink"
+                }`}
+              >
+                <Heart filled={post.voted} className="h-3.5 w-3.5" />
+                <span className="tabular">{post.votes}</span>
+              </button>
               {post.mine && (
                 <button
                   disabled={busy}

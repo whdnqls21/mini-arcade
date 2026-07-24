@@ -92,11 +92,9 @@ export function AdminBoard() {
                 <span className="rounded-full bg-pitch-line px-2 py-0.5 text-ink-dim">
                   {CATEGORY_LABEL[p.category]}
                 </span>
-                {!p.isNotice && (
-                  <span className="flex items-center gap-1">
-                    <Heart filled className="h-3 w-3 text-grass" /> {p.votes}
-                  </span>
-                )}
+                <span className="flex items-center gap-1">
+                  <Heart filled className="h-3 w-3 text-grass" /> {p.votes}
+                </span>
                 {p.pinned && <span className="text-gold">고정됨</span>}
                 <span className="ml-auto">
                   {p.authorName} · {timeAgo(p.createdAt)}
