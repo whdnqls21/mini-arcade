@@ -54,7 +54,7 @@ function Grid({ onSelect }: { onSelect: (quizId: string) => void }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-3 gap-2">
       {items.map((it) => {
         const badge = KIND_BADGE[it.kind];
         return (
