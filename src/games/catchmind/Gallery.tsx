@@ -74,6 +74,11 @@ function Grid({ onSelect }: { onSelect: (quizId: string) => void }) {
               <span className={`absolute right-1 top-1 rounded-full px-1.5 py-0.5 text-[10px] ${badge.cls}`}>
                 {badge.label}
               </span>
+              {it.commentCount > 0 && (
+                <span className="absolute bottom-1 left-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-ink-dim">
+                  💬 {it.commentCount}
+                </span>
+              )}
             </div>
             <span className="truncate text-center text-xs text-ink-dim">{it.word}</span>
           </button>

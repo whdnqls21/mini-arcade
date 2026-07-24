@@ -50,11 +50,18 @@ export async function GET() {
     (a, b) => +new Date(b.created_at) - +new Date(a.created_at)
   );
 
+  const quizIds = rows.map((r) => r.id);
   const wordIds = [...new Set(rows.map((r) => r.word_id))];
-  const wRes = wordIds.length
-    ? await sb.from("ma_cm_words").select("id,text").in("id", wordIds)
-    : { data: [] };
+  const [wRes, cRes] = await Promise.all([
+    wordIds.length ? sb.from("ma_cm_words").select("id,text").in("id", wordIds) : Promise.resolve({ data: [] }),
+    // 문제별 댓글 수 (테이블 없으면 조용히 0)
+    quizIds.length ? sb.from("ma_cm_comments").select("quiz_id").in("quiz_id", quizIds) : Promise.resolve({ data: [] }),
+  ]);
   const wordById = new Map(((wRes.data ?? []) as { id: number; text: string }[]).map((w) => [w.id, w.text]));
+  const commentCount = new Map<string, number>();
+  for (const c of (cRes.data ?? []) as { quiz_id: string }[]) {
+    commentCount.set(c.quiz_id, (commentCount.get(c.quiz_id) ?? 0) + 1);
+  }
 
   const items = await Promise.all(
     rows.map(async (r) => ({
@@ -62,6 +69,7 @@ export async function GET() {
       imageUrl: await signDrawing(sb, r.image_path),
       word: wordById.get(r.word_id) ?? "",
       kind: r.kind,
+      commentCount: commentCount.get(r.id) ?? 0,
     }))
   );
 

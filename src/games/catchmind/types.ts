@@ -75,6 +75,7 @@ export interface GalleryItem {
   imageUrl: string | null;
   word: string;
   kind: GalleryKind; // 내 출제 / 맞힘 / 못 맞힘
+  commentCount: number; // 댓글 수
 }
 
 export interface RatingSummary {
