@@ -34,18 +34,16 @@ export async function POST(req: NextRequest) {
   }
 
   const sb = createServiceClient();
-  if (await isSoloAccount(sb, session.id)) {
+
+  // 솔로체크 + 제시어 유효성을 병렬로(업로드 전에 검증).
+  const [wordRes, solo] = await Promise.all([
+    sb.from("ma_cm_words").select("id").eq("id", wordId).eq("is_active", true).maybeSingle(),
+    isSoloAccount(sb, session.id),
+  ]);
+  if (solo) {
     return NextResponse.json({ error: "솔로모드에서는 이용할 수 없어요." }, { status: 403 });
   }
-
-  // 제시어 유효성.
-  const { data: word } = await sb
-    .from("ma_cm_words")
-    .select("id")
-    .eq("id", wordId)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!word) return NextResponse.json({ error: "없는 제시어입니다." }, { status: 400 });
+  if (!wordRes.data) return NextResponse.json({ error: "없는 제시어입니다." }, { status: 400 });
 
   const ext = decoded.contentType.split("/")[1] ?? "webp";
   const path = `${session.id}/${crypto.randomUUID()}.${ext}`;

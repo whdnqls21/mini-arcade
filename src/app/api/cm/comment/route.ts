@@ -18,9 +18,6 @@ export async function POST(req: NextRequest) {
   if (action === "add") {
     const session = await getAccountSession();
     if (!session) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
-    if (await isSoloAccount(sb, session.id)) {
-      return NextResponse.json({ error: "솔로모드에서는 이용할 수 없어요." }, { status: 403 });
-    }
     const quizId = body?.quizId;
     const text = typeof body?.body === "string" ? body.body.trim() : "";
     if (typeof quizId !== "string") {
@@ -29,13 +26,15 @@ export async function POST(req: NextRequest) {
     if (!text || text.length > BODY_MAX) {
       return NextResponse.json({ error: `댓글을 확인하세요 (1~${BODY_MAX}자).` }, { status: 400 });
     }
-    const { data: quiz } = await sb
-      .from("ma_cm_quizzes")
-      .select("id")
-      .eq("id", quizId)
-      .eq("is_deleted", false)
-      .maybeSingle();
-    if (!quiz) return NextResponse.json({ error: "문제를 찾을 수 없습니다." }, { status: 404 });
+    // 솔로체크 + 문제 존재 확인을 병렬로.
+    const [quizRes, solo] = await Promise.all([
+      sb.from("ma_cm_quizzes").select("id").eq("id", quizId).eq("is_deleted", false).maybeSingle(),
+      isSoloAccount(sb, session.id),
+    ]);
+    if (solo) {
+      return NextResponse.json({ error: "솔로모드에서는 이용할 수 없어요." }, { status: 403 });
+    }
+    if (!quizRes.data) return NextResponse.json({ error: "문제를 찾을 수 없습니다." }, { status: 404 });
 
     const { error } = await sb.from("ma_cm_comments").insert({
       quiz_id: quizId,

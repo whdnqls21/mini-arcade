@@ -12,18 +12,20 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
   const sb = createServiceClient();
-  if (await isSoloAccount(sb, session.id)) {
-    return NextResponse.json({ error: "솔로모드에서는 이용할 수 없어요." }, { status: 403 });
-  }
 
-  const [atRes, mineRes] = await Promise.all([
+  // 솔로체크를 본 쿼리와 병렬로.
+  const [atRes, mineRes, solo] = await Promise.all([
     sb.from("ma_cm_attempts").select("quiz_id,is_correct").eq("user_id", session.id).eq("finished", true),
     sb
       .from("ma_cm_quizzes")
       .select("id,word_id,image_path,created_at")
       .eq("author_id", session.id)
       .eq("is_deleted", false),
+    isSoloAccount(sb, session.id),
   ]);
+  if (solo) {
+    return NextResponse.json({ error: "솔로모드에서는 이용할 수 없어요." }, { status: 403 });
+  }
 
   const attempts = (atRes.data ?? []) as { quiz_id: string; is_correct: boolean }[];
   const correctById = new Map(attempts.map((a) => [a.quiz_id, a.is_correct]));

@@ -15,26 +15,32 @@ export async function GET(req: NextRequest) {
   if (!quizId) return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
 
   const sb = createServiceClient();
-  if (await isSoloAccount(sb, session.id)) {
+
+  // 솔로체크·문제·내 시도를 병렬로(모두 quizId/세션에만 의존).
+  const [quizRes, myAttemptRes, solo] = await Promise.all([
+    sb
+      .from("ma_cm_quizzes")
+      .select("author_id,word_id,image_path,is_deleted")
+      .eq("id", quizId)
+      .maybeSingle(),
+    sb
+      .from("ma_cm_attempts")
+      .select("is_correct,finished")
+      .eq("quiz_id", quizId)
+      .eq("user_id", session.id)
+      .maybeSingle(),
+    isSoloAccount(sb, session.id),
+  ]);
+  if (solo) {
     return NextResponse.json({ error: "솔로모드에서는 이용할 수 없어요." }, { status: 403 });
   }
-
-  const { data: quiz } = await sb
-    .from("ma_cm_quizzes")
-    .select("author_id,word_id,image_path,is_deleted")
-    .eq("id", quizId)
-    .maybeSingle();
+  const quiz = quizRes.data;
   if (!quiz || quiz.is_deleted) {
     return NextResponse.json({ error: "문제를 찾을 수 없습니다." }, { status: 404 });
   }
 
   const mine = quiz.author_id === session.id;
-  const { data: myAttempt } = await sb
-    .from("ma_cm_attempts")
-    .select("is_correct,finished")
-    .eq("quiz_id", quizId)
-    .eq("user_id", session.id)
-    .maybeSingle();
+  const myAttempt = myAttemptRes.data;
   const finished = !!myAttempt?.finished;
   if (!mine && !finished) {
     return NextResponse.json({ error: "아직 볼 수 없는 문제예요." }, { status: 403 });
