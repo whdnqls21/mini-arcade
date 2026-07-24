@@ -73,6 +73,15 @@ export function PostCard({
           {open ? post.title : <span className="line-clamp-1">{post.title}</span>}
         </h2>
 
+        {post.votes > 0 && (
+          <span
+            className={`flex shrink-0 items-center gap-0.5 text-[11px] ${
+              post.voted ? "text-grass" : "text-ink-faint"
+            }`}
+          >
+            <Heart filled={post.voted} className="h-3 w-3" /> {post.votes}
+          </span>
+        )}
         {post.comments.length > 0 && (
           <span className="shrink-0 text-[11px] text-ink-faint">💬 {post.comments.length}</span>
         )}
