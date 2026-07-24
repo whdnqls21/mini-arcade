@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAccountSession } from "@/lib/auth";
-import { isSoloAccount, signDrawing } from "@/lib/catchmind/server";
+import { isSoloAccount, drawingUrl } from "@/lib/catchmind/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     quizId,
-    imageUrl: await signDrawing(sb, quiz.image_path),
+    imageUrl: drawingUrl(sb, quiz.image_path),
     word: (wRes.data as { text: string } | null)?.text ?? "",
     authorName: (aRes.data as { name: string } | null)?.name ?? "(탈퇴)",
     kind,

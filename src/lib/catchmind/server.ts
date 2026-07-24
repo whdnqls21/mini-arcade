@@ -82,9 +82,8 @@ export async function isSoloAccount(sb: SupabaseClient, id: string): Promise<boo
   return !!data?.solo;
 }
 
-// 조회용 서명 URL(짧게 유지).
-export async function signDrawing(sb: SupabaseClient, path: string): Promise<string | null> {
-  const { data, error } = await sb.storage.from(CM_BUCKET).createSignedUrl(path, 60 * 30);
-  if (error || !data) return null;
-  return data.signedUrl;
+// 조회용 URL. 버킷이 공개라 고정 public URL 을 쓴다(서명 왕복·만료 없음 →
+// URL 이 안정적이라 브라우저/CDN 캐시가 적중해 재방문이 즉시 뜬다).
+export function drawingUrl(sb: SupabaseClient, path: string): string {
+  return sb.storage.from(CM_BUCKET).getPublicUrl(path).data.publicUrl;
 }

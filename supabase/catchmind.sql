@@ -4,9 +4,10 @@
 -- 이 파일은 supabase/schema.sql 과 별개로 "그대로 SQL Editor 에 붙여넣고 Run"
 -- 해도 안전하다(create table if not exists). 기존 기록은 건드리지 않는다.
 --
--- 실행 후 추가로 해야 할 것(코드에서 이미지 업로드/서명에 필요):
---   Supabase → Storage → New bucket → 이름 'cm-drawings', Public 체크 해제(비공개).
---   서버가 service_role 로 업로드/서명 URL 발급하므로 별도 정책은 필요 없다.
+-- 실행 후 추가로 해야 할 것(코드에서 이미지 업로드/조회에 필요):
+--   Supabase → Storage → New bucket → 이름 'cm-drawings', Public 체크(공개).
+--   업로드는 서버 service_role, 조회는 고정 public URL 사용(서명 왕복 없음 → 캐시로 빠름).
+--   그림 경로가 계정UUID/랜덤UUID 라 추측 불가. 별도 정책 필요 없다.
 -- ════════════════════════════════════════════════════════════════════════
 
 -- 제시어 사전 (출제 시 랜덤 3개 중 택1)

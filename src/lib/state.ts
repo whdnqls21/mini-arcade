@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getAccountSession, isAdmin } from "./auth";
-import { signDrawing } from "./catchmind/server";
+import { drawingUrl } from "./catchmind/server";
 import { createServiceClient } from "./supabase/server";
 import type { Account, Game, Score, Scoring } from "./types";
 
@@ -171,7 +171,7 @@ async function buildHiddenQuizzes(
       word: wordById.get(q.word_id) ?? "",
       reportCount: q.report_count,
       reasons: reasonsByQuiz.get(q.id) ?? [],
-      imageUrl: await signDrawing(sb, q.image_path),
+      imageUrl: drawingUrl(sb, q.image_path),
       createdAt: q.created_at,
     });
   }

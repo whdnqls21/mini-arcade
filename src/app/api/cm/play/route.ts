@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAccountSession } from "@/lib/auth";
-import { answerLength, hintForTry, isSoloAccount, signDrawing } from "@/lib/catchmind/server";
+import { answerLength, hintForTry, isSoloAccount, drawingUrl } from "@/lib/catchmind/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -58,9 +58,7 @@ export async function GET() {
     .maybeSingle();
   if (!word) return NextResponse.json({ quiz: null });
 
-  const imageUrl = await signDrawing(sb, chosen.image_path);
-  if (!imageUrl) return NextResponse.json({ error: "그림을 불러오지 못했습니다." }, { status: 500 });
-
+  const imageUrl = drawingUrl(sb, chosen.image_path);
   const tries = triesByQuiz.get(chosen.id) ?? 0;
   return NextResponse.json({
     quiz: {

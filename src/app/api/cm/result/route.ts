@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAccountSession } from "@/lib/auth";
-import { signDrawing } from "@/lib/catchmind/server";
+import { drawingUrl } from "@/lib/catchmind/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
     correct: attempt.is_correct,
     myScore: attempt.solver_score,
     authorName: (authorRes.data as { name: string } | null)?.name ?? "(탈퇴)",
-    imageUrl: await signDrawing(sb, quiz.image_path),
+    imageUrl: drawingUrl(sb, quiz.image_path),
     wrongTop3,
     myStars: (rRes.data as { stars: number } | null)?.stars ?? null,
   });

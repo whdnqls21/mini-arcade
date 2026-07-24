@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAccountSession } from "@/lib/auth";
-import { isSoloAccount, signDrawing } from "@/lib/catchmind/server";
+import { isSoloAccount, drawingUrl } from "@/lib/catchmind/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -66,7 +66,7 @@ export async function GET() {
   const items = await Promise.all(
     rows.map(async (r) => ({
       quizId: r.id,
-      imageUrl: await signDrawing(sb, r.image_path),
+      imageUrl: drawingUrl(sb, r.image_path),
       word: wordById.get(r.word_id) ?? "",
       kind: r.kind,
       commentCount: commentCount.get(r.id) ?? 0,
