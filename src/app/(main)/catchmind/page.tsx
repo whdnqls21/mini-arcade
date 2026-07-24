@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/Card";
 import { useAppState } from "@/components/StateProvider";
 import { DrawCanvas, type DrawCanvasHandle } from "@/games/catchmind/DrawCanvas";
+import { Gallery } from "@/games/catchmind/Gallery";
 import { REPORT_REASONS, type ReportReason } from "@/games/catchmind/types";
 import type {
   CmRank,
@@ -16,7 +17,7 @@ import type {
   WordPick,
 } from "@/games/catchmind/types";
 
-type View = "home" | "pick" | "draw" | "guess" | "result" | "rank";
+type View = "home" | "pick" | "draw" | "guess" | "result" | "rank" | "gallery";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { cache: "no-store", ...init });
@@ -49,12 +50,20 @@ export default function CatchmindPage() {
 
   return (
     <Wrap onHome={() => setView("home")} showBack={view !== "home"}>
-      {view === "home" && <Home onPick={() => setView("pick")} onGuess={() => setView("guess")} onRank={() => setView("rank")} />}
+      {view === "home" && (
+        <Home
+          onPick={() => setView("pick")}
+          onGuess={() => setView("guess")}
+          onRank={() => setView("rank")}
+          onGallery={() => setView("gallery")}
+        />
+      )}
       {view === "pick" && <Pick onDraw={() => setView("draw")} pickRef={pickHolder} />}
       {view === "draw" && <Draw word={pickHolder.current} onDone={() => setView("home")} />}
       {view === "guess" && <Guess onFinished={goResult} onEmpty={() => setView("pick")} />}
       {view === "result" && resultQuizId && <Result quizId={resultQuizId} onNext={() => setView("guess")} />}
       {view === "rank" && <Rank />}
+      {view === "gallery" && <Gallery />}
     </Wrap>
   );
 }
@@ -94,7 +103,17 @@ function Wrap({
 }
 
 // ── 홈 ────────────────────────────────────────────────────────────────
-function Home({ onPick, onGuess, onRank }: { onPick: () => void; onGuess: () => void; onRank: () => void }) {
+function Home({
+  onPick,
+  onGuess,
+  onRank,
+  onGallery,
+}: {
+  onPick: () => void;
+  onGuess: () => void;
+  onRank: () => void;
+  onGallery: () => void;
+}) {
   const [stats, setStats] = useState<CmStats | null>(null);
   useEffect(() => {
     api<CmStats>("/api/cm/me").then(setStats).catch(() => setStats(null));
@@ -119,9 +138,14 @@ function Home({ onPick, onGuess, onRank }: { onPick: () => void; onGuess: () => 
         <BigButton onClick={onPick} title="문제출제" desc="제시어를 그려요" />
       </div>
 
-      <button onClick={onRank} className="rounded-xl border border-pitch-line py-3 text-sm text-ink-dim hover:text-ink">
-        🏆 순위 보기 (총점 · 눈썰미 · 손재주)
-      </button>
+      <div className="grid grid-cols-2 gap-3">
+        <button onClick={onGallery} className="rounded-xl border border-pitch-line py-3 text-sm text-ink-dim hover:text-ink">
+          🖼️ 갤러리
+        </button>
+        <button onClick={onRank} className="rounded-xl border border-pitch-line py-3 text-sm text-ink-dim hover:text-ink">
+          🏆 순위
+        </button>
+      </div>
 
       {stats && (
         <p className="text-center text-xs text-ink-faint">

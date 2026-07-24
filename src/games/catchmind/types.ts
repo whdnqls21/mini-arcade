@@ -66,3 +66,42 @@ export interface CmRank {
   solver: CmRankRow[];
   author: CmRankRow[];
 }
+
+// ── 갤러리 ──────────────────────────────────────────────────────────────
+export type GalleryKind = "mine" | "solved" | "failed";
+
+export interface GalleryItem {
+  quizId: string;
+  imageUrl: string | null;
+  word: string;
+  kind: GalleryKind; // 내 출제 / 맞힘 / 못 맞힘
+}
+
+export interface RatingSummary {
+  avg: number; // 평균(0이면 평가 없음)
+  count: number; // 평가 수
+  dist: number[]; // [1★,2★,3★,4★,5★] 개수
+}
+
+export interface GalleryComment {
+  id: string;
+  authorName: string;
+  body: string;
+  mine: boolean;
+  likes: number;
+  liked: boolean;
+  createdAt: string;
+}
+
+export interface GalleryDetail {
+  quizId: string;
+  imageUrl: string | null;
+  word: string;
+  authorName: string;
+  kind: GalleryKind;
+  rating: RatingSummary;
+  myStars: number | null; // 내가 준 별점
+  canRate: boolean; // 평가 가능(끝냈고, 내 문제 아니고, 아직 평가 안 함)
+  wrongTop3: { guess: string; count: number }[];
+  comments: GalleryComment[];
+}

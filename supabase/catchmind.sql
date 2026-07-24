@@ -175,3 +175,27 @@ insert into public.ma_cm_words (text, category) values
   ('세종대왕', '인물'), ('이순신', '인물'), ('나폴레옹', '인물'), ('링컨', '인물'),
   ('마이클잭슨', '인물'), ('스티브잡스', '인물')
 on conflict (text) do nothing;
+
+-- ────────────────────────────────────────────────────────────────────────
+-- 갤러리 댓글 (문제별 댓글 + 좋아요). 게시판 댓글과 동일 구조.
+-- 운영 DB 에 추가할 때 아래 한 벌만 실행(재실행 안전).
+create table if not exists public.ma_cm_comments (
+  id          uuid primary key default gen_random_uuid(),
+  quiz_id     uuid not null references public.ma_cm_quizzes(id) on delete cascade,
+  account_id  uuid references public.ma_accounts(id) on delete set null,
+  author_name text not null,
+  body        text not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists ma_cm_comments_quiz_idx on public.ma_cm_comments (quiz_id, created_at);
+
+create table if not exists public.ma_cm_comment_votes (
+  comment_id uuid not null references public.ma_cm_comments(id) on delete cascade,
+  account_id uuid not null references public.ma_accounts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (comment_id, account_id)
+);
+create index if not exists ma_cm_comment_votes_comment_idx on public.ma_cm_comment_votes (comment_id);
+
+alter table public.ma_cm_comments       enable row level security;
+alter table public.ma_cm_comment_votes  enable row level security;
