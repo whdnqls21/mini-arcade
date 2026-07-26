@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 
 import { Card } from "@/components/Card";
+import { IconBadge } from "@/components/IconBadge";
 import { Heart } from "@/components/board/Heart";
 import { CATEGORY_LABEL, STATUS_LABEL, STATUS_STYLE } from "@/lib/board-meta";
 import { postJSON } from "@/lib/client-api";
@@ -107,7 +108,8 @@ export function PostCard({
             {post.body}
           </p>
 
-          <div className="flex items-center gap-2 pt-1 text-[11px] text-ink-faint">
+          <div className="flex items-center gap-1 pt-1 text-[11px] text-ink-faint">
+            <IconBadge iconKey={post.authorIcon} />
             <span>{post.authorName}</span>
             <div className="ml-auto flex items-center gap-2">
               {/* 모든 글(공지·업데이트 포함)에 좋아요 */}
@@ -147,9 +149,10 @@ export function PostCard({
               <ul className="flex flex-col gap-2">
                 {post.comments.map((c) => (
                   <li key={c.id} className="rounded-lg bg-black/15 px-3 py-2">
-                    <div className="flex items-center gap-2 text-[11px] text-ink-faint">
+                    <div className="flex items-center gap-1 text-[11px] text-ink-faint">
+                      <IconBadge iconKey={c.authorIcon} />
                       <span className="text-ink-dim">{c.authorName}</span>
-                      <span>{timeAgo(c.createdAt)}</span>
+                      <span className="ml-1">{timeAgo(c.createdAt)}</span>
                       <div className="ml-auto flex items-center gap-2">
                         <button
                           disabled={busy || !sessionId}

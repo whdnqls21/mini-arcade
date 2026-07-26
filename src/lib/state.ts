@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAccountSession, isAdmin } from "./auth";
 import { drawingUrl } from "./catchmind/server";
+import { EARN_COND } from "./icons";
 import { createServiceClient } from "./supabase/server";
 import type { Account, Game, Score, Scoring } from "./types";
 
@@ -10,6 +11,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export interface LeaderRow {
   accountId: string;
   name: string;
+  icon: string | null; // 닉네임 옆 아이콘 키
   best: number;
   rank: number;
 }
@@ -22,7 +24,14 @@ export interface GameView extends Game {
 // GameView 는 Game 을 확장하므로 reset_at/reset_note 가 이미 포함된다.
 
 export interface AppState {
-  session: { id: string; name: string; solo: boolean } | null;
+  session: {
+    id: string;
+    name: string;
+    solo: boolean;
+    icon: string | null; // 현재 장착 아이콘 키
+    // 아이콘 선택 UI 용 — granted: 이미 영구 획득, eligible: 지금 조건 충족(장착 시 영구 획득)
+    icons: { granted: string[]; eligible: string[] };
+  } | null;
   isAdmin: boolean;
   games: GameView[];
 }
@@ -77,14 +86,88 @@ async function fetchScoreAgg(sb: SupabaseClient): Promise<ScoreAgg[]> {
   return [...m.values()];
 }
 
+// ── 닉네임 아이콘 ────────────────────────────────────────────────────
+// 계정별 장착 아이콘. icon 컬럼이 아직 없으면(마이그레이션 전) 조용히 빈 맵.
+async function fetchIcons(sb: SupabaseClient): Promise<Map<string, string | null>> {
+  const { data, error } = await sb.from("ma_accounts").select("id,icon");
+  if (error) return new Map();
+  return new Map(((data ?? []) as { id: string; icon: string | null }[]).map((r) => [r.id, r.icon ?? null]));
+}
+
+// 영구 획득한 아이콘 키들. 테이블이 없으면 조용히 [].
+async function fetchGrantedIcons(sb: SupabaseClient, accountId: string): Promise<string[]> {
+  const { data, error } = await sb.from("ma_account_icons").select("icon_key").eq("account_id", accountId);
+  if (error) return [];
+  return ((data ?? []) as { icon_key: string }[]).map((r) => r.icon_key);
+}
+
+// 리더보드(솔로 제외) 기준으로 accountId 가 지금 조건을 충족하는 획득 아이콘 키.
+export function eligibleIcons(input: {
+  games: { slug: string; scoring: Scoring }[];
+  agg: ScoreAgg[];
+  soloIds: Set<string>;
+  accountId: string;
+}): string[] {
+  const { games, agg, soloIds, accountId } = input;
+
+  const aggByGame = new Map<string, ScoreAgg[]>();
+  for (const r of agg) {
+    const list = aggByGame.get(r.game_slug) ?? [];
+    list.push(r);
+    aggByGame.set(r.game_slug, list);
+  }
+
+  // 게임별 내 순위(솔로 계정 제외하고 매김). 내가 솔로면 리더보드에 없어 순위 없음 → 챔피언 불가.
+  const myRank = new Map<string, number>();
+  for (const g of games) {
+    const high = isHigh(g.scoring);
+    const rows = (aggByGame.get(g.slug) ?? [])
+      .filter((r) => !soloIds.has(r.account_id))
+      .map((r) => ({ id: r.account_id, best: high ? r.max_all : r.min_all }));
+    rows.sort((a, b) => (a.best - b.best) * sortDir(g.scoring));
+    let rank = 0;
+    let prev: number | null = null;
+    rows.forEach((r, i) => {
+      rank = prev !== null && prev === r.best ? rank : i + 1;
+      prev = r.best;
+      if (r.id === accountId) myRank.set(g.slug, rank);
+    });
+  }
+
+  const myPlays = agg.filter((r) => r.account_id === accountId).reduce((sum, r) => sum + r.plays, 0);
+
+  const out: string[] = [];
+  for (const [key, cond] of Object.entries(EARN_COND)) {
+    let ok = false;
+    if (cond.kind === "champion") ok = myRank.get(cond.slug) === 1;
+    else if (cond.kind === "goat") ok = games.length > 0 && games.every((g) => myRank.get(g.slug) === 1);
+    else if (cond.kind === "plays") ok = myPlays >= cond.count;
+    if (ok) out.push(key);
+  }
+  return out;
+}
+
+// 데이터를 따로 안 들고 있는 라우트(아이콘 장착)용 — 필요한 것만 조회해 판정한다.
+export async function computeEligibleIcons(sb: SupabaseClient, accountId: string): Promise<string[]> {
+  const [gRes, agg, aRes] = await Promise.all([
+    sb.from("ma_games").select("slug,scoring").eq("active", true),
+    fetchScoreAgg(sb),
+    sb.from("ma_accounts").select("id").eq("solo", true),
+  ]);
+  const games = (gRes.data ?? []) as { slug: string; scoring: Scoring }[];
+  const soloIds = new Set(((aRes.data ?? []) as { id: string }[]).map((a) => a.id));
+  return eligibleIcons({ games, agg, soloIds, accountId });
+}
+
 export async function buildState(): Promise<AppState> {
   const sb = createServiceClient();
-  const [session, admin, gRes, agg, aRes] = await Promise.all([
+  const [session, admin, gRes, agg, aRes, iconById] = await Promise.all([
     getAccountSession(),
     isAdmin(),
     sb.from("ma_games").select("*").eq("active", true).order("sort"),
     fetchScoreAgg(sb),
     sb.from("ma_accounts").select("id,name,active,solo,created_at").eq("active", true),
+    fetchIcons(sb),
   ]);
 
   const games = (gRes.data ?? []) as Game[];
@@ -116,7 +199,13 @@ export async function buildState(): Promise<AppState> {
       }
       if (!nameById.has(r.account_id)) continue; // 비활성/삭제 계정 제외
       if (soloById.get(r.account_id)) continue; // 솔로모드 계정은 리더보드에서 제외
-      rows.push({ accountId: r.account_id, name: nameById.get(r.account_id) ?? "", best: bestAll(r), rank: 0 });
+      rows.push({
+        accountId: r.account_id,
+        name: nameById.get(r.account_id) ?? "",
+        icon: iconById.get(r.account_id) ?? null,
+        best: bestAll(r),
+        rank: 0,
+      });
     }
     rows.sort((x, y) => (x.best - y.best) * sortDir(g.scoring));
     rows.forEach((r, i) => {
@@ -126,10 +215,27 @@ export async function buildState(): Promise<AppState> {
     return { ...g, myBest, mySoloBest, leaderboard: rows };
   });
 
+  let sessionOut: AppState["session"] = null;
+  if (session) {
+    const soloIds = new Set(accounts.filter((a) => a.solo).map((a) => a.id));
+    const eligible = eligibleIcons({
+      games: games.map((g) => ({ slug: g.slug, scoring: g.scoring })),
+      agg,
+      soloIds,
+      accountId: session.id,
+    });
+    const granted = await fetchGrantedIcons(sb, session.id);
+    sessionOut = {
+      id: session.id,
+      name: session.name,
+      solo: soloById.get(session.id) ?? false,
+      icon: iconById.get(session.id) ?? null,
+      icons: { granted, eligible },
+    };
+  }
+
   return {
-    session: session
-      ? { id: session.id, name: session.name, solo: soloById.get(session.id) ?? false }
-      : null,
+    session: sessionOut,
     isAdmin: admin,
     games: gameViews,
   };

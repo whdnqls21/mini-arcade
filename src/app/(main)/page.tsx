@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Card } from "@/components/Card";
+import { IconBadge } from "@/components/IconBadge";
 import { useAppState } from "@/components/StateProvider";
 import { CatchmindIcon } from "@/games/catchmind/CatchmindIcon";
 import { GAME_REGISTRY } from "@/games/registry";
@@ -163,6 +164,7 @@ export default function GamesPage() {
                     🏆 1위{" "}
                     {top ? (
                       <>
+                        <IconBadge iconKey={top.icon} />{" "}
                         <b className="text-ink">{top.name}</b>{" "}
                         <span className="tabular text-gold">{formatScore(g.scoring, top.best, g.slug)}</span>
                       </>

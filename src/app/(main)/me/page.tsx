@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 import { Card } from "@/components/Card";
+import { IconBadge } from "@/components/IconBadge";
+import { IconPicker } from "@/components/IconPicker";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { SoloModeToggle } from "@/components/SoloModeToggle";
 import { useAppState } from "@/components/StateProvider";
@@ -29,7 +31,10 @@ export default function MePage() {
     <div className="flex flex-col gap-4">
       <div className="pt-1">
         <p className="text-xs uppercase tracking-[0.2em] text-grass">내정보</p>
-        <h1 className="font-display text-2xl text-ink">{me.name}</h1>
+        <h1 className="flex items-center gap-2 font-display text-2xl text-ink">
+          <IconBadge iconKey={me.icon} />
+          {me.name}
+        </h1>
       </div>
 
       <Card className="flex flex-col gap-3">
@@ -60,6 +65,14 @@ export default function MePage() {
           </ul>
         )}
       </Card>
+
+      <IconPicker
+        current={me.icon}
+        name={me.name}
+        granted={me.icons.granted}
+        eligible={me.icons.eligible}
+        onChanged={refresh}
+      />
 
       <SoloModeToggle solo={me.solo} onChanged={refresh} />
 

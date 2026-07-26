@@ -33,7 +33,7 @@ interface CommentRow {
 // 목록 — 로그인 없이도 볼 수 있게 한다(작성/추천만 로그인 필요).
 export async function GET() {
   const sb = createServiceClient();
-  const [session, admin, pRes, vRes, cRes, cvRes] = await Promise.all([
+  const [session, admin, pRes, vRes, cRes, cvRes, iconRes] = await Promise.all([
     getAccountSession(),
     isAdmin(),
     sb.from("ma_posts").select("*").order("created_at", { ascending: false }),
@@ -42,7 +42,16 @@ export async function GET() {
     sb.from("ma_post_comments").select("*").order("created_at", { ascending: true }),
     // 댓글 좋아요 테이블도 마이그레이션 전이면 조용히 빈 값으로.
     sb.from("ma_post_comment_votes").select("comment_id,account_id"),
+    // 작성자 아이콘 — 이름 스냅샷과 달리 '현재' 아이콘을 계정 참조로 붙인다(컬럼 없으면 무시).
+    sb.from("ma_accounts").select("id,icon"),
   ]);
+
+  const iconById = new Map<string, string | null>();
+  if (!iconRes.error) {
+    for (const a of (iconRes.data ?? []) as { id: string; icon: string | null }[]) {
+      iconById.set(a.id, a.icon ?? null);
+    }
+  }
 
   // 테이블이 없으면(마이그레이션 전) 조용히 빈 목록으로 보이지 않게 원인을 알린다.
   if (pRes.error) {
@@ -82,6 +91,7 @@ export async function GET() {
     list.push({
       id: c.id,
       authorName: c.author_name,
+      authorIcon: c.account_id ? iconById.get(c.account_id) ?? null : null,
       body: c.body,
       mine: !!session && c.account_id === session.id,
       likes: cLikeCount.get(c.id) ?? 0,
@@ -97,6 +107,7 @@ export async function GET() {
     title: p.title,
     body: p.body,
     authorName: p.author_name,
+    authorIcon: p.account_id ? iconById.get(p.account_id) ?? null : null,
     isNotice: p.is_notice,
     pinned: p.pinned,
     status: p.status,

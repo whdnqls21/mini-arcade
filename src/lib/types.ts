@@ -12,6 +12,7 @@ export interface Account {
   name: string;
   active: boolean;
   solo: boolean; // 솔로모드: 리더보드에서 제외
+  icon: string | null; // 닉네임 옆 아이콘 키(src/lib/icons.ts). null=없음
   // pin_hash 는 서버에서만 다루며 클라이언트로 내려보내지 않는다.
   created_at: string;
 }
@@ -44,6 +45,7 @@ export type PostStatus = "reviewing" | "planned" | "done" | "declined";
 export interface CommentView {
   id: string;
   authorName: string;
+  authorIcon: string | null; // 작성자 현재 아이콘 키
   body: string;
   mine: boolean; // 내가 쓴 댓글인지(삭제 권한)
   likes: number; // 좋아요 수
@@ -58,6 +60,7 @@ export interface PostView {
   title: string;
   body: string;
   authorName: string;
+  authorIcon: string | null; // 작성자 현재 아이콘 키
   isNotice: boolean;
   pinned: boolean;
   status: PostStatus | null;

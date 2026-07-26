@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { ACCOUNT_COOKIE, COOKIE_OPTIONS, getAccountSession, signSession } from "@/lib/auth";
+import { iconByKey } from "@/lib/icons";
 import { validateName } from "@/lib/name";
 import { hashPin, isValidPin, verifyPin } from "@/lib/pin";
+import { computeEligibleIcons } from "@/lib/state";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +109,60 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "솔로모드 변경에 실패했습니다." }, { status: 500 });
     }
     return NextResponse.json({ ok: true, solo });
+  }
+
+  // ── 닉네임 아이콘 장착/해제 ───────────────────────────────────────
+  if (action === "setIcon") {
+    const key = body?.icon;
+
+    // 해제(아이콘 없음)
+    if (key === null || key === "") {
+      const { error } = await sb.from("ma_accounts").update({ icon: null }).eq("id", me.id);
+      if (error) {
+        console.error("setIcon(해제) 실패", error);
+        return NextResponse.json({ error: "아이콘 변경에 실패했습니다." }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, icon: null });
+    }
+
+    if (typeof key !== "string") {
+      return NextResponse.json({ error: "아이콘을 확인하세요." }, { status: 400 });
+    }
+    const def = iconByKey(key);
+    if (!def) {
+      return NextResponse.json({ error: "없는 아이콘이에요." }, { status: 400 });
+    }
+
+    // 획득형이면 이미 영구 획득했거나(테이블 기록) 지금 조건 충족이어야 한다.
+    if (def.tier === "earned") {
+      const { data: owned } = await sb
+        .from("ma_account_icons")
+        .select("icon_key")
+        .eq("account_id", me.id)
+        .eq("icon_key", key)
+        .maybeSingle();
+      if (!owned) {
+        const eligible = await computeEligibleIcons(sb, me.id);
+        if (!eligible.includes(key)) {
+          return NextResponse.json(
+            { error: "아직 잠긴 아이콘이에요. 조건을 달성해보세요!" },
+            { status: 403 }
+          );
+        }
+        // 조건 충족 → 영구 획득으로 기록(중복·테이블없음은 무시하고 장착은 진행)
+        const { error: gErr } = await sb
+          .from("ma_account_icons")
+          .insert({ account_id: me.id, icon_key: key });
+        if (gErr && gErr.code !== "23505") console.error("아이콘 획득 기록 실패(무시)", gErr);
+      }
+    }
+
+    const { error } = await sb.from("ma_accounts").update({ icon: key }).eq("id", me.id);
+    if (error) {
+      console.error("setIcon 실패", error);
+      return NextResponse.json({ error: "아이콘 변경에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, icon: key });
   }
 
   return NextResponse.json({ error: "알 수 없는 동작입니다." }, { status: 400 });

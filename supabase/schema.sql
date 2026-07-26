@@ -229,4 +229,16 @@ on conflict (slug) do nothing;
 -- create table if not exists 로 바꿔 그대로 실행하고, 아래 RLS 도 함께 실행:
 --   alter table public.ma_posts      enable row level security;
 --   alter table public.ma_post_votes enable row level security;
+--
+-- 닉네임 아이콘을 추가할 때(이 파일 전체 재실행 금지) — 아래 한 벌만 실행:
+--   (아이콘 정의·획득 조건은 코드 src/lib/icons.ts 한 곳에 있고, DB 는 '장착 아이콘'과
+--    '영구 획득 기록'만 저장한다. icon 은 아이콘 키 문자열, null=없음)
+--   alter table public.ma_accounts add column if not exists icon text;
+--   create table if not exists public.ma_account_icons (
+--     account_id uuid not null references public.ma_accounts(id) on delete cascade,
+--     icon_key   text not null,
+--     earned_at  timestamptz not null default now(),
+--     primary key (account_id, icon_key)
+--   );
+--   alter table public.ma_account_icons enable row level security;
 -- ────────────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { Card } from "@/components/Card";
+import { IconBadge } from "@/components/IconBadge";
 import { useAppState } from "@/components/StateProvider";
 import { formatScore } from "@/lib/format";
 
@@ -60,8 +61,9 @@ export default function RankPage() {
                   }`}
                 >
                   <span className="w-5 text-center text-xs text-ink-faint">{r.rank}</span>
-                  <span className="flex-1 text-ink">
-                    {r.name}
+                  <span className="flex flex-1 items-center gap-1 text-ink">
+                    <IconBadge iconKey={r.icon} />
+                    <span>{r.name}</span>
                     {r.accountId === meId && <span className="ml-1 text-[10px] text-grass">나</span>}
                   </span>
                   <span className="tabular text-gold">{formatScore(g.scoring, r.best, g.slug)}</span>
