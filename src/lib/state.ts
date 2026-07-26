@@ -224,7 +224,20 @@ export async function buildState(): Promise<AppState> {
       soloIds,
       accountId: session.id,
     });
-    const granted = await fetchGrantedIcons(sb, session.id);
+    let granted = await fetchGrantedIcons(sb, session.id);
+
+    // 자동 획득 — 조건을 충족했는데 아직 기록 안 된 아이콘은 이 순간 영구 획득 처리한다.
+    // 신규 달성분만 upsert 하므로 평소(새로 딴 게 없을 때)엔 쓰기가 없다.
+    const toGrant = eligible.filter((k) => !granted.includes(k));
+    if (toGrant.length > 0) {
+      const { error } = await sb.from("ma_account_icons").upsert(
+        toGrant.map((icon_key) => ({ account_id: session.id, icon_key })),
+        { onConflict: "account_id,icon_key", ignoreDuplicates: true }
+      );
+      if (error) console.error("아이콘 자동 획득 실패(무시)", error);
+      else granted = [...granted, ...toGrant];
+    }
+
     sessionOut = {
       id: session.id,
       name: session.name,
