@@ -3,7 +3,9 @@
 //  - earned : 조건 달성 시 잠금 해제 → 한 번 달성하면 영구 보유
 // 획득 조건 판정은 서버(state.ts)가 한다. 여기엔 표시 정보 + 조건 메타만 둔다.
 
-export type IconTier = "basic" | "earned";
+// basic  = 기본(누구나) · earned = 조건 달성 · season = 시즌 보상(추후)
+// 테두리 색으로 등급을 구분한다: basic 브론즈, earned 은색, season 금색.
+export type IconTier = "basic" | "earned" | "season";
 
 export interface IconDef {
   key: string; // 저장·식별용 키
@@ -74,6 +76,13 @@ export const EARNED_ICONS: IconDef[] = EARNED.map(([key, emoji, label, hint]) =>
 }));
 
 export const ALL_ICONS: IconDef[] = [...BASIC_ICONS, ...EARNED_ICONS];
+
+// 등급별 테두리 색(닉네임 아이콘 코인)
+export const TIER_RING: Record<IconTier, string> = {
+  basic: "#c68a4e", // 브론즈(갈색)
+  earned: "#c9d1de", // 은색
+  season: "#f4c64e", // 금색(앱 골드)
+};
 
 const BY_KEY = new Map<string, IconDef>(ALL_ICONS.map((i) => [i.key, i]));
 export const iconByKey = (key: string | null | undefined): IconDef | undefined =>

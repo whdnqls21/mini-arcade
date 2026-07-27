@@ -7,6 +7,9 @@ import { IconBadge } from "@/components/IconBadge";
 import { BASIC_ICONS, EARNED_ICONS } from "@/lib/icons";
 import { postJSON } from "@/lib/client-api";
 
+// 등급 안내 문구용
+const TIER_HINT = "테두리 색으로 등급을 구분해요 — 갈색(기본) · 은색(획득) · 금색(시즌 보상)";
+
 // 내정보의 닉네임 아이콘 선택기. 기본은 아무나, 획득형은 잠금 해제된 것만 장착 가능.
 export function IconPicker({
   current,
@@ -60,6 +63,8 @@ export function IconPicker({
         </span>
       </div>
 
+      <p className="text-[11px] leading-relaxed text-ink-faint">{TIER_HINT}</p>
+
       {/* 기본 — 누구나 */}
       <div className="flex flex-col gap-2">
         <p className="text-xs text-ink-faint">기본 · 자유롭게 골라 꾸며요</p>
@@ -82,7 +87,7 @@ export function IconPicker({
               title={i.label}
               className={cell(current === i.key, "aspect-square")}
             >
-              {i.emoji}
+              <IconBadge iconKey={i.key} />
             </button>
           ))}
         </div>
@@ -109,7 +114,11 @@ export function IconPicker({
                       : "bg-black/10"
                 }`}
               >
-                <span className={`text-xl ${open ? "" : "opacity-30 grayscale"}`}>{i.emoji}</span>
+                {open ? (
+                  <IconBadge iconKey={i.key} className="text-xl" />
+                ) : (
+                  <span className="text-xl opacity-30 grayscale">{i.emoji}</span>
+                )}
                 <span className="min-w-0 flex-1">
                   <span className={`block text-xs leading-tight break-keep ${open ? "text-ink" : "text-ink-faint"}`}>
                     {i.label}
