@@ -241,4 +241,10 @@ on conflict (slug) do nothing;
 --     primary key (account_id, icon_key)
 --   );
 --   alter table public.ma_account_icons enable row level security;
+--
+-- 프로필 칭호·한 줄 소개를 추가할 때(이 파일 전체 재실행 금지) — 아래 한 벌만 실행:
+--   (title 은 '보유한 획득 아이콘 키'를 칭호로 쓴다. bio 는 한 줄 소개 텍스트)
+--   alter table public.ma_accounts
+--     add column if not exists title text,
+--     add column if not exists bio   text;
 -- ────────────────────────────────────────────────────────────────────────

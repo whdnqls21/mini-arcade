@@ -5,7 +5,9 @@ import { useState } from "react";
 import { Card } from "@/components/Card";
 import { IconBadge } from "@/components/IconBadge";
 import { IconPicker } from "@/components/IconPicker";
+import { ProfileExtras } from "@/components/ProfileExtras";
 import { ProfileSettings } from "@/components/ProfileSettings";
+import { TitleTag } from "@/components/TitleTag";
 import { SoloModeToggle } from "@/components/SoloModeToggle";
 import { useAppState } from "@/components/StateProvider";
 import { postJSON } from "@/lib/client-api";
@@ -31,10 +33,12 @@ export default function MePage() {
     <div className="flex flex-col gap-4">
       <div className="pt-1">
         <p className="text-xs uppercase tracking-[0.2em] text-grass">내정보</p>
-        <h1 className="flex items-center gap-2 font-display text-2xl text-ink">
+        <h1 className="flex flex-wrap items-center gap-2 font-display text-2xl text-ink">
           <IconBadge iconKey={me.icon} />
           {me.name}
+          <TitleTag titleKey={me.title} className="px-2 py-1 text-[11px]" />
         </h1>
+        {me.bio && <p className="mt-1 text-sm text-ink-dim">{me.bio}</p>}
       </div>
 
       <Card className="flex flex-col gap-3">
@@ -71,6 +75,13 @@ export default function MePage() {
         name={me.name}
         granted={me.icons.granted}
         eligible={me.icons.eligible}
+        onChanged={refresh}
+      />
+
+      <ProfileExtras
+        currentTitle={me.title}
+        currentBio={me.bio}
+        granted={me.icons.granted}
         onChanged={refresh}
       />
 

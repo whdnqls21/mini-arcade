@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Card } from "@/components/Card";
 import { IconBadge } from "@/components/IconBadge";
+import { TitleTag } from "@/components/TitleTag";
 import { useAppState } from "@/components/StateProvider";
 import { CatchmindIcon } from "@/games/catchmind/CatchmindIcon";
 import { GAME_REGISTRY } from "@/games/registry";
@@ -166,6 +167,7 @@ export default function GamesPage() {
                       <>
                         <IconBadge iconKey={top.icon} />{" "}
                         <b className="text-ink">{top.name}</b>{" "}
+                        <TitleTag titleKey={top.title} />{" "}
                         <span className="tabular text-gold">{formatScore(g.scoring, top.best, g.slug)}</span>
                       </>
                     ) : (

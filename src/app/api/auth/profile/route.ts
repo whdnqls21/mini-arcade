@@ -165,5 +165,60 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, icon: key });
   }
 
+  // ── 칭호 설정/해제 ───────────────────────────────────────────────
+  // 칭호는 별도 카탈로그 없이 '보유한 획득 아이콘'의 이름을 쓴다.
+  if (action === "setTitle") {
+    const key = body?.title;
+
+    if (key === null || key === "") {
+      const { error } = await sb.from("ma_accounts").update({ title: null }).eq("id", me.id);
+      if (error) {
+        console.error("setTitle(해제) 실패", error);
+        return NextResponse.json({ error: "칭호 변경에 실패했습니다." }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, title: null });
+    }
+
+    if (typeof key !== "string") {
+      return NextResponse.json({ error: "칭호를 확인하세요." }, { status: 400 });
+    }
+    const def = iconByKey(key);
+    if (!def || def.tier !== "earned") {
+      return NextResponse.json({ error: "칭호로 쓸 수 없는 값이에요." }, { status: 400 });
+    }
+    // 획득(보유)한 것만 칭호로 쓸 수 있다.
+    const { data: owned } = await sb
+      .from("ma_account_icons")
+      .select("icon_key")
+      .eq("account_id", me.id)
+      .eq("icon_key", key)
+      .maybeSingle();
+    if (!owned) {
+      return NextResponse.json({ error: "아직 획득하지 않은 칭호예요." }, { status: 403 });
+    }
+
+    const { error } = await sb.from("ma_accounts").update({ title: key }).eq("id", me.id);
+    if (error) {
+      console.error("setTitle 실패", error);
+      return NextResponse.json({ error: "칭호 변경에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, title: key });
+  }
+
+  // ── 한 줄 소개 설정 ──────────────────────────────────────────────
+  if (action === "setBio") {
+    const raw = typeof body?.bio === "string" ? body.bio.trim().replace(/\s+/g, " ") : "";
+    if (raw.length > 30) {
+      return NextResponse.json({ error: "소개는 30자까지 쓸 수 있어요." }, { status: 400 });
+    }
+    const value = raw === "" ? null : raw;
+    const { error } = await sb.from("ma_accounts").update({ bio: value }).eq("id", me.id);
+    if (error) {
+      console.error("setBio 실패", error);
+      return NextResponse.json({ error: "소개 변경에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, bio: value });
+  }
+
   return NextResponse.json({ error: "알 수 없는 동작입니다." }, { status: 400 });
 }

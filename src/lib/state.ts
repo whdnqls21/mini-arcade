@@ -12,6 +12,7 @@ export interface LeaderRow {
   accountId: string;
   name: string;
   icon: string | null; // 닉네임 옆 아이콘 키
+  title: string | null; // 칭호 키(획득 아이콘 키)
   best: number;
   rank: number;
 }
@@ -29,6 +30,8 @@ export interface AppState {
     name: string;
     solo: boolean;
     icon: string | null; // 현재 장착 아이콘 키
+    title: string | null; // 현재 칭호 키(획득 아이콘 키)
+    bio: string | null; // 한 줄 소개
     // 아이콘 선택 UI 용 — granted: 이미 영구 획득, eligible: 지금 조건 충족(장착 시 영구 획득)
     icons: { granted: string[]; eligible: string[] };
   } | null;
@@ -86,12 +89,23 @@ async function fetchScoreAgg(sb: SupabaseClient): Promise<ScoreAgg[]> {
   return [...m.values()];
 }
 
-// ── 닉네임 아이콘 ────────────────────────────────────────────────────
-// 계정별 장착 아이콘. icon 컬럼이 아직 없으면(마이그레이션 전) 조용히 빈 맵.
-async function fetchIcons(sb: SupabaseClient): Promise<Map<string, string | null>> {
-  const { data, error } = await sb.from("ma_accounts").select("id,icon");
-  if (error) return new Map();
-  return new Map(((data ?? []) as { id: string; icon: string | null }[]).map((r) => [r.id, r.icon ?? null]));
+// ── 닉네임 꾸미기(아이콘·칭호·소개) ──────────────────────────────────
+// 계정별 장착 정보. title/bio 컬럼이 아직 없으면(마이그레이션 전) icon 만이라도 받고,
+// icon 도 없으면 빈 맵으로 조용히 폴백한다.
+export interface Deco {
+  icon: string | null;
+  title: string | null;
+  bio: string | null;
+}
+async function fetchDeco(sb: SupabaseClient): Promise<Map<string, Deco>> {
+  let res = await sb.from("ma_accounts").select("id,icon,title,bio");
+  if (res.error) res = await sb.from("ma_accounts").select("id,icon"); // title/bio 마이그레이션 전
+  if (res.error) return new Map();
+  return new Map(
+    ((res.data ?? []) as { id: string; icon?: string | null; title?: string | null; bio?: string | null }[]).map(
+      (r) => [r.id, { icon: r.icon ?? null, title: r.title ?? null, bio: r.bio ?? null }]
+    )
+  );
 }
 
 // 영구 획득한 아이콘 키들. 테이블이 없으면 조용히 [].
@@ -161,13 +175,13 @@ export async function computeEligibleIcons(sb: SupabaseClient, accountId: string
 
 export async function buildState(): Promise<AppState> {
   const sb = createServiceClient();
-  const [session, admin, gRes, agg, aRes, iconById] = await Promise.all([
+  const [session, admin, gRes, agg, aRes, decoById] = await Promise.all([
     getAccountSession(),
     isAdmin(),
     sb.from("ma_games").select("*").eq("active", true).order("sort"),
     fetchScoreAgg(sb),
     sb.from("ma_accounts").select("id,name,active,solo,created_at").eq("active", true),
-    fetchIcons(sb),
+    fetchDeco(sb),
   ]);
 
   const games = (gRes.data ?? []) as Game[];
@@ -202,7 +216,8 @@ export async function buildState(): Promise<AppState> {
       rows.push({
         accountId: r.account_id,
         name: nameById.get(r.account_id) ?? "",
-        icon: iconById.get(r.account_id) ?? null,
+        icon: decoById.get(r.account_id)?.icon ?? null,
+        title: decoById.get(r.account_id)?.title ?? null,
         best: bestAll(r),
         rank: 0,
       });
@@ -238,11 +253,14 @@ export async function buildState(): Promise<AppState> {
       else granted = [...granted, ...toGrant];
     }
 
+    const myDeco = decoById.get(session.id);
     sessionOut = {
       id: session.id,
       name: session.name,
       solo: soloById.get(session.id) ?? false,
-      icon: iconById.get(session.id) ?? null,
+      icon: myDeco?.icon ?? null,
+      title: myDeco?.title ?? null,
+      bio: myDeco?.bio ?? null,
       icons: { granted, eligible },
     };
   }

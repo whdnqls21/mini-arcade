@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import { Card } from "@/components/Card";
 import { IconBadge } from "@/components/IconBadge";
+import { TitleTag } from "@/components/TitleTag";
 import { Heart } from "@/components/board/Heart";
 import { CATEGORY_LABEL, STATUS_LABEL, STATUS_STYLE } from "@/lib/board-meta";
 import { postJSON } from "@/lib/client-api";
@@ -111,6 +112,7 @@ export function PostCard({
           <div className="flex items-center gap-1 pt-1 text-[11px] text-ink-faint">
             <IconBadge iconKey={post.authorIcon} />
             <span>{post.authorName}</span>
+            <TitleTag titleKey={post.authorTitle} />
             <div className="ml-auto flex items-center gap-2">
               {/* 모든 글(공지·업데이트 포함)에 좋아요 */}
               <button
@@ -152,6 +154,7 @@ export function PostCard({
                     <div className="flex items-center gap-1 text-[11px] text-ink-faint">
                       <IconBadge iconKey={c.authorIcon} />
                       <span className="text-ink-dim">{c.authorName}</span>
+                      <TitleTag titleKey={c.authorTitle} />
                       <span className="ml-1">{timeAgo(c.createdAt)}</span>
                       <div className="ml-auto flex items-center gap-2">
                         <button

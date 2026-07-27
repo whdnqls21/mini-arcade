@@ -42,14 +42,18 @@ export async function GET() {
     sb.from("ma_post_comments").select("*").order("created_at", { ascending: true }),
     // 댓글 좋아요 테이블도 마이그레이션 전이면 조용히 빈 값으로.
     sb.from("ma_post_comment_votes").select("comment_id,account_id"),
-    // 작성자 아이콘 — 이름 스냅샷과 달리 '현재' 아이콘을 계정 참조로 붙인다(컬럼 없으면 무시).
-    sb.from("ma_accounts").select("id,icon"),
+    // 작성자 아이콘·칭호 — 이름 스냅샷과 달리 '현재' 값을 계정 참조로 붙인다(컬럼 없으면 무시).
+    sb.from("ma_accounts").select("id,icon,title"),
   ]);
 
   const iconById = new Map<string, string | null>();
-  if (!iconRes.error) {
-    for (const a of (iconRes.data ?? []) as { id: string; icon: string | null }[]) {
+  const titleById = new Map<string, string | null>();
+  // title 컬럼이 아직 없으면(마이그레이션 전) icon 만이라도 받는다.
+  const decoRes = iconRes.error ? await sb.from("ma_accounts").select("id,icon") : iconRes;
+  if (!decoRes.error) {
+    for (const a of (decoRes.data ?? []) as { id: string; icon: string | null; title?: string | null }[]) {
       iconById.set(a.id, a.icon ?? null);
+      titleById.set(a.id, a.title ?? null);
     }
   }
 
@@ -92,6 +96,7 @@ export async function GET() {
       id: c.id,
       authorName: c.author_name,
       authorIcon: c.account_id ? iconById.get(c.account_id) ?? null : null,
+      authorTitle: c.account_id ? titleById.get(c.account_id) ?? null : null,
       body: c.body,
       mine: !!session && c.account_id === session.id,
       likes: cLikeCount.get(c.id) ?? 0,
@@ -108,6 +113,7 @@ export async function GET() {
     body: p.body,
     authorName: p.author_name,
     authorIcon: p.account_id ? iconById.get(p.account_id) ?? null : null,
+    authorTitle: p.account_id ? titleById.get(p.account_id) ?? null : null,
     isNotice: p.is_notice,
     pinned: p.pinned,
     status: p.status,
