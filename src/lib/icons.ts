@@ -79,7 +79,7 @@ export const ALL_ICONS: IconDef[] = [...BASIC_ICONS, ...EARNED_ICONS];
 
 // 등급별 테두리 색(닉네임 아이콘 코인)
 export const TIER_RING: Record<IconTier, string> = {
-  basic: "#c68a4e", // 브론즈(갈색)
+  basic: "#8a5a2b", // 브론즈(짙은 갈색)
   earned: "#c9d1de", // 은색
   season: "#f4c64e", // 금색(앱 골드)
 };

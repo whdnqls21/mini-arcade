@@ -17,7 +17,7 @@ export function IconBadge({
       role="img"
       aria-label={def.label}
       title={def.label}
-      className={`inline-flex shrink-0 items-center justify-center rounded-full leading-none ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-[0.18em] leading-none ${className}`}
       style={{
         border: `0.1em solid ${ring}`,
         // 테두리 색을 아주 옅게 깔아 코인 느낌을 준다.
