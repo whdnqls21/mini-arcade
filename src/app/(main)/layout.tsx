@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { Card } from "@/components/Card";
+import { EarnedCelebration } from "@/components/EarnedCelebration";
 import ForceRename from "@/components/ForceRename";
 import LoginScreen from "@/components/LoginScreen";
 import { StateProvider, useAppState } from "@/components/StateProvider";
@@ -40,7 +41,12 @@ function Gate({ children }: { children: ReactNode }) {
     return <ForceRename currentName={state.session.name} onDone={refresh} />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <EarnedCelebration />
+      {children}
+    </>
+  );
 }
 
 export default function MainLayout({ children }: { children: ReactNode }) {

@@ -34,6 +34,7 @@ export interface AppState {
     bio: string | null; // 한 줄 소개
     // 아이콘 선택 UI 용 — granted: 이미 영구 획득, eligible: 지금 조건 충족(장착 시 영구 획득)
     icons: { granted: string[]; eligible: string[] };
+    newlyEarned: string[]; // 이번 로드에서 새로 영구 획득한 아이콘(획득 알림용). 한 번만 채워진다.
   } | null;
   isAdmin: boolean;
   games: GameView[];
@@ -115,14 +116,61 @@ async function fetchGrantedIcons(sb: SupabaseClient, accountId: string): Promise
   return ((data ?? []) as { icon_key: string }[]).map((r) => r.icon_key);
 }
 
-// 리더보드(솔로 제외) 기준으로 accountId 가 지금 조건을 충족하는 획득 아이콘 키.
+// 캐치마인드·게시판 기반 조건 판정에 쓰는 계정별 활동 집계.
+export interface AccountStats {
+  cmAuthored: number; // 캐치마인드 출제 수
+  cmSolved: number; // 캐치마인드 정답 수
+  cmAuthorSolves: number; // 내 문제가 맞혀진 횟수
+  likesReceived: number; // 게시판에서 받은 좋아요 수
+  boardActivity: number; // 게시판 글+댓글 수
+}
+const EMPTY_STATS: AccountStats = {
+  cmAuthored: 0,
+  cmSolved: 0,
+  cmAuthorSolves: 0,
+  likesReceived: 0,
+  boardActivity: 0,
+};
+
+// 한 계정의 활동 집계. 테이블이 없거나 오류면 그 항목만 0(조용히).
+export async function computeAccountStats(sb: SupabaseClient, accountId: string): Promise<AccountStats> {
+  const head = { count: "exact" as const, head: true };
+  const [authored, solved, authorSolved, myPosts, myComments] = await Promise.all([
+    sb.from("ma_cm_quizzes").select("id", head).eq("author_id", accountId).eq("is_deleted", false),
+    sb.from("ma_cm_attempts").select("id", head).eq("user_id", accountId).eq("is_correct", true),
+    sb.from("ma_cm_point_logs").select("id", head).eq("user_id", accountId).eq("reason", "author_solved"),
+    sb.from("ma_posts").select("id").eq("account_id", accountId),
+    sb.from("ma_post_comments").select("id").eq("account_id", accountId),
+  ]);
+  const postIds = ((myPosts.data ?? []) as { id: string }[]).map((r) => r.id);
+  const commentIds = ((myComments.data ?? []) as { id: string }[]).map((r) => r.id);
+  const [postLikes, commentLikes] = await Promise.all([
+    postIds.length
+      ? sb.from("ma_post_votes").select("post_id", head).in("post_id", postIds)
+      : Promise.resolve({ count: 0 }),
+    commentIds.length
+      ? sb.from("ma_post_comment_votes").select("comment_id", head).in("comment_id", commentIds)
+      : Promise.resolve({ count: 0 }),
+  ]);
+  return {
+    cmAuthored: authored.count ?? 0,
+    cmSolved: solved.count ?? 0,
+    cmAuthorSolves: authorSolved.count ?? 0,
+    likesReceived: (postLikes.count ?? 0) + (commentLikes.count ?? 0),
+    boardActivity: postIds.length + commentIds.length,
+  };
+}
+
+// 리더보드(솔로 제외) + 활동 집계 기준으로 accountId 가 지금 조건을 충족하는 획득 아이콘 키.
 export function eligibleIcons(input: {
   games: { slug: string; scoring: Scoring }[];
   agg: ScoreAgg[];
   soloIds: Set<string>;
   accountId: string;
+  stats?: AccountStats;
 }): string[] {
   const { games, agg, soloIds, accountId } = input;
+  const stats = input.stats ?? EMPTY_STATS;
 
   const aggByGame = new Map<string, ScoreAgg[]>();
   for (const r of agg) {
@@ -148,29 +196,81 @@ export function eligibleIcons(input: {
     });
   }
 
+  const ranks = [...myRank.values()];
+  const champCount = ranks.filter((r) => r === 1).length;
+  const playedGames = new Set(
+    agg.filter((r) => r.account_id === accountId && r.plays > 0).map((r) => r.game_slug)
+  );
+  const playedAll = games.length > 0 && games.every((g) => playedGames.has(g.slug));
   const myPlays = agg.filter((r) => r.account_id === accountId).reduce((sum, r) => sum + r.plays, 0);
 
   const out: string[] = [];
   for (const [key, cond] of Object.entries(EARN_COND)) {
     let ok = false;
-    if (cond.kind === "champion") ok = myRank.get(cond.slug) === 1;
-    else if (cond.kind === "goat") ok = games.length > 0 && games.every((g) => myRank.get(g.slug) === 1);
-    else if (cond.kind === "plays") ok = myPlays >= cond.count;
+    switch (cond.kind) {
+      case "champion":
+        ok = myRank.get(cond.slug) === 1;
+        break;
+      case "goat":
+        ok = games.length > 0 && games.every((g) => myRank.get(g.slug) === 1);
+        break;
+      case "plays":
+        ok = myPlays >= cond.count;
+        break;
+      case "championsAtLeast":
+        ok = champCount >= cond.count;
+        break;
+      case "anyRank":
+        ok = ranks.some((r) => r === cond.rank);
+        break;
+      case "playedAll":
+        ok = playedAll;
+        break;
+      case "cmAuthored":
+        ok = stats.cmAuthored >= cond.count;
+        break;
+      case "cmSolved":
+        ok = stats.cmSolved >= cond.count;
+        break;
+      case "cmAuthorSolves":
+        ok = stats.cmAuthorSolves >= cond.count;
+        break;
+      case "likesReceived":
+        ok = stats.likesReceived >= cond.count;
+        break;
+      case "boardActivity":
+        ok = stats.boardActivity >= cond.count;
+        break;
+    }
     if (ok) out.push(key);
   }
   return out;
 }
 
 // 데이터를 따로 안 들고 있는 라우트(아이콘 장착)용 — 필요한 것만 조회해 판정한다.
-export async function computeEligibleIcons(sb: SupabaseClient, accountId: string): Promise<string[]> {
-  const [gRes, agg, aRes] = await Promise.all([
-    sb.from("ma_games").select("slug,scoring").eq("active", true),
-    fetchScoreAgg(sb),
-    sb.from("ma_accounts").select("id").eq("solo", true),
+// pre 로 games/agg/soloIds 를 넘기면 그만큼 재조회를 아낀다(활동 집계는 항상 새로 조회).
+export async function computeEligibleIcons(
+  sb: SupabaseClient,
+  accountId: string,
+  pre?: { games: { slug: string; scoring: Scoring }[]; agg: ScoreAgg[]; soloIds: Set<string> }
+): Promise<string[]> {
+  const [games, agg, soloIds, stats] = await Promise.all([
+    pre?.games ??
+      sb
+        .from("ma_games")
+        .select("slug,scoring")
+        .eq("active", true)
+        .then((r) => (r.data ?? []) as { slug: string; scoring: Scoring }[]),
+    pre?.agg ?? fetchScoreAgg(sb),
+    pre?.soloIds ??
+      sb
+        .from("ma_accounts")
+        .select("id")
+        .eq("solo", true)
+        .then((r) => new Set(((r.data ?? []) as { id: string }[]).map((a) => a.id))),
+    computeAccountStats(sb, accountId),
   ]);
-  const games = (gRes.data ?? []) as { slug: string; scoring: Scoring }[];
-  const soloIds = new Set(((aRes.data ?? []) as { id: string }[]).map((a) => a.id));
-  return eligibleIcons({ games, agg, soloIds, accountId });
+  return eligibleIcons({ games, agg, soloIds, accountId, stats });
 }
 
 export async function buildState(): Promise<AppState> {
@@ -233,13 +333,15 @@ export async function buildState(): Promise<AppState> {
   let sessionOut: AppState["session"] = null;
   if (session) {
     const soloIds = new Set(accounts.filter((a) => a.solo).map((a) => a.id));
-    const eligible = eligibleIcons({
-      games: games.map((g) => ({ slug: g.slug, scoring: g.scoring })),
-      agg,
-      soloIds,
-      accountId: session.id,
-    });
-    let granted = await fetchGrantedIcons(sb, session.id);
+    const [eligible, grantedInit] = await Promise.all([
+      computeEligibleIcons(sb, session.id, {
+        games: games.map((g) => ({ slug: g.slug, scoring: g.scoring })),
+        agg,
+        soloIds,
+      }),
+      fetchGrantedIcons(sb, session.id),
+    ]);
+    let granted = grantedInit;
 
     // 자동 획득 — 조건을 충족했는데 아직 기록 안 된 아이콘은 이 순간 영구 획득 처리한다.
     // 신규 달성분만 upsert 하므로 평소(새로 딴 게 없을 때)엔 쓰기가 없다.
@@ -262,6 +364,7 @@ export async function buildState(): Promise<AppState> {
       title: myDeco?.title ?? null,
       bio: myDeco?.bio ?? null,
       icons: { granted, eligible },
+      newlyEarned: toGrant, // 이번 로드에서 새로 획득한 것(없으면 빈 배열)
     };
   }
 

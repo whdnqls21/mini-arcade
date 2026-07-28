@@ -19,7 +19,15 @@ export interface IconDef {
 export type EarnCond =
   | { kind: "champion"; slug: string } // 해당 게임 리더보드 1위
   | { kind: "goat" } // 전 종목 1위 석권
-  | { kind: "plays"; count: number }; // 누적 플레이 수
+  | { kind: "plays"; count: number } // 누적 플레이 수
+  | { kind: "championsAtLeast"; count: number } // 1위 게임 수 N개 이상
+  | { kind: "anyRank"; rank: number } // 어떤 게임이든 특정 순위 달성
+  | { kind: "playedAll" } // 모든 게임을 한 번씩 플레이
+  | { kind: "cmAuthored"; count: number } // 캐치마인드 출제 수
+  | { kind: "cmSolved"; count: number } // 캐치마인드 정답 수
+  | { kind: "cmAuthorSolves"; count: number } // 내 문제가 맞혀진 횟수
+  | { kind: "likesReceived"; count: number } // 게시판에서 받은 좋아요 수
+  | { kind: "boardActivity"; count: number }; // 게시판 글+댓글 수
 
 // ── 기본 아이콘 (누구나) ──────────────────────────────────────────
 const BASIC: [string, string, string][] = [
@@ -58,6 +66,19 @@ const EARNED: [string, string, string, string, EarnCond][] = [
   ["champ:2048", "🧩", "2048 마스터", "2048 1위 달성", { kind: "champion", slug: "2048" }],
   ["goat", "🐐", "GOAT", "모든 게임 1위 석권", { kind: "goat" }],
   ["play100", "🔥", "열정", "누적 100판 플레이", { kind: "plays", count: 100 }],
+  // 실력/등급형
+  ["tri", "🏅", "삼관왕", "게임 3종 이상에서 1위", { kind: "championsAtLeast", count: 3 }],
+  ["king", "👑", "왕중왕", "게임 5종 이상에서 1위", { kind: "championsAtLeast", count: 5 }],
+  ["second", "🥈", "만년 2인자", "어떤 게임이든 2위 달성", { kind: "anyRank", rank: 2 }],
+  ["allround", "🎯", "올라운더", "모든 게임을 한 번씩 플레이", { kind: "playedAll" }],
+  ["gamer", "🕹️", "게임광", "누적 500판 플레이", { kind: "plays", count: 500 }],
+  // 캐치마인드형
+  ["painter", "🎨", "화가", "캐치마인드 문제 10개 출제", { kind: "cmAuthored", count: 10 }],
+  ["sharp", "🧠", "눈썰미", "캐치마인드 정답 30개", { kind: "cmSolved", count: 30 }],
+  ["handy", "🖌️", "손재주", "내가 낸 문제가 30번 맞혀짐", { kind: "cmAuthorSolves", count: 30 }],
+  // 활동형
+  ["popular", "❤️", "인기왕", "게시판에서 좋아요 5개 받기", { kind: "likesReceived", count: 5 }],
+  ["chatty", "💬", "수다쟁이", "게시판 글·댓글 8개 작성", { kind: "boardActivity", count: 8 }],
 ];
 
 export const BASIC_ICONS: IconDef[] = BASIC.map(([key, emoji, label]) => ({
