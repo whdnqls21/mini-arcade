@@ -46,6 +46,7 @@ export type PostStatus = "reviewing" | "planned" | "done" | "declined";
 // 클라이언트로 내려보내는 댓글
 export interface CommentView {
   id: string;
+  authorId: string | null; // 작성자 계정 id(프로필 링크용). 관리자/탈퇴는 null
   authorName: string;
   authorIcon: string | null; // 작성자 현재 아이콘 키
   authorTitle: string | null; // 작성자 현재 칭호 키
@@ -62,6 +63,7 @@ export interface PostView {
   category: PostCategory;
   title: string;
   body: string;
+  authorId: string | null; // 작성자 계정 id(프로필 링크용). 관리자/탈퇴는 null
   authorName: string;
   authorIcon: string | null; // 작성자 현재 아이콘 키
   authorTitle: string | null; // 작성자 현재 칭호 키

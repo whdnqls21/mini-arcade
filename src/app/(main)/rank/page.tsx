@@ -62,12 +62,15 @@ export default function RankPage() {
                   }`}
                 >
                   <span className="w-5 text-center text-xs text-ink-faint">{r.rank}</span>
-                  <span className="flex min-w-0 flex-1 items-center gap-1 text-ink">
+                  <Link
+                    href={`/u/${r.accountId}`}
+                    className="flex min-w-0 flex-1 items-center gap-1 text-ink hover:text-grass"
+                  >
                     <IconBadge iconKey={r.icon} />
                     <span className="truncate">{r.name}</span>
                     <TitleTag titleKey={r.title} />
                     {r.accountId === meId && <span className="text-[10px] text-grass">나</span>}
-                  </span>
+                  </Link>
                   <span className="tabular text-gold">{formatScore(g.scoring, r.best, g.slug)}</span>
                 </li>
               ))}

@@ -375,6 +375,107 @@ export async function buildState(): Promise<AppState> {
   };
 }
 
+// ── 공개 프로필(남의 프로필 보기) ────────────────────────────────────
+export interface PublicProfileGame {
+  slug: string;
+  name: string;
+  scoring: Scoring;
+  best: number | null;
+  rank: number | null; // 솔로모드거나 기록 없으면 null
+}
+export interface PublicProfile {
+  id: string;
+  name: string;
+  icon: string | null;
+  title: string | null;
+  bio: string | null;
+  createdAt: string;
+  solo: boolean;
+  isMe: boolean;
+  summary: { champions: number; totalPlays: number; iconCount: number };
+  games: PublicProfileGame[];
+  ownedIcons: string[]; // 영구 획득한 아이콘 키(도감)
+  catchmind: { points: number; solved: number; authored: number };
+}
+
+// 특정 계정의 공개 프로필을 조립한다. 없거나 비활성이면 null.
+export async function buildPublicProfile(
+  sb: SupabaseClient,
+  targetId: string,
+  viewerId: string | null
+): Promise<PublicProfile | null> {
+  const [tRes, gRes, agg, aRes, owned, cmPoints, cmSolved, cmAuthored] = await Promise.all([
+    sb
+      .from("ma_accounts")
+      .select("id,name,solo,active,created_at,icon,title,bio")
+      .eq("id", targetId)
+      .maybeSingle(),
+    sb.from("ma_games").select("*").eq("active", true).order("sort"),
+    fetchScoreAgg(sb),
+    sb.from("ma_accounts").select("id,solo").eq("active", true),
+    fetchGrantedIcons(sb, targetId),
+    sb.from("ma_cm_point_logs").select("amount").eq("user_id", targetId),
+    sb.from("ma_cm_attempts").select("id", { count: "exact", head: true }).eq("user_id", targetId).eq("is_correct", true),
+    sb.from("ma_cm_quizzes").select("id", { count: "exact", head: true }).eq("author_id", targetId).eq("is_deleted", false),
+  ]);
+
+  const t = tRes.data as
+    | { id: string; name: string; solo: boolean; active: boolean; created_at: string; icon: string | null; title: string | null; bio: string | null }
+    | null;
+  if (!t || !t.active) return null;
+
+  const games = (gRes.data ?? []) as Game[];
+  const soloIds = new Set(((aRes.data ?? []) as { id: string; solo: boolean }[]).filter((a) => a.solo).map((a) => a.id));
+
+  const aggByGame = new Map<string, ScoreAgg[]>();
+  for (const r of agg) {
+    const list = aggByGame.get(r.game_slug) ?? [];
+    list.push(r);
+    aggByGame.set(r.game_slug, list);
+  }
+
+  let champions = 0;
+  const gamesOut: PublicProfileGame[] = games.map((g) => {
+    const high = isHigh(g.scoring);
+    const mine = (aggByGame.get(g.slug) ?? []).find((r) => r.account_id === targetId);
+    const best = mine ? (high ? mine.max_all : mine.min_all) : null;
+
+    // 순위(솔로 제외). 대상이 솔로면 순위표에 없어 rank=null.
+    const rows = (aggByGame.get(g.slug) ?? [])
+      .filter((r) => !soloIds.has(r.account_id))
+      .map((r) => ({ id: r.account_id, best: high ? r.max_all : r.min_all }));
+    rows.sort((a, b) => (a.best - b.best) * sortDir(g.scoring));
+    let rank: number | null = null;
+    let prev: number | null = null;
+    let curRank = 0;
+    rows.forEach((r, i) => {
+      curRank = prev !== null && prev === r.best ? curRank : i + 1;
+      prev = r.best;
+      if (r.id === targetId) rank = curRank;
+    });
+    if (rank === 1) champions += 1;
+    return { slug: g.slug, name: g.name, scoring: g.scoring, best, rank };
+  });
+
+  const totalPlays = agg.filter((r) => r.account_id === targetId).reduce((s, r) => s + r.plays, 0);
+  const points = ((cmPoints.data ?? []) as { amount: number }[]).reduce((s, r) => s + r.amount, 0);
+
+  return {
+    id: t.id,
+    name: t.name,
+    icon: t.icon ?? null,
+    title: t.title ?? null,
+    bio: t.bio ?? null,
+    createdAt: t.created_at,
+    solo: t.solo,
+    isMe: viewerId === t.id,
+    summary: { champions, totalPlays, iconCount: owned.length },
+    games: gamesOut,
+    ownedIcons: owned,
+    catchmind: { points, solved: cmSolved.count ?? 0, authored: cmAuthored.count ?? 0 },
+  };
+}
+
 // ── 관리자용: 계정 목록(전체) ────────────────────────────────────────
 export interface AdminAccount {
   id: string;

@@ -1,11 +1,41 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { Card } from "@/components/Card";
 import { IconBadge } from "@/components/IconBadge";
 import { TitleTag } from "@/components/TitleTag";
 import { Heart } from "@/components/board/Heart";
+
+// 작성자 표시(아이콘+이름+칭호). 계정 id 가 있으면 프로필로 링크.
+function Author({
+  id,
+  name,
+  icon,
+  title,
+  nameClass = "",
+}: {
+  id: string | null;
+  name: string;
+  icon: string | null;
+  title: string | null;
+  nameClass?: string;
+}) {
+  const inner = (
+    <>
+      <IconBadge iconKey={icon} />
+      <span className={nameClass}>{name}</span>
+      <TitleTag titleKey={title} />
+    </>
+  );
+  if (!id) return <span className="flex items-center gap-1">{inner}</span>;
+  return (
+    <Link href={`/u/${id}`} className="flex items-center gap-1 hover:text-grass">
+      {inner}
+    </Link>
+  );
+}
 import { CATEGORY_LABEL, STATUS_LABEL, STATUS_STYLE } from "@/lib/board-meta";
 import { postJSON } from "@/lib/client-api";
 import { timeAgo } from "@/lib/format";
@@ -110,9 +140,12 @@ export function PostCard({
           </p>
 
           <div className="flex items-center gap-1 pt-1 text-[11px] text-ink-faint">
-            <IconBadge iconKey={post.authorIcon} />
-            <span>{post.authorName}</span>
-            <TitleTag titleKey={post.authorTitle} />
+            <Author
+              id={post.authorId}
+              name={post.authorName}
+              icon={post.authorIcon}
+              title={post.authorTitle}
+            />
             <div className="ml-auto flex items-center gap-2">
               {/* 모든 글(공지·업데이트 포함)에 좋아요 */}
               <button
@@ -152,9 +185,13 @@ export function PostCard({
                 {post.comments.map((c) => (
                   <li key={c.id} className="rounded-lg bg-black/15 px-3 py-2">
                     <div className="flex items-center gap-1 text-[11px] text-ink-faint">
-                      <IconBadge iconKey={c.authorIcon} />
-                      <span className="text-ink-dim">{c.authorName}</span>
-                      <TitleTag titleKey={c.authorTitle} />
+                      <Author
+                        id={c.authorId}
+                        name={c.authorName}
+                        icon={c.authorIcon}
+                        title={c.authorTitle}
+                        nameClass="text-ink-dim"
+                      />
                       <span className="ml-1">{timeAgo(c.createdAt)}</span>
                       <div className="ml-auto flex items-center gap-2">
                         <button

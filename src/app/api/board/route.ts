@@ -94,6 +94,7 @@ export async function GET() {
     const list = commentsByPost.get(c.post_id) ?? [];
     list.push({
       id: c.id,
+      authorId: c.account_id ?? null,
       authorName: c.author_name,
       authorIcon: c.account_id ? iconById.get(c.account_id) ?? null : null,
       authorTitle: c.account_id ? titleById.get(c.account_id) ?? null : null,
@@ -111,6 +112,7 @@ export async function GET() {
     category: p.category,
     title: p.title,
     body: p.body,
+    authorId: p.account_id ?? null,
     authorName: p.author_name,
     authorIcon: p.account_id ? iconById.get(p.account_id) ?? null : null,
     authorTitle: p.account_id ? titleById.get(p.account_id) ?? null : null,
