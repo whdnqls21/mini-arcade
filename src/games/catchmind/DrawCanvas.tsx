@@ -105,7 +105,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle>(function DrawCanvas(_prop
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     const stroke: Stroke = {
       color: eraser ? BG : color,
-      width: eraser ? Math.max(width, 16) : width,
+      width, // 지우개도 선택한 굵기 그대로 사용한다
       points: [posOf(e)],
     };
     drawingRef.current = stroke;
