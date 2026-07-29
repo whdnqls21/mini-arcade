@@ -36,6 +36,31 @@ export interface SeasonView {
   endsAt: string;
 }
 
+// 명예의 전당 — 종료된 시즌의 스냅샷(이름·기록 문자열 그대로, 소급 안 바뀜).
+export interface HallChampion {
+  gameSlug: string | null;
+  gameName: string | null;
+  scoring: Scoring | null;
+  accountId: string | null;
+  memberName: string;
+  icon: string | null;
+  score: number | null;
+}
+export interface HallEntry {
+  seasonId: string;
+  num: number;
+  name: string | null;
+  endedAt: string | null;
+  mvp: {
+    accountId: string | null;
+    memberName: string;
+    icon: string | null;
+    points: number | null;
+    medals: number | null;
+  } | null;
+  champions: HallChampion[];
+}
+
 export interface AppState {
   session: {
     id: string;
@@ -50,6 +75,7 @@ export interface AppState {
   } | null;
   isAdmin: boolean;
   season: SeasonView | null; // 현재 활성 시즌(없으면 null = 전 게임 올타임)
+  hall: HallEntry[]; // 명예의 전당(종료된 시즌 스냅샷, 최신순). 없으면 빈 배열
   games: GameView[];
 }
 
@@ -120,6 +146,77 @@ async function fetchSeasonAgg(sb: SupabaseClient, seasonId: string): Promise<Sco
     .select("account_id,game_slug,score,meta")
     .eq("season_id", seasonId);
   return aggregateScores((data ?? []) as Parameters<typeof aggregateScores>[0]);
+}
+
+// 명예의 전당 — 종료된 시즌 + 그 결과(스냅샷)를 최신순으로. 테이블 없으면 조용히 [].
+async function fetchHall(sb: SupabaseClient): Promise<HallEntry[]> {
+  const { data: seasons, error } = await sb
+    .from("ma_seasons")
+    .select("id,num,name,closed_at")
+    .eq("status", "closed")
+    .order("num", { ascending: false })
+    .limit(12);
+  if (error || !seasons || seasons.length === 0) return [];
+
+  const rows = seasons as { id: string; num: number; name: string | null; closed_at: string | null }[];
+  const ids = rows.map((s) => s.id);
+  const { data: resData, error: rErr } = await sb
+    .from("ma_season_results")
+    .select("season_id,category,game_slug,game_name,scoring,account_id,member_name,icon,score,points,medals")
+    .in("season_id", ids);
+  if (rErr) return []; // 결과 테이블 없음(2단계 마이그레이션 전)
+
+  interface ResRow {
+    season_id: string;
+    category: "mvp" | "champion";
+    game_slug: string | null;
+    game_name: string | null;
+    scoring: Scoring | null;
+    account_id: string | null;
+    member_name: string;
+    icon: string | null;
+    score: number | null;
+    points: number | null;
+    medals: number | null;
+  }
+  const bySeason = new Map<string, ResRow[]>();
+  for (const r of (resData ?? []) as ResRow[]) {
+    const list = bySeason.get(r.season_id) ?? [];
+    list.push(r);
+    bySeason.set(r.season_id, list);
+  }
+
+  return rows.map((s) => {
+    const rs = bySeason.get(s.id) ?? [];
+    const mvpRow = rs.find((r) => r.category === "mvp") ?? null;
+    const champions: HallChampion[] = rs
+      .filter((r) => r.category === "champion")
+      .map((r) => ({
+        gameSlug: r.game_slug,
+        gameName: r.game_name,
+        scoring: r.scoring,
+        accountId: r.account_id,
+        memberName: r.member_name,
+        icon: r.icon,
+        score: r.score,
+      }));
+    return {
+      seasonId: s.id,
+      num: s.num,
+      name: s.name,
+      endedAt: s.closed_at,
+      mvp: mvpRow
+        ? {
+            accountId: mvpRow.account_id,
+            memberName: mvpRow.member_name,
+            icon: mvpRow.icon,
+            points: mvpRow.points,
+            medals: mvpRow.medals,
+          }
+        : null,
+      champions,
+    };
+  });
 }
 
 // ── 닉네임 꾸미기(아이콘·칭호·소개) ──────────────────────────────────
@@ -307,7 +404,7 @@ export async function computeEligibleIcons(
 
 export async function buildState(): Promise<AppState> {
   const sb = createServiceClient();
-  const [session, admin, gRes, agg, aRes, decoById, season] = await Promise.all([
+  const [session, admin, gRes, agg, aRes, decoById, season, hall] = await Promise.all([
     getAccountSession(),
     isAdmin(),
     sb.from("ma_games").select("*").eq("active", true).order("sort"),
@@ -315,6 +412,7 @@ export async function buildState(): Promise<AppState> {
     sb.from("ma_accounts").select("id,name,active,solo,created_at").eq("active", true),
     fetchDeco(sb),
     fetchActiveSeason(sb),
+    fetchHall(sb),
   ]);
 
   const games = (gRes.data ?? []) as Game[];
@@ -429,6 +527,7 @@ export async function buildState(): Promise<AppState> {
     session: sessionOut,
     isAdmin: admin,
     season: seasonView,
+    hall,
     games: gameViews,
   };
 }

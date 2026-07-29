@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Card } from "@/components/Card";
 import { IconBadge } from "@/components/IconBadge";
-import { BASIC_ICONS, EARNED_ICONS } from "@/lib/icons";
+import { BASIC_ICONS, EARNED_ICONS, SEASON_ICONS } from "@/lib/icons";
 import { postJSON } from "@/lib/client-api";
 
 // 등급 안내 문구용
@@ -99,6 +99,44 @@ export function IconPicker({
         <div className="grid grid-cols-3 gap-2">
           {EARNED_ICONS.map((i) => {
             const open = unlocked.has(i.key);
+            const selected = current === i.key;
+            return (
+              <button
+                key={i.key}
+                onClick={() => (open ? equip(i.key) : setHint(`🔒 ${i.label} — ${i.hint}`))}
+                disabled={busy}
+                aria-label={i.label}
+                className={`flex items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors ${
+                  selected
+                    ? "bg-grass/20 ring-2 ring-grass"
+                    : open
+                      ? "bg-black/20 hover:bg-black/30"
+                      : "bg-black/10"
+                }`}
+              >
+                {open ? (
+                  <IconBadge iconKey={i.key} className="text-xl" />
+                ) : (
+                  <span className="text-xl opacity-30 grayscale">{i.emoji}</span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-xs leading-tight break-keep ${open ? "text-ink" : "text-ink-faint"}`}>
+                    {i.label}
+                  </span>
+                  {!open && <span className="mt-0.5 block text-[10px] text-ink-faint">🔒 잠김</span>}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 시즌 보상 — 시즌 MVP 에게 지급되는 금테 아이콘 */}
+      <div className="flex flex-col gap-2">
+        <p className="text-xs text-ink-faint">시즌 보상 · 시즌 MVP에게 지급돼요</p>
+        <div className="grid grid-cols-3 gap-2">
+          {SEASON_ICONS.map((i) => {
+            const open = granted.includes(i.key); // 시즌 보상은 지급받아야만 열림(조건 자동판정 없음)
             const selected = current === i.key;
             return (
               <button

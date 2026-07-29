@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isAdmin } from "@/lib/auth";
 import { CM_BUCKET } from "@/lib/catchmind/server";
+import { computeSeasonSnapshot, fetchActiveSeason } from "@/lib/season";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -195,25 +196,48 @@ export async function POST(req: NextRequest) {
   }
 
   // 시즌 종료 — 활성 시즌을 지금 종료(status=closed). 예정 종료일 전이어도 됨.
-  // NOTE(2단계): 여기서 스냅샷(명예의 전당)·MVP 산정을 함께 처리할 예정.
+  // 종료 직전에 스냅샷(종목별 1등 + F1 MVP)을 이름 문자열로 박아 명예의 전당에 남기고,
+  // MVP 에게 시즌 보상 아이콘(season_mvp, 금테)을 지급한다.
   if (action === "seasonEnd") {
-    const { data: active } = await sb
-      .from("ma_seasons")
-      .select("id,num")
-      .eq("status", "active")
-      .maybeSingle();
+    const active = await fetchActiveSeason(sb);
     if (!active) {
       return NextResponse.json({ error: "진행 중인 시즌이 없습니다." }, { status: 400 });
     }
+
+    // 1) 스냅샷 계산 → 저장. 결과 테이블이 없으면(2단계 마이그레이션 전) 닫지 않고 안내.
+    const { rows, mvpAccountId } = await computeSeasonSnapshot(sb, active);
+    if (rows.length > 0) {
+      const { error: insErr } = await sb.from("ma_season_results").insert(rows);
+      if (insErr) {
+        console.error("seasonEnd 스냅샷 저장 실패", insErr);
+        return NextResponse.json(
+          { error: "시즌 결과 저장에 실패했어요. 2단계 마이그레이션(ma_season_results)을 먼저 실행하세요." },
+          { status: 500 }
+        );
+      }
+    }
+
+    // 2) MVP 에게 시즌 보상 아이콘 영구 지급(중복·테이블없음은 무시).
+    if (mvpAccountId) {
+      const { error: gErr } = await sb
+        .from("ma_account_icons")
+        .upsert([{ account_id: mvpAccountId, icon_key: "season_mvp" }], {
+          onConflict: "account_id,icon_key",
+          ignoreDuplicates: true,
+        });
+      if (gErr) console.error("시즌 MVP 아이콘 지급 실패(무시)", gErr);
+    }
+
+    // 3) 시즌 닫기.
     const { error } = await sb
       .from("ma_seasons")
       .update({ status: "closed", closed_at: new Date().toISOString() })
-      .eq("id", (active as { id: string }).id);
+      .eq("id", active.id);
     if (error) {
       console.error("seasonEnd 실패", error);
       return NextResponse.json({ error: "시즌 종료에 실패했습니다." }, { status: 500 });
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, mvp: mvpAccountId, champions: rows.filter((r) => r.category === "champion").length });
   }
 
   return NextResponse.json({ error: "알 수 없는 동작입니다." }, { status: 400 });

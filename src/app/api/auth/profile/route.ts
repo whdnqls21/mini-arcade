@@ -133,8 +133,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "없는 아이콘이에요." }, { status: 400 });
     }
 
-    // 획득형이면 이미 영구 획득했거나(테이블 기록) 지금 조건 충족이어야 한다.
-    if (def.tier === "earned") {
+    // 획득형·시즌형이면 보유(영구 획득)해야 장착할 수 있다.
+    if (def.tier === "earned" || def.tier === "season") {
       const { data: owned } = await sb
         .from("ma_account_icons")
         .select("icon_key")
@@ -142,6 +142,13 @@ export async function POST(req: NextRequest) {
         .eq("icon_key", key)
         .maybeSingle();
       if (!owned) {
+        // 시즌 보상은 조건 자동판정 대상이 아니라, MVP 지급으로만 얻는다(보유 필수).
+        if (def.tier === "season") {
+          return NextResponse.json(
+            { error: "시즌 보상 아이콘이에요. 시즌 MVP만 얻을 수 있어요." },
+            { status: 403 }
+          );
+        }
         const eligible = await computeEligibleIcons(sb, me.id);
         if (!eligible.includes(key)) {
           return NextResponse.json(
@@ -183,10 +190,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "칭호를 확인하세요." }, { status: 400 });
     }
     const def = iconByKey(key);
-    if (!def || def.tier !== "earned") {
+    if (!def || (def.tier !== "earned" && def.tier !== "season")) {
       return NextResponse.json({ error: "칭호로 쓸 수 없는 값이에요." }, { status: 400 });
     }
-    // 획득(보유)한 것만 칭호로 쓸 수 있다.
+    // 획득(보유)한 것만 칭호로 쓸 수 있다(획득 아이콘·시즌 보상 아이콘).
     const { data: owned } = await sb
       .from("ma_account_icons")
       .select("icon_key")

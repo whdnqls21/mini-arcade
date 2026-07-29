@@ -81,6 +81,13 @@ const EARNED: [string, string, string, string, EarnCond][] = [
   ["chatty", "💬", "수다쟁이", "게시판 글·댓글 8개 작성", { kind: "boardActivity", count: 8 }],
 ];
 
+// ── 시즌 보상 아이콘 (금테) ───────────────────────────────────────
+// 조건 자동 판정(EARN_COND)이 아니라, 시즌 종료 시 서버가 MVP 에게 '직접 지급'한다
+// (ma_account_icons 에 기록). 그래서 EARNED 와 달리 여기 별도로 둔다.
+const SEASON: [string, string, string][] = [
+  ["season_mvp", "🏆", "시즌 MVP"], // 시즌 종합 1위. 획득 후 영구 보유(칭호로도 사용 가능)
+];
+
 export const BASIC_ICONS: IconDef[] = BASIC.map(([key, emoji, label]) => ({
   key,
   emoji,
@@ -96,7 +103,15 @@ export const EARNED_ICONS: IconDef[] = EARNED.map(([key, emoji, label, hint]) =>
   hint,
 }));
 
-export const ALL_ICONS: IconDef[] = [...BASIC_ICONS, ...EARNED_ICONS];
+export const SEASON_ICONS: IconDef[] = SEASON.map(([key, emoji, label]) => ({
+  key,
+  emoji,
+  label,
+  tier: "season",
+  hint: "시즌 종합 1위(MVP) 달성 시 지급",
+}));
+
+export const ALL_ICONS: IconDef[] = [...BASIC_ICONS, ...EARNED_ICONS, ...SEASON_ICONS];
 
 // 등급별 테두리 색(닉네임 아이콘 코인)
 export const TIER_RING: Record<IconTier, string> = {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Card } from "@/components/Card";
-import { EARNED_ICONS } from "@/lib/icons";
+import { EARNED_ICONS, SEASON_ICONS } from "@/lib/icons";
 import { postJSON } from "@/lib/client-api";
 
 const BIO_MAX = 30;
@@ -21,8 +21,8 @@ export function ProfileExtras({
   onChanged: () => void | Promise<void>;
 }) {
   const owned = new Set(granted);
-  // 칭호 후보 = 보유한 획득 아이콘
-  const titleOptions = EARNED_ICONS.filter((i) => owned.has(i.key));
+  // 칭호 후보 = 보유한 획득 아이콘 + 시즌 보상 아이콘(시즌 MVP 등)
+  const titleOptions = [...EARNED_ICONS, ...SEASON_ICONS].filter((i) => owned.has(i.key));
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

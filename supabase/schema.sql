@@ -21,6 +21,7 @@ $$;
 drop table if exists public.ma_post_votes cascade;
 drop table if exists public.ma_posts cascade;
 drop table if exists public.ma_scores cascade;
+drop table if exists public.ma_season_results cascade;
 drop table if exists public.ma_seasons cascade;
 drop table if exists public.ma_games cascade;
 drop table if exists public.ma_accounts cascade;
@@ -91,6 +92,28 @@ create table public.ma_scores (
 create index ma_scores_game_idx on public.ma_scores (game_slug);
 create index ma_scores_account_idx on public.ma_scores (account_id);
 
+-- 시즌 종료 스냅샷 (명예의 전당). 이름·게임명·정렬방식을 종료 시점 값으로 박아
+-- 이름 변경/계정 삭제/게임 개편에 흔들리지 않게 한다. category: 'mvp' | 'champion'.
+create table public.ma_season_results (
+  id          uuid primary key default gen_random_uuid(),
+  season_id   uuid references public.ma_seasons(id) on delete cascade,
+  num         int  not null,                        -- 시즌 번호(표시용 비정규화)
+  name        text,                                 -- 시즌 이름 스냅샷
+  category    text not null,                        -- 'mvp'(종합) | 'champion'(종목 1등)
+  game_slug   text,                                 -- champion: 종목 slug / mvp: null
+  game_name   text,                                 -- 종료 시점 게임 이름 스냅샷
+  scoring     text,                                 -- 종료 시점 정렬 방식(점수 표시용)
+  account_id  uuid references public.ma_accounts(id) on delete set null, -- 참조용(삭제 시 null)
+  member_name text not null,                        -- 종료 시점 이름 스냅샷
+  icon        text,                                 -- 종료 시점 장착 아이콘(표시용)
+  score       int,                                  -- champion 기록 / mvp: null
+  points      int,                                  -- mvp F1 총점 / champion: null
+  medals      int,                                  -- mvp 1등 개수(보조)
+  created_at  timestamptz not null default now(),
+  constraint ma_season_results_category_valid check (category in ('mvp','champion'))
+);
+create index ma_season_results_season_idx on public.ma_season_results (season_id);
+
 -- 게시판 (사용자 제안 · 관리자 공지)
 create table public.ma_posts (
   id          uuid primary key default gen_random_uuid(),
@@ -141,6 +164,7 @@ alter table public.ma_accounts      enable row level security;
 alter table public.ma_settings      enable row level security;
 alter table public.ma_games         enable row level security;
 alter table public.ma_seasons       enable row level security;
+alter table public.ma_season_results enable row level security;
 alter table public.ma_scores        enable row level security;
 alter table public.ma_posts         enable row level security;
 alter table public.ma_post_votes    enable row level security;
@@ -306,4 +330,27 @@ on conflict (slug) do nothing;
 --          min(score) filter (where meta->>'solo'='true') as min_solo, count(*) as plays
 --   from public.ma_scores where season_id is not null
 --   group by game_slug, account_id, season_id;
+--
+-- 시즌제 2단계(종료 스냅샷·명예의 전당)를 운영 DB 에 추가할 때
+-- (이 파일 전체 재실행 금지) — 아래 한 벌만 그대로 SQL Editor 에서 실행:
+--   create table if not exists public.ma_season_results (
+--     id          uuid primary key default gen_random_uuid(),
+--     season_id   uuid references public.ma_seasons(id) on delete cascade,
+--     num         int  not null,
+--     name        text,
+--     category    text not null,
+--     game_slug   text,
+--     game_name   text,
+--     scoring     text,
+--     account_id  uuid references public.ma_accounts(id) on delete set null,
+--     member_name text not null,
+--     icon        text,
+--     score       int,
+--     points      int,
+--     medals      int,
+--     created_at  timestamptz not null default now(),
+--     constraint ma_season_results_category_valid check (category in ('mvp','champion'))
+--   );
+--   create index if not exists ma_season_results_season_idx on public.ma_season_results (season_id);
+--   alter table public.ma_season_results enable row level security;
 -- ────────────────────────────────────────────────────────────────────────
