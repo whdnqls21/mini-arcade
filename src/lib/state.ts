@@ -3,6 +3,7 @@ import "server-only";
 import { getAccountSession, isAdmin } from "./auth";
 import { drawingUrl } from "./catchmind/server";
 import { EARN_COND } from "./icons";
+import { fetchActiveSeason } from "./season";
 import { createServiceClient } from "./supabase/server";
 import type { Account, Game, Score, Scoring } from "./types";
 
@@ -20,9 +21,20 @@ export interface LeaderRow {
 export interface GameView extends Game {
   myBest: number | null;
   mySoloBest: number | null; // 솔로모드에서 세운 기록만의 베스트(내정보 솔로 표시용)
+  inSeason: boolean; // 현재 시즌 로테이션 종목인지(true 면 리더보드/베스트가 이번 시즌 범위)
   leaderboard: LeaderRow[];
 }
 // GameView 는 Game 을 확장하므로 reset_at/reset_note 가 이미 포함된다.
+
+// 현재 활성 시즌 요약(클라이언트 노출용). 시즌 없으면 AppState.season = null.
+export interface SeasonView {
+  id: string;
+  num: number;
+  name: string | null;
+  games: string[]; // 이번 시즌 로테이션 종목 slug
+  startsAt: string;
+  endsAt: string;
+}
 
 export interface AppState {
   session: {
@@ -37,6 +49,7 @@ export interface AppState {
     newlyEarned: string[]; // 이번 로드에서 새로 영구 획득한 아이콘(획득 알림용). 한 번만 채워진다.
   } | null;
   isAdmin: boolean;
+  season: SeasonView | null; // 현재 활성 시즌(없으면 null = 전 게임 올타임)
   games: GameView[];
 }
 
@@ -58,21 +71,12 @@ interface ScoreAgg {
   plays: number;
 }
 
-async function fetchScoreAgg(sb: SupabaseClient): Promise<ScoreAgg[]> {
-  const viewRes = await sb
-    .from("ma_scores_agg")
-    .select("game_slug,account_id,max_all,min_all,max_solo,min_solo,plays");
-  if (!viewRes.error && viewRes.data) return viewRes.data as ScoreAgg[];
-
-  console.warn("ma_scores_agg 뷰 없음 — ma_scores 폴백", viewRes.error?.message);
-  const { data } = await sb.from("ma_scores").select("account_id,game_slug,score,meta");
+// ma_scores 원본 행들을 (게임×계정) 베스트로 JS 집계(뷰 폴백 공용).
+function aggregateScores(
+  rows: { account_id: string; game_slug: string; score: number; meta: Record<string, unknown> | null }[]
+): ScoreAgg[] {
   const m = new Map<string, ScoreAgg>();
-  for (const s of (data ?? []) as {
-    account_id: string;
-    game_slug: string;
-    score: number;
-    meta: Record<string, unknown> | null;
-  }[]) {
+  for (const s of rows) {
     const key = `${s.game_slug}|${s.account_id}`;
     let r = m.get(key);
     if (!r) {
@@ -88,6 +92,34 @@ async function fetchScoreAgg(sb: SupabaseClient): Promise<ScoreAgg[]> {
     }
   }
   return [...m.values()];
+}
+
+async function fetchScoreAgg(sb: SupabaseClient): Promise<ScoreAgg[]> {
+  const viewRes = await sb
+    .from("ma_scores_agg")
+    .select("game_slug,account_id,max_all,min_all,max_solo,min_solo,plays");
+  if (!viewRes.error && viewRes.data) return viewRes.data as ScoreAgg[];
+
+  console.warn("ma_scores_agg 뷰 없음 — ma_scores 폴백", viewRes.error?.message);
+  const { data } = await sb.from("ma_scores").select("account_id,game_slug,score,meta");
+  return aggregateScores((data ?? []) as Parameters<typeof aggregateScores>[0]);
+}
+
+// 특정 시즌 범위의 (게임×계정) 베스트. 시즌 종목 리더보드에 쓴다.
+// 뷰가 없으면 ma_scores 를 season_id 로 필터해 JS 집계(폴백).
+async function fetchSeasonAgg(sb: SupabaseClient, seasonId: string): Promise<ScoreAgg[]> {
+  const viewRes = await sb
+    .from("ma_scores_agg_season")
+    .select("game_slug,account_id,max_all,min_all,max_solo,min_solo,plays")
+    .eq("season_id", seasonId);
+  if (!viewRes.error && viewRes.data) return viewRes.data as ScoreAgg[];
+
+  console.warn("ma_scores_agg_season 뷰 없음 — ma_scores 폴백", viewRes.error?.message);
+  const { data } = await sb
+    .from("ma_scores")
+    .select("account_id,game_slug,score,meta")
+    .eq("season_id", seasonId);
+  return aggregateScores((data ?? []) as Parameters<typeof aggregateScores>[0]);
 }
 
 // ── 닉네임 꾸미기(아이콘·칭호·소개) ──────────────────────────────────
@@ -275,13 +307,14 @@ export async function computeEligibleIcons(
 
 export async function buildState(): Promise<AppState> {
   const sb = createServiceClient();
-  const [session, admin, gRes, agg, aRes, decoById] = await Promise.all([
+  const [session, admin, gRes, agg, aRes, decoById, season] = await Promise.all([
     getAccountSession(),
     isAdmin(),
     sb.from("ma_games").select("*").eq("active", true).order("sort"),
     fetchScoreAgg(sb),
     sb.from("ma_accounts").select("id,name,active,solo,created_at").eq("active", true),
     fetchDeco(sb),
+    fetchActiveSeason(sb),
   ]);
 
   const games = (gRes.data ?? []) as Game[];
@@ -289,7 +322,7 @@ export async function buildState(): Promise<AppState> {
   const nameById = new Map(accounts.map((a) => [a.id, a.name]));
   const soloById = new Map(accounts.map((a) => [a.id, a.solo]));
 
-  // 게임별 집계 행 묶기.
+  // 게임별 집계 행 묶기(올타임).
   const aggByGame = new Map<string, ScoreAgg[]>();
   for (const r of agg) {
     const list = aggByGame.get(r.game_slug) ?? [];
@@ -297,16 +330,29 @@ export async function buildState(): Promise<AppState> {
     aggByGame.set(r.game_slug, list);
   }
 
+  // 시즌 종목은 리더보드/베스트를 '이번 시즌' 범위로 좁힌다. 비시즌 게임은 올타임 그대로.
+  const seasonGameSet = new Set(season?.games ?? []);
+  const seasonAgg = season ? await fetchSeasonAgg(sb, season.id) : [];
+  const seasonAggByGame = new Map<string, ScoreAgg[]>();
+  for (const r of seasonAgg) {
+    const list = seasonAggByGame.get(r.game_slug) ?? [];
+    list.push(r);
+    seasonAggByGame.set(r.game_slug, list);
+  }
+
   const gameViews: GameView[] = games.map((g) => {
     const high = isHigh(g.scoring);
     const bestAll = (r: ScoreAgg) => (high ? r.max_all : r.min_all);
     const bestSolo = (r: ScoreAgg) => (high ? r.max_solo : r.min_solo);
 
+    const inSeason = seasonGameSet.has(g.slug);
+    const source = inSeason ? seasonAggByGame.get(g.slug) ?? [] : aggByGame.get(g.slug) ?? [];
+
     // 내 베스트는 솔로 여부와 무관하게 계산. 솔로 베스트는 meta.solo 기록만.
     let myBest: number | null = null;
     let mySoloBest: number | null = null;
     const rows: LeaderRow[] = [];
-    for (const r of aggByGame.get(g.slug) ?? []) {
+    for (const r of source) {
       if (session && r.account_id === session.id) {
         myBest = bestAll(r);
         mySoloBest = bestSolo(r);
@@ -327,7 +373,7 @@ export async function buildState(): Promise<AppState> {
       r.rank = i > 0 && rows[i - 1].best === r.best ? rows[i - 1].rank : i + 1;
     });
 
-    return { ...g, myBest, mySoloBest, leaderboard: rows };
+    return { ...g, myBest, mySoloBest, inSeason, leaderboard: rows };
   });
 
   let sessionOut: AppState["session"] = null;
@@ -368,9 +414,21 @@ export async function buildState(): Promise<AppState> {
     };
   }
 
+  const seasonView: SeasonView | null = season
+    ? {
+        id: season.id,
+        num: season.num,
+        name: season.name,
+        games: season.games,
+        startsAt: season.starts_at,
+        endsAt: season.ends_at,
+      }
+    : null;
+
   return {
     session: sessionOut,
     isAdmin: admin,
+    season: seasonView,
     games: gameViews,
   };
 }
@@ -497,10 +555,22 @@ export interface AdminHiddenQuiz {
   imageUrl: string | null; // 서명 URL
   createdAt: string;
 }
+// 관리자용 시즌 행(생성/종료 관리·역대 목록).
+export interface AdminSeason {
+  id: string;
+  num: number;
+  name: string | null;
+  games: string[];
+  starts_at: string;
+  ends_at: string;
+  status: "active" | "closed";
+  closed_at: string | null;
+}
 export interface AdminState {
   adminPinSet: boolean;
   accounts: AdminAccount[];
   games: AdminGame[];
+  seasons: AdminSeason[];
   hiddenQuizzes: AdminHiddenQuiz[];
 }
 
@@ -563,11 +633,15 @@ async function buildHiddenQuizzes(
 
 export async function buildAdminState(): Promise<AdminState> {
   const sb = createServiceClient();
-  const [setRes, aRes, agg, gRes] = await Promise.all([
+  const [setRes, aRes, agg, gRes, sRes] = await Promise.all([
     sb.from("ma_settings").select("admin_pin_hash").eq("id", 1).maybeSingle(),
     sb.from("ma_accounts").select("id,name,active,created_at").order("created_at"),
     fetchScoreAgg(sb),
     sb.from("ma_games").select("*").order("sort"),
+    sb
+      .from("ma_seasons")
+      .select("id,num,name,games,starts_at,ends_at,status,closed_at")
+      .order("num", { ascending: false }),
   ]);
   const accounts = (aRes.data ?? []) as Account[];
   const playCount = new Map<string, number>();
@@ -579,6 +653,9 @@ export async function buildAdminState(): Promise<AdminState> {
 
   const nameById = new Map(accounts.map((a) => [a.id, a.name]));
   const hiddenQuizzes = await buildHiddenQuizzes(sb, nameById);
+
+  // 시즌 테이블이 아직 없으면(마이그레이션 전) sRes.error → 빈 목록으로 조용히 폴백.
+  const seasons = sRes.error ? [] : ((sRes.data ?? []) as AdminSeason[]);
 
   return {
     adminPinSet: !!(setRes.data as { admin_pin_hash: string | null } | null)?.admin_pin_hash,
@@ -593,6 +670,7 @@ export async function buildAdminState(): Promise<AdminState> {
       ...g,
       scoreCount: scoreCount.get(g.slug) ?? 0,
     })),
+    seasons,
     hiddenQuizzes,
   };
 }

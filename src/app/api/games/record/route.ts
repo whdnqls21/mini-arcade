@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAccountSession } from "@/lib/auth";
+import { fetchActiveSeason } from "@/lib/season";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -54,12 +55,20 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   const finalMeta = { ...(meta ?? {}), solo: !!acct?.solo };
 
-  const { error } = await sb.from("ma_scores").insert({
+  // 시즌 종목이면 현재 활성 시즌을 기록에 부착한다(비시즌 게임·오프시즌은 부착 안 함 = 자유 종목).
+  // 시즌 테이블이 없으면(마이그레이션 전) season 은 null → 필드를 아예 넣지 않아 구스키마에서도 안전.
+  const season = await fetchActiveSeason(sb);
+  const seasonId = season && season.games.includes(gameSlug) ? season.id : null;
+
+  const row: Record<string, unknown> = {
     account_id: session.id,
     game_slug: gameSlug,
     score: Math.round(score),
     meta: finalMeta,
-  });
+  };
+  if (seasonId) row.season_id = seasonId;
+
+  const { error } = await sb.from("ma_scores").insert(row);
   if (error) {
     console.error("record 실패", error);
     return NextResponse.json({ error: "기록 저장에 실패했습니다." }, { status: 500 });

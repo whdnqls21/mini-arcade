@@ -215,7 +215,7 @@ function NoticeForm() {
   );
 }
 
-type Tab = "board" | "accounts" | "games" | "review";
+type Tab = "board" | "accounts" | "games" | "seasons" | "review";
 
 function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -240,6 +240,7 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
     { key: "board", label: "게시판" },
     { key: "accounts", label: "계정", badge: admin.accounts.length },
     { key: "games", label: "게임" },
+    { key: "seasons", label: "시즌" },
     { key: "review", label: "검토", badge: admin.hiddenQuizzes.length },
   ];
 
@@ -402,9 +403,183 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
         </Card>
       )}
 
+      {tab === "seasons" && <SeasonSection admin={admin} busy={busy} run={run} />}
+
       {tab === "review" && <ReviewSection quizzes={admin.hiddenQuizzes} busy={busy} run={run} />}
     </div>
   );
+}
+
+// 시즌 관리 — 활성 시즌이 있으면 현황+지금 종료, 없으면 새 시즌 시작 폼. 역대 시즌은 아래에.
+function SeasonSection({
+  admin,
+  busy,
+  run,
+}: {
+  admin: AdminState;
+  busy: boolean;
+  run: (fn: () => Promise<unknown>) => void;
+}) {
+  const nameBySlug = new Map(admin.games.map((g) => [g.slug, g.name]));
+  const active = admin.seasons.find((s) => s.status === "active") ?? null;
+  const past = admin.seasons.filter((s) => s.status === "closed");
+
+  // 새 시즌 폼 상태 — 종목 선택(4~5 권장), 이름, 기간(일).
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [name, setName] = useState("");
+  const [days, setDays] = useState(15);
+
+  const togglePick = (slug: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+
+  return (
+    <div className="flex flex-col gap-4">
+      {active ? (
+        <Card className="flex flex-col gap-3 border-gold/30">
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-lg text-ink">
+              시즌 {active.num}
+              {active.name ? <span className="ml-1.5 text-gold">{active.name}</span> : null}
+            </h2>
+            <span className="rounded-full bg-grass/15 px-2 py-0.5 text-[11px] text-grass">진행 중</span>
+            <span className="ml-auto text-xs text-ink-faint">{ddayText(active.ends_at)}</span>
+          </div>
+          <div className="text-xs text-ink-dim">
+            {fmtDate(active.starts_at)} ~ {fmtDate(active.ends_at)}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {active.games.map((slug) => (
+              <span key={slug} className="rounded-full bg-black/25 px-2.5 py-1 text-xs text-ink">
+                {nameBySlug.get(slug) ?? slug}
+              </span>
+            ))}
+          </div>
+          <p className="text-[11px] text-ink-faint">
+            지금 종료하면 예정 종료일 전이어도 이 시즌이 마감돼요. (명예의 전당·MVP 집계는 다음 단계에서 붙습니다)
+          </p>
+          <button
+            disabled={busy}
+            onClick={() => {
+              if (confirm(`시즌 ${active.num}을(를) 지금 종료할까요?`)) {
+                run(() => postJSON("/api/admin/action", { action: "seasonEnd" }));
+              }
+            }}
+            className="rounded-xl border border-danger/40 py-2.5 text-sm text-danger disabled:opacity-40"
+          >
+            시즌 지금 종료
+          </button>
+        </Card>
+      ) : (
+        <Card className="flex flex-col gap-3">
+          <div>
+            <h2 className="font-display text-lg text-ink">새 시즌 시작</h2>
+            <p className="mt-0.5 text-xs text-ink-faint">
+              이번 시즌 종목을 고르세요. 4~5개 권장(최대 8). 고른 종목만 순위·MVP에 들어가고,
+              나머지 게임은 자유 종목으로 계속 플레이할 수 있어요.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {admin.games.map((g) => {
+              const on = picked.has(g.slug);
+              return (
+                <button
+                  key={g.slug}
+                  onClick={() => togglePick(g.slug)}
+                  className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                    on
+                      ? "border-grass/50 bg-grass/15 text-grass"
+                      : "border-pitch-line text-ink-dim hover:text-ink"
+                  }`}
+                >
+                  {on ? "✓ " : ""}
+                  {g.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={name}
+              maxLength={30}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="시즌 이름(선택) 예: 반응속도 시즌"
+              className="flex-1 rounded-xl border border-pitch-line bg-black/20 px-3 py-2.5 text-sm text-ink outline-none focus:border-gold"
+            />
+            <div className="flex items-center gap-1 rounded-xl border border-pitch-line bg-black/20 px-2.5 py-2">
+              <input
+                type="number"
+                min={1}
+                max={90}
+                value={days}
+                onChange={(e) => setDays(Math.min(90, Math.max(1, Number(e.target.value) || 1)))}
+                className="tabular w-12 bg-transparent text-center text-sm text-ink outline-none"
+              />
+              <span className="text-xs text-ink-faint">일</span>
+            </div>
+          </div>
+          <p className="text-[11px] text-ink-faint">
+            {picked.size}개 선택 · {days}일 뒤 예정 종료({ddayFromNow(days)})
+          </p>
+          <button
+            disabled={busy || picked.size === 0}
+            onClick={() =>
+              run(() =>
+                postJSON("/api/admin/action", {
+                  action: "seasonCreate",
+                  games: [...picked],
+                  name: name.trim(),
+                  days,
+                })
+              )
+            }
+            className="rounded-xl bg-gold py-2.5 font-display text-pitch-base disabled:opacity-40"
+          >
+            시즌 시작
+          </button>
+        </Card>
+      )}
+
+      {past.length > 0 && (
+        <Card className="flex flex-col gap-2">
+          <h3 className="font-display text-sm text-ink-dim">역대 시즌</h3>
+          {past.map((s) => (
+            <div key={s.id} className="flex items-center gap-2 text-xs">
+              <span className="font-display text-ink">시즌 {s.num}</span>
+              {s.name && <span className="text-gold">{s.name}</span>}
+              <span className="text-ink-faint">{s.games.length}종목</span>
+              <span className="ml-auto text-ink-faint">
+                {fmtDate(s.starts_at)} ~ {fmtDate(s.closed_at ?? s.ends_at)}
+              </span>
+            </div>
+          ))}
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// 날짜 표기 유틸(관리자 화면 전용).
+function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getMonth() + 1}. ${d.getDate()}.`;
+}
+function ddayText(endIso: string): string {
+  const end = new Date(endIso).getTime();
+  if (Number.isNaN(end)) return "";
+  const diff = Math.ceil((end - Date.now()) / (24 * 60 * 60 * 1000));
+  if (diff > 0) return `D-${diff}`;
+  if (diff === 0) return "D-day";
+  return `종료일 ${-diff}일 지남`;
+}
+function ddayFromNow(days: number): string {
+  const d = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  return `${d.getMonth() + 1}. ${d.getDate()}.`;
 }
 
 // 신고 누적으로 숨겨진 캐치마인드 그림 검토 — 복구 / 영구삭제.

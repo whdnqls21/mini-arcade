@@ -129,5 +129,92 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // 시즌 시작 — 로테이션 종목 + 기간 지정. 활성 시즌은 하나만(이미 있으면 거부).
+  if (action === "seasonCreate") {
+    const rawGames = Array.isArray(body?.games) ? body.games : null;
+    if (!rawGames || rawGames.length === 0) {
+      return NextResponse.json({ error: "종목을 하나 이상 선택하세요." }, { status: 400 });
+    }
+    const wanted: string[] = [
+      ...new Set((rawGames as unknown[]).filter((s): s is string => typeof s === "string")),
+    ];
+    // 유효한(존재하는) 게임 slug 만 허용.
+    const { data: gs } = await sb.from("ma_games").select("slug");
+    const valid = new Set(((gs ?? []) as { slug: string }[]).map((g) => g.slug));
+    const games = wanted.filter((s) => valid.has(s));
+    if (games.length === 0) {
+      return NextResponse.json({ error: "유효한 종목이 없습니다." }, { status: 400 });
+    }
+    if (games.length > 8) {
+      return NextResponse.json({ error: "종목은 최대 8개까지 선택할 수 있어요." }, { status: 400 });
+    }
+
+    // 이미 활성 시즌이 있으면 거부(먼저 종료해야 함).
+    const { data: activeRow } = await sb
+      .from("ma_seasons")
+      .select("id")
+      .eq("status", "active")
+      .maybeSingle();
+    if (activeRow) {
+      return NextResponse.json(
+        { error: "이미 진행 중인 시즌이 있어요. 먼저 종료한 뒤 새 시즌을 시작하세요." },
+        { status: 400 }
+      );
+    }
+
+    // 다음 시즌 번호 = 최대 num + 1.
+    const { data: last } = await sb
+      .from("ma_seasons")
+      .select("num")
+      .order("num", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const num = ((last as { num: number } | null)?.num ?? 0) + 1;
+
+    const rawName = typeof body?.name === "string" ? body.name.trim() : "";
+    const name = rawName ? rawName.slice(0, 30) : null;
+
+    const rawDays = Number(body?.days);
+    const days = Number.isFinite(rawDays) ? Math.min(90, Math.max(1, Math.round(rawDays))) : 15;
+    const now = new Date();
+    const endsAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+    const { error } = await sb.from("ma_seasons").insert({
+      num,
+      name,
+      games,
+      starts_at: now.toISOString(),
+      ends_at: endsAt.toISOString(),
+      status: "active",
+    });
+    if (error) {
+      console.error("seasonCreate 실패", error);
+      return NextResponse.json({ error: "시즌 시작에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, num });
+  }
+
+  // 시즌 종료 — 활성 시즌을 지금 종료(status=closed). 예정 종료일 전이어도 됨.
+  // NOTE(2단계): 여기서 스냅샷(명예의 전당)·MVP 산정을 함께 처리할 예정.
+  if (action === "seasonEnd") {
+    const { data: active } = await sb
+      .from("ma_seasons")
+      .select("id,num")
+      .eq("status", "active")
+      .maybeSingle();
+    if (!active) {
+      return NextResponse.json({ error: "진행 중인 시즌이 없습니다." }, { status: 400 });
+    }
+    const { error } = await sb
+      .from("ma_seasons")
+      .update({ status: "closed", closed_at: new Date().toISOString() })
+      .eq("id", (active as { id: string }).id);
+    if (error) {
+      console.error("seasonEnd 실패", error);
+      return NextResponse.json({ error: "시즌 종료에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "알 수 없는 동작입니다." }, { status: 400 });
 }

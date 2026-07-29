@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Card } from "@/components/Card";
 import { IconBadge } from "@/components/IconBadge";
+import { SeasonBanner } from "@/components/SeasonBanner";
 import { TitleTag } from "@/components/TitleTag";
 import { useAppState } from "@/components/StateProvider";
 import { CatchmindIcon } from "@/games/catchmind/CatchmindIcon";
@@ -49,6 +50,8 @@ export default function GamesPage() {
           return [...sel].every((t) => tags.includes(t));
         });
 
+  const gameNameBySlug = new Map(state.games.map((g) => [g.slug, g.name]));
+
   // 캐치마인드 카드는 솔로모드면 숨기고, 필터가 걸리면 창의력만 만족할 때 노출(AND).
   const showCatchmind = !solo && [...sel].every((t) => CATCHMIND_TAGS.includes(t));
 
@@ -58,6 +61,9 @@ export default function GamesPage() {
         <p className="text-xs uppercase tracking-[0.2em] text-grass">게임</p>
         <h1 className="font-display text-2xl text-ink">{state.session?.name}님, 플레이!</h1>
       </div>
+
+      {/* 진행 중 시즌 안내(없으면 렌더 안 함) */}
+      <SeasonBanner season={state.season} gameNameBySlug={gameNameBySlug} />
 
       {/* 태그 필터 — 여러 개 선택 시 모두 만족하는 게임만(AND) */}
       <div className="flex flex-wrap gap-1.5">
@@ -139,6 +145,11 @@ export default function GamesPage() {
                   {/* 제목 + 태그를 한 줄에 */}
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <h2 className="font-display text-xl text-ink">{g.name}</h2>
+                    {g.inSeason && (
+                      <span className="rounded-full bg-gold/15 px-1.5 py-0.5 text-[10px] font-medium text-gold">
+                        시즌
+                      </span>
+                    )}
                     {(GAME_REGISTRY[g.slug]?.tags ?? []).map((t) => (
                       <span key={t} className="text-[11px] font-medium text-grass/70">
                         #{TAG_LABEL[t]}

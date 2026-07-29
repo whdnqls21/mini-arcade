@@ -21,6 +21,7 @@ $$;
 drop table if exists public.ma_post_votes cascade;
 drop table if exists public.ma_posts cascade;
 drop table if exists public.ma_scores cascade;
+drop table if exists public.ma_seasons cascade;
 drop table if exists public.ma_games cascade;
 drop table if exists public.ma_accounts cascade;
 drop table if exists public.ma_settings cascade;
@@ -60,6 +61,23 @@ create table public.ma_games (
   constraint ma_games_scoring_valid check (scoring in ('high','low','time','htime'))
 );
 
+-- 시즌 (로테이션 종목·기간. 활성 시즌은 하나만. 스냅샷/보상은 2단계에서 얹는다)
+create table public.ma_seasons (
+  id         uuid primary key default gen_random_uuid(),
+  num        int  not null,                        -- 시즌 번호(1,2,3…)
+  name       text,                                 -- 시즌 이름/테마(선택)
+  games      text[] not null default '{}',          -- 이번 시즌 로테이션 종목 slug
+  starts_at  timestamptz not null default now(),
+  ends_at    timestamptz not null,                  -- 예정 종료일(관리자가 지정)
+  status     text not null default 'active',        -- 'active' | 'closed'
+  closed_at  timestamptz,                           -- 실제 종료 시각(관리자 수동 종료 시)
+  created_at timestamptz not null default now(),
+  constraint ma_seasons_status_valid check (status in ('active','closed'))
+);
+create unique index ma_seasons_num_idx on public.ma_seasons (num);
+-- 활성 시즌은 최대 하나: status='active' 인 행이 1개를 넘지 못하게 부분 유니크 인덱스
+create unique index ma_seasons_one_active on public.ma_seasons (status) where status = 'active';
+
 -- 기록 (계정 × 게임, 여러 판. 리더보드는 계정별 베스트로 계산)
 create table public.ma_scores (
   id         uuid primary key default gen_random_uuid(),
@@ -67,6 +85,7 @@ create table public.ma_scores (
   game_slug  text not null references public.ma_games(slug) on delete cascade,
   score      int not null,                       -- time 게임은 밀리초(ms) 저장
   meta       jsonb,
+  season_id  uuid references public.ma_seasons(id) on delete set null, -- 시즌 종목 기록이면 그 시즌, 아니면 null(자유 종목)
   created_at timestamptz not null default now()
 );
 create index ma_scores_game_idx on public.ma_scores (game_slug);
@@ -121,6 +140,7 @@ create index ma_post_comment_votes_comment_idx on public.ma_post_comment_votes (
 alter table public.ma_accounts      enable row level security;
 alter table public.ma_settings      enable row level security;
 alter table public.ma_games         enable row level security;
+alter table public.ma_seasons       enable row level security;
 alter table public.ma_scores        enable row level security;
 alter table public.ma_posts         enable row level security;
 alter table public.ma_post_votes    enable row level security;
@@ -138,6 +158,18 @@ select game_slug, account_id,
        count(*)   as plays
 from public.ma_scores
 group by game_slug, account_id;
+
+-- 성능: 시즌 범위 점수 집계 뷰 — 시즌 리더보드는 (게임×계정×시즌) 베스트를 이걸로.
+create or replace view public.ma_scores_agg_season as
+select game_slug, account_id, season_id,
+       max(score) as max_all,
+       min(score) as min_all,
+       max(score) filter (where meta->>'solo' = 'true') as max_solo,
+       min(score) filter (where meta->>'solo' = 'true') as min_solo,
+       count(*)   as plays
+from public.ma_scores
+where season_id is not null
+group by game_slug, account_id, season_id;
 
 -- 시드: 첫 게임 2048 + settings 단일 행
 insert into public.ma_settings (id) values (1) on conflict (id) do nothing;
@@ -247,4 +279,31 @@ on conflict (slug) do nothing;
 --   alter table public.ma_accounts
 --     add column if not exists title text,
 --     add column if not exists bio   text;
+--
+-- 시즌제 1단계(시즌 테이블 + 기록에 시즌 부착 + 시즌 집계 뷰)를 운영 DB 에 추가할 때
+-- (이 파일 전체 재실행 금지) — 아래 한 벌만 그대로 SQL Editor 에서 실행:
+--   create table if not exists public.ma_seasons (
+--     id         uuid primary key default gen_random_uuid(),
+--     num        int  not null,
+--     name       text,
+--     games      text[] not null default '{}',
+--     starts_at  timestamptz not null default now(),
+--     ends_at    timestamptz not null,
+--     status     text not null default 'active',
+--     closed_at  timestamptz,
+--     created_at timestamptz not null default now(),
+--     constraint ma_seasons_status_valid check (status in ('active','closed'))
+--   );
+--   create unique index if not exists ma_seasons_num_idx on public.ma_seasons (num);
+--   create unique index if not exists ma_seasons_one_active on public.ma_seasons (status) where status = 'active';
+--   alter table public.ma_seasons enable row level security;
+--   alter table public.ma_scores
+--     add column if not exists season_id uuid references public.ma_seasons(id) on delete set null;
+--   create index if not exists ma_scores_season_idx on public.ma_scores (season_id);
+--   create or replace view public.ma_scores_agg_season as
+--   select game_slug, account_id, season_id, max(score) as max_all, min(score) as min_all,
+--          max(score) filter (where meta->>'solo'='true') as max_solo,
+--          min(score) filter (where meta->>'solo'='true') as min_solo, count(*) as plays
+--   from public.ma_scores where season_id is not null
+--   group by game_slug, account_id, season_id;
 -- ────────────────────────────────────────────────────────────────────────
