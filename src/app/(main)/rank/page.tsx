@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@/components/Card";
 import { HallOfFame } from "@/components/HallOfFame";
 import { IconBadge } from "@/components/IconBadge";
+import { SeasonMvpRace } from "@/components/SeasonMvpRace";
 import { TitleTag } from "@/components/TitleTag";
 import { useAppState } from "@/components/StateProvider";
 import { formatScore } from "@/lib/format";
@@ -21,6 +22,9 @@ export default function RankPage() {
         <p className="text-xs uppercase tracking-[0.2em] text-grass">순위</p>
         <h1 className="font-display text-2xl text-ink">게임별 리더보드</h1>
       </div>
+
+      {/* 진행 중 시즌 MVP 레이스(없으면 렌더 안 함) */}
+      <SeasonMvpRace season={state.season} race={state.mvpRace} meId={meId} />
 
       {/* 명예의 전당 — 종료된 시즌이 있으면 상단에(없으면 렌더 안 함) */}
       <HallOfFame hall={state.hall} />

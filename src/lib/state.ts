@@ -3,7 +3,7 @@ import "server-only";
 import { getAccountSession, isAdmin } from "./auth";
 import { drawingUrl } from "./catchmind/server";
 import { EARN_COND } from "./icons";
-import { fetchActiveSeason } from "./season";
+import { F1_POINTS, fetchActiveSeason } from "./season";
 import { createServiceClient } from "./supabase/server";
 import type { Account, Game, Score, Scoring } from "./types";
 
@@ -34,6 +34,17 @@ export interface SeasonView {
   games: string[]; // 이번 시즌 로테이션 종목 slug
   startsAt: string;
   endsAt: string;
+}
+
+// 실시간 MVP 레이스 — 진행 중 시즌의 현재 F1 종합 순위(한 줄).
+export interface MvpRaceRow {
+  accountId: string;
+  name: string;
+  icon: string | null;
+  title: string | null;
+  points: number;
+  medals: number; // 현재 1등 종목 수
+  rank: number;
 }
 
 // 명예의 전당 — 종료된 시즌의 스냅샷(이름·기록 문자열 그대로, 소급 안 바뀜).
@@ -75,6 +86,7 @@ export interface AppState {
   } | null;
   isAdmin: boolean;
   season: SeasonView | null; // 현재 활성 시즌(없으면 null = 전 게임 올타임)
+  mvpRace: MvpRaceRow[]; // 진행 중 시즌의 현재 F1 종합 순위(시즌 없으면 빈 배열)
   hall: HallEntry[]; // 명예의 전당(종료된 시즌 스냅샷, 최신순). 없으면 빈 배열
   games: GameView[];
 }
@@ -410,6 +422,54 @@ export async function computeEligibleIcons(
   return eligibleIcons({ games, agg, soloIds, accountId, stats });
 }
 
+// 진행 중 시즌의 현재 MVP 레이스(F1 종합 순위). 종료 스냅샷과 같은 규칙으로 계산하되
+// 이미 조회해 둔 시즌 집계를 재사용한다(추가 쿼리 없음). 솔로·비활성 계정은 제외.
+function computeMvpRace(
+  seasonGames: string[],
+  scoringBySlug: Map<string, Scoring>,
+  seasonAggByGame: Map<string, ScoreAgg[]>,
+  isEligible: (id: string) => boolean,
+  nameById: Map<string, string>,
+  decoById: Map<string, Deco>
+): MvpRaceRow[] {
+  const pts = new Map<string, { points: number; medals: number }>();
+  for (const slug of seasonGames) {
+    const scoring = scoringBySlug.get(slug) ?? "high";
+    const high = isHigh(scoring);
+    const ranked = (seasonAggByGame.get(slug) ?? [])
+      .filter((r) => isEligible(r.account_id))
+      .map((r) => ({ id: r.account_id, best: high ? r.max_all : r.min_all }));
+    ranked.sort((a, b) => (a.best - b.best) * sortDir(scoring));
+    let rank = 0;
+    let prev: number | null = null;
+    ranked.forEach((r, i) => {
+      rank = prev !== null && prev === r.best ? rank : i + 1;
+      prev = r.best;
+      const cur = pts.get(r.id) ?? { points: 0, medals: 0 };
+      cur.points += F1_POINTS[rank - 1] ?? 1;
+      if (rank === 1) cur.medals += 1;
+      pts.set(r.id, cur);
+    });
+  }
+
+  const rows: MvpRaceRow[] = [...pts.entries()].map(([id, v]) => ({
+    accountId: id,
+    name: nameById.get(id) ?? "",
+    icon: decoById.get(id)?.icon ?? null,
+    title: decoById.get(id)?.title ?? null,
+    points: v.points,
+    medals: v.medals,
+    rank: 0,
+  }));
+  // 종합 순위 — 포인트 내림차순, 동점이면 1등 개수 우선(종료 시 MVP 산정과 동일).
+  rows.sort((a, b) => b.points - a.points || b.medals - a.medals);
+  rows.forEach((r, i) => {
+    const prev = rows[i - 1];
+    r.rank = i > 0 && prev.points === r.points && prev.medals === r.medals ? prev.rank : i + 1;
+  });
+  return rows;
+}
+
 export async function buildState(): Promise<AppState> {
   const sb = createServiceClient();
   const [session, admin, gRes, agg, aRes, decoById, season, hall] = await Promise.all([
@@ -445,6 +505,18 @@ export async function buildState(): Promise<AppState> {
     list.push(r);
     seasonAggByGame.set(r.game_slug, list);
   }
+
+  // 진행 중 시즌이면 현재 MVP 레이스(F1 종합 순위)를 계산(추가 쿼리 없음).
+  const mvpRace: MvpRaceRow[] = season
+    ? computeMvpRace(
+        season.games,
+        new Map(games.map((g) => [g.slug, g.scoring])),
+        seasonAggByGame,
+        (id) => nameById.has(id) && !soloById.get(id),
+        nameById,
+        decoById
+      )
+    : [];
 
   const gameViews: GameView[] = games.map((g) => {
     const high = isHigh(g.scoring);
@@ -535,6 +607,7 @@ export async function buildState(): Promise<AppState> {
     session: sessionOut,
     isAdmin: admin,
     season: seasonView,
+    mvpRace,
     hall,
     games: gameViews,
   };
