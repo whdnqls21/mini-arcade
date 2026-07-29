@@ -429,7 +429,6 @@ function SeasonSection({
   const [name, setName] = useState("");
   const [startAt, setStartAt] = useState(() => toLocalInput(new Date()));
   const [endAt, setEndAt] = useState(() => toLocalInput(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)));
-  const [announce, setAnnounce] = useState(true); // 시즌 공지 자동 작성
 
   const startMs = new Date(startAt).getTime();
   const endMs = new Date(endAt).getTime();
@@ -554,15 +553,6 @@ function SeasonSection({
             {validRange ? ` · ${fmtDateTime(new Date(endMs).toISOString())} 종료` : ""}
           </p>
           {!validRange && <p className="text-[11px] text-danger">종료 일시는 시작 일시보다 뒤여야 해요.</p>}
-          <label className="flex items-center gap-2 text-xs text-ink-dim">
-            <input
-              type="checkbox"
-              checked={announce}
-              onChange={(e) => setAnnounce(e.target.checked)}
-              className="h-4 w-4 accent-gold"
-            />
-            시작하면 게시판에 시즌 공지 자동 작성
-          </label>
           <button
             disabled={busy || picked.size === 0 || !validRange}
             onClick={() =>
@@ -573,7 +563,6 @@ function SeasonSection({
                   name: name.trim(),
                   startsAt: new Date(startMs).toISOString(),
                   endsAt: new Date(endMs).toISOString(),
-                  announce,
                 })
               )
             }
