@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isAdmin } from "@/lib/auth";
 import { CM_BUCKET } from "@/lib/catchmind/server";
-import { computeSeasonSnapshot, fetchActiveSeason } from "@/lib/season";
+import { computeSeasonSnapshot, fetchScheduledOrActiveSeason } from "@/lib/season";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -175,16 +175,25 @@ export async function POST(req: NextRequest) {
     const rawName = typeof body?.name === "string" ? body.name.trim() : "";
     const name = rawName ? rawName.slice(0, 30) : null;
 
-    const rawDays = Number(body?.days);
-    const days = Number.isFinite(rawDays) ? Math.min(90, Math.max(1, Math.round(rawDays))) : 15;
-    const now = new Date();
-    const endsAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+    // 관리자가 지정한 시작·종료 일시(ISO). 시작이 미래면 그 시즌은 '예정'으로 대기하다
+    // 시작 시각이 지나면 자동으로 진행 중이 된다(fetchActiveSeason 의 시작일 필터).
+    const startsAt = typeof body?.startsAt === "string" ? new Date(body.startsAt) : new Date();
+    const endsAt = typeof body?.endsAt === "string" ? new Date(body.endsAt) : null;
+    if (Number.isNaN(startsAt.getTime())) {
+      return NextResponse.json({ error: "시작 일시를 확인하세요." }, { status: 400 });
+    }
+    if (!endsAt || Number.isNaN(endsAt.getTime())) {
+      return NextResponse.json({ error: "종료 일시를 확인하세요." }, { status: 400 });
+    }
+    if (endsAt.getTime() <= startsAt.getTime()) {
+      return NextResponse.json({ error: "종료 일시는 시작 일시보다 뒤여야 해요." }, { status: 400 });
+    }
 
     const { error } = await sb.from("ma_seasons").insert({
       num,
       name,
       games,
-      starts_at: now.toISOString(),
+      starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
       status: "active",
     });
@@ -199,9 +208,10 @@ export async function POST(req: NextRequest) {
   // 종료 직전에 스냅샷(종목별 1등 + F1 MVP)을 이름 문자열로 박아 명예의 전당에 남기고,
   // MVP 에게 시즌 보상 아이콘(season_mvp, 금테)을 지급한다.
   if (action === "seasonEnd") {
-    const active = await fetchActiveSeason(sb);
+    // 진행 중이거나 '예정'인 시즌 모두 종료 대상(예정 시즌 종료 = 취소).
+    const active = await fetchScheduledOrActiveSeason(sb);
     if (!active) {
-      return NextResponse.json({ error: "진행 중인 시즌이 없습니다." }, { status: 400 });
+      return NextResponse.json({ error: "진행 중이거나 예정된 시즌이 없습니다." }, { status: 400 });
     }
 
     // 1) 스냅샷 계산 → 저장. 결과 테이블이 없으면(2단계 마이그레이션 전) 닫지 않고 안내.

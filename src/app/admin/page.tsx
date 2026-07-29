@@ -424,10 +424,17 @@ function SeasonSection({
   const active = admin.seasons.find((s) => s.status === "active") ?? null;
   const past = admin.seasons.filter((s) => s.status === "closed");
 
-  // 새 시즌 폼 상태 — 종목 선택(4~5 권장), 이름, 기간(일).
+  // 새 시즌 폼 상태 — 종목 선택, 이름, 시작·종료 일시(datetime-local).
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [name, setName] = useState("");
-  const [days, setDays] = useState(15);
+  const [startAt, setStartAt] = useState(() => toLocalInput(new Date()));
+  const [endAt, setEndAt] = useState(() => toLocalInput(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)));
+
+  const startMs = new Date(startAt).getTime();
+  const endMs = new Date(endAt).getTime();
+  const validRange = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs;
+  // 활성 시즌이 아직 시작 전(예정)인지 — 표시·버튼 문구를 바꾼다.
+  const scheduled = active ? new Date(active.starts_at).getTime() > Date.now() : false;
 
   const togglePick = (slug: string) =>
     setPicked((prev) => {
@@ -446,11 +453,17 @@ function SeasonSection({
               시즌 {active.num}
               {active.name ? <span className="ml-1.5 text-gold">{active.name}</span> : null}
             </h2>
-            <span className="rounded-full bg-grass/15 px-2 py-0.5 text-[11px] text-grass">진행 중</span>
-            <span className="ml-auto text-xs text-ink-faint">{ddayText(active.ends_at)}</span>
+            {scheduled ? (
+              <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] text-gold">예정</span>
+            ) : (
+              <span className="rounded-full bg-grass/15 px-2 py-0.5 text-[11px] text-grass">진행 중</span>
+            )}
+            <span className="ml-auto text-xs text-ink-faint">
+              {scheduled ? `시작 ${ddayText(active.starts_at)}` : ddayText(active.ends_at)}
+            </span>
           </div>
           <div className="text-xs text-ink-dim">
-            {fmtDate(active.starts_at)} ~ {fmtDate(active.ends_at)}
+            {fmtDateTime(active.starts_at)} ~ {fmtDateTime(active.ends_at)}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {active.games.map((slug) => (
@@ -460,18 +473,23 @@ function SeasonSection({
             ))}
           </div>
           <p className="text-[11px] text-ink-faint">
-            지금 종료하면 예정 종료일 전이어도 이 시즌이 마감돼요. (명예의 전당·MVP 집계는 다음 단계에서 붙습니다)
+            {scheduled
+              ? "아직 시작 전(예정)이에요. 시작 일시가 지나면 자동으로 진행 중이 됩니다. 지금 종료하면 이 예정 시즌이 취소돼요."
+              : "지금 종료하면 예정 종료일 전이어도 마감되고, MVP·종목별 1등이 명예의 전당에 기록돼요."}
           </p>
           <button
             disabled={busy}
             onClick={() => {
-              if (confirm(`시즌 ${active.num}을(를) 지금 종료할까요?`)) {
+              const msg = scheduled
+                ? `예정된 시즌 ${active.num}을(를) 취소할까요?`
+                : `시즌 ${active.num}을(를) 지금 종료할까요? MVP·종목별 1등이 확정됩니다.`;
+              if (confirm(msg)) {
                 run(() => postJSON("/api/admin/action", { action: "seasonEnd" }));
               }
             }}
             className="rounded-xl border border-danger/40 py-2.5 text-sm text-danger disabled:opacity-40"
           >
-            시즌 지금 종료
+            {scheduled ? "예정 시즌 취소" : "시즌 지금 종료"}
           </button>
         </Card>
       ) : (
@@ -502,44 +520,55 @@ function SeasonSection({
               );
             })}
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              value={name}
-              maxLength={30}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="시즌 이름(선택) 예: 반응속도 시즌"
-              className="flex-1 rounded-xl border border-pitch-line bg-black/20 px-3 py-2.5 text-sm text-ink outline-none focus:border-gold"
-            />
-            <div className="flex items-center gap-1 rounded-xl border border-pitch-line bg-black/20 px-2.5 py-2">
+          <input
+            value={name}
+            maxLength={30}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="시즌 이름(선택) 예: 반응속도 시즌"
+            className="rounded-xl border border-pitch-line bg-black/20 px-3 py-2.5 text-sm text-ink outline-none focus:border-gold"
+          />
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-xs text-ink-dim">
+              <span className="w-9 shrink-0 text-ink-faint">시작</span>
               <input
-                type="number"
-                min={1}
-                max={90}
-                value={days}
-                onChange={(e) => setDays(Math.min(90, Math.max(1, Number(e.target.value) || 1)))}
-                className="tabular w-12 bg-transparent text-center text-sm text-ink outline-none"
+                type="datetime-local"
+                value={startAt}
+                onChange={(e) => setStartAt(e.target.value)}
+                className="flex-1 rounded-xl border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink outline-none focus:border-gold"
               />
-              <span className="text-xs text-ink-faint">일</span>
-            </div>
+            </label>
+            <label className="flex items-center gap-2 text-xs text-ink-dim">
+              <span className="w-9 shrink-0 text-ink-faint">종료</span>
+              <input
+                type="datetime-local"
+                value={endAt}
+                onChange={(e) => setEndAt(e.target.value)}
+                className="flex-1 rounded-xl border border-pitch-line bg-black/20 px-3 py-2 text-sm text-ink outline-none focus:border-gold"
+              />
+            </label>
           </div>
           <p className="text-[11px] text-ink-faint">
-            {picked.size}개 선택 · {days}일 뒤 예정 종료({ddayFromNow(days)})
+            {picked.size}개 선택 ·{" "}
+            {startMs > Date.now() ? `${fmtDateTime(new Date(startMs).toISOString())} 시작 예정` : "즉시 시작"}
+            {validRange ? ` · ${fmtDateTime(new Date(endMs).toISOString())} 종료` : ""}
           </p>
+          {!validRange && <p className="text-[11px] text-danger">종료 일시는 시작 일시보다 뒤여야 해요.</p>}
           <button
-            disabled={busy || picked.size === 0}
+            disabled={busy || picked.size === 0 || !validRange}
             onClick={() =>
               run(() =>
                 postJSON("/api/admin/action", {
                   action: "seasonCreate",
                   games: [...picked],
                   name: name.trim(),
-                  days,
+                  startsAt: new Date(startMs).toISOString(),
+                  endsAt: new Date(endMs).toISOString(),
                 })
               )
             }
             className="rounded-xl bg-gold py-2.5 font-display text-pitch-base disabled:opacity-40"
           >
-            시즌 시작
+            {startMs > Date.now() ? "시즌 예약" : "시즌 시작"}
           </button>
         </Card>
       )}
@@ -569,17 +598,24 @@ function fmtDate(iso: string): string {
   if (Number.isNaN(d.getTime())) return "";
   return `${d.getMonth() + 1}. ${d.getDate()}.`;
 }
+function fmtDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getMonth() + 1}. ${d.getDate()}. ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+// Date → datetime-local 입력값(YYYY-MM-DDTHH:mm, 로컬 시간)
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 function ddayText(endIso: string): string {
   const end = new Date(endIso).getTime();
   if (Number.isNaN(end)) return "";
   const diff = Math.ceil((end - Date.now()) / (24 * 60 * 60 * 1000));
   if (diff > 0) return `D-${diff}`;
   if (diff === 0) return "D-day";
-  return `종료일 ${-diff}일 지남`;
-}
-function ddayFromNow(days: number): string {
-  const d = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-  return `${d.getMonth() + 1}. ${d.getDate()}.`;
+  return `${-diff}일 지남`;
 }
 
 // 신고 누적으로 숨겨진 캐치마인드 그림 검토 — 복구 / 영구삭제.
