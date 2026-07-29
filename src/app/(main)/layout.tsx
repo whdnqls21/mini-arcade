@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Card } from "@/components/Card";
 import { EarnedCelebration } from "@/components/EarnedCelebration";
 import { SeasonEndCelebration } from "@/components/SeasonEndCelebration";
+import { SeasonStartCelebration } from "@/components/SeasonStartCelebration";
 import ForceRename from "@/components/ForceRename";
 import LoginScreen from "@/components/LoginScreen";
 import { StateProvider, useAppState } from "@/components/StateProvider";
@@ -46,6 +47,7 @@ function Gate({ children }: { children: ReactNode }) {
     <>
       <EarnedCelebration />
       <SeasonEndCelebration />
+      <SeasonStartCelebration />
       {children}
     </>
   );
