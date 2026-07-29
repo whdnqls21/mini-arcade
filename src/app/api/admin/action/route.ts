@@ -139,9 +139,11 @@ export async function POST(req: NextRequest) {
     const wanted: string[] = [
       ...new Set((rawGames as unknown[]).filter((s): s is string => typeof s === "string")),
     ];
-    // 유효한(존재하는) 게임 slug 만 허용.
-    const { data: gs } = await sb.from("ma_games").select("slug");
-    const valid = new Set(((gs ?? []) as { slug: string }[]).map((g) => g.slug));
+    // 유효한(존재하는) 게임 slug 만 허용. 이름은 공지 문구에 쓴다.
+    const { data: gs } = await sb.from("ma_games").select("slug,name");
+    const gameRows = (gs ?? []) as { slug: string; name: string }[];
+    const valid = new Set(gameRows.map((g) => g.slug));
+    const nameBySlug = new Map(gameRows.map((g) => [g.slug, g.name]));
     const games = wanted.filter((s) => valid.has(s));
     if (games.length === 0) {
       return NextResponse.json({ error: "유효한 종목이 없습니다." }, { status: 400 });
@@ -201,6 +203,52 @@ export async function POST(req: NextRequest) {
       console.error("seasonCreate 실패", error);
       return NextResponse.json({ error: "시즌 시작에 실패했습니다." }, { status: 500 });
     }
+
+    // 시즌 공지 자동 작성(관리자가 끄지 않았으면). 실패해도 시즌 생성 자체는 성공 처리.
+    if (body?.announce !== false) {
+      const scheduled = startsAt.getTime() > Date.now();
+      const gameNames = games.map((s) => nameBySlug.get(s) ?? s);
+      const kst = (d: Date) =>
+        d.toLocaleString("ko-KR", {
+          timeZone: "Asia/Seoul",
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+      const title = `🏆 시즌 ${num} ${scheduled ? "예고" : "시작"}!`;
+      const noticeBody = [
+        `시즌 ${num}${name ? ` · “${name}”` : ""}이 ${scheduled ? "곧 시작돼요" : "시작됐어요"}! 🎉`,
+        ``,
+        `■ 기간`,
+        scheduled ? `${kst(startsAt)} 시작 · ${kst(endsAt)} 종료 예정` : `${kst(startsAt)} ~ ${kst(endsAt)}`,
+        ``,
+        `■ 이번 시즌 종목`,
+        gameNames.join(" · "),
+        `(지정 종목 외 게임은 자유 종목으로 계속 즐길 수 있어요.)`,
+        ``,
+        `■ 겨루는 법 · 보상`,
+        `종목별 순위로 F1 포인트를 모아 종합 1위 = 시즌 MVP 🏆`,
+        `· 시즌 MVP — 금테 아이콘 + 칭호`,
+        `· 종목별 1등 — 시즌 한정 금테 아이콘`,
+        `· 명예의 전당에 이름 영구 등재`,
+        ``,
+        `순위 탭에서 실시간 MVP 레이스를 확인하세요!`,
+      ]
+        .join("\n")
+        .slice(0, 1000);
+      const { error: pErr } = await sb.from("ma_posts").insert({
+        account_id: null,
+        author_name: "관리자",
+        category: "notice",
+        title,
+        body: noticeBody,
+        is_notice: true,
+      });
+      if (pErr) console.error("시즌 공지 자동 작성 실패(무시)", pErr);
+    }
+
     return NextResponse.json({ ok: true, num });
   }
 
