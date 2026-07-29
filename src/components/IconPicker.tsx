@@ -96,6 +96,11 @@ export function IconPicker({
       {/* 획득 — 조건 달성 시 잠금 해제 */}
       <div className="flex flex-col gap-2">
         <p className="text-xs text-ink-faint">획득 · 조건을 달성하면 잠금 해제돼요</p>
+        {/* 순위 칭호 게이트 안내 — 숫자는 state.ts MIN_RANKED_FOR_ICON(=5)과 맞춘다 */}
+        <p className="text-[10px] leading-relaxed text-ink-faint">
+          ※ ‘1위·2위·GOAT·삼관왕’ 같은 순위 칭호는 <b className="text-ink-dim">5명 이상</b>이 겨룬
+          게임에서만 인정돼요.
+        </p>
         <div className="grid grid-cols-3 gap-2">
           {EARNED_ICONS.map((i) => {
             const open = unlocked.has(i.key);

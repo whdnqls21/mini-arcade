@@ -85,6 +85,12 @@ const better = (scoring: Scoring, a: number, b: number) =>
   isHigh(scoring) ? Math.max(a, b) : Math.min(a, b);
 const sortDir = (scoring: Scoring) => (isHigh(scoring) ? -1 : 1); // 내림차순=상위 먼저
 
+// 순위 기반 칭호(게임 1위·2위·GOAT·삼관왕 등)를 인정하는 최소 경쟁 인원.
+// 이 인원 미만이 기록을 낸 게임은 순위를 아예 매기지 않아 칭호 판정에서 빠진다.
+// (새 게임 초반 참가자가 1~2명일 때 아무나 1위 칭호를 영구 획득하는 걸 막는다.)
+// 값을 바꾸면 IconPicker 의 안내 문구(“5명 이상 …”)도 함께 맞춘다(server-only 라 값 공유 불가).
+export const MIN_RANKED_FOR_ICON = 5;
+
 // (게임×계정)별 점수 집계. ma_scores 전량 조회 대신 DB 뷰(ma_scores_agg)에서 받는다.
 // 뷰가 없으면(마이그레이션 전) ma_scores 를 받아 JS 로 집계(폴백).
 interface ScoreAgg {
@@ -309,12 +315,14 @@ export function eligibleIcons(input: {
   }
 
   // 게임별 내 순위(솔로 계정 제외하고 매김). 내가 솔로면 리더보드에 없어 순위 없음 → 챔피언 불가.
+  // 경쟁 인원이 MIN_RANKED_FOR_ICON 미만인 게임은 순위를 매기지 않는다(순위 칭호 인정 안 함).
   const myRank = new Map<string, number>();
   for (const g of games) {
     const high = isHigh(g.scoring);
     const rows = (aggByGame.get(g.slug) ?? [])
       .filter((r) => !soloIds.has(r.account_id))
       .map((r) => ({ id: r.account_id, best: high ? r.max_all : r.min_all }));
+    if (rows.length < MIN_RANKED_FOR_ICON) continue; // 경쟁 인원 미달 → 순위 칭호 판정 제외
     rows.sort((a, b) => (a.best - b.best) * sortDir(g.scoring));
     let rank = 0;
     let prev: number | null = null;
