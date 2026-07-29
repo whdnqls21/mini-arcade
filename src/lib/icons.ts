@@ -82,10 +82,26 @@ const EARNED: [string, string, string, string, EarnCond][] = [
 ];
 
 // ── 시즌 보상 아이콘 (금테) ───────────────────────────────────────
-// 조건 자동 판정(EARN_COND)이 아니라, 시즌 종료 시 서버가 MVP 에게 '직접 지급'한다
+// 조건 자동 판정(EARN_COND)이 아니라, 시즌 종료 시 서버가 '직접 지급'한다
 // (ma_account_icons 에 기록). 그래서 EARNED 와 달리 여기 별도로 둔다.
-const SEASON: [string, string, string][] = [
-  ["season_mvp", "🏆", "시즌 MVP"], // 시즌 종합 1위. 획득 후 영구 보유(칭호로도 사용 가능)
+// [key, emoji, label, hint]
+const SEASON: [string, string, string, string][] = [
+  ["season_mvp", "🏆", "시즌 MVP", "시즌 종합 1위(MVP)에게 지급"], // 종합 1위
+];
+
+// 시즌 종목별 1등 아이콘(금테). 올타임 champ:* 와 같은 이모지를 쓰되 이름 앞에 '시즌'을 붙여
+// 구분한다. 시즌 종료 시 그 종목 1등에게 지급(seasonEnd). 키는 schamp:<slug>.
+const SEASON_CHAMP: [string, string, string][] = [
+  ["schamp:apple", "🍎", "시즌 사과왕"],
+  ["schamp:suika", "🍉", "시즌 수박왕"],
+  ["schamp:whack", "🔨", "시즌 두더지 왕"],
+  ["schamp:mahjong", "🀄", "시즌 사천성 고수"],
+  ["schamp:dino", "🦖", "시즌 다이노 마스터"],
+  ["schamp:memory", "🃏", "시즌 기억의 달인"],
+  ["schamp:schulte", "🔢", "시즌 스피드"],
+  ["schamp:poop", "💩", "시즌 똥손"],
+  ["schamp:greenlight", "🚦", "시즌 반응왕"],
+  ["schamp:2048", "🧩", "시즌 2048 마스터"],
 ];
 
 export const BASIC_ICONS: IconDef[] = BASIC.map(([key, emoji, label]) => ({
@@ -103,13 +119,16 @@ export const EARNED_ICONS: IconDef[] = EARNED.map(([key, emoji, label, hint]) =>
   hint,
 }));
 
-export const SEASON_ICONS: IconDef[] = SEASON.map(([key, emoji, label]) => ({
-  key,
-  emoji,
-  label,
-  tier: "season",
-  hint: "시즌 종합 1위(MVP) 달성 시 지급",
-}));
+export const SEASON_ICONS: IconDef[] = [
+  ...SEASON.map(([key, emoji, label, hint]) => ({ key, emoji, label, tier: "season" as const, hint })),
+  ...SEASON_CHAMP.map(([key, emoji, label]) => ({
+    key,
+    emoji,
+    label,
+    tier: "season" as const,
+    hint: "시즌 종료 시 이 종목 1등에게 지급",
+  })),
+];
 
 export const ALL_ICONS: IconDef[] = [...BASIC_ICONS, ...EARNED_ICONS, ...SEASON_ICONS];
 

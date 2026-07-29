@@ -217,15 +217,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2) MVP 에게 시즌 보상 아이콘 영구 지급(중복·테이블없음은 무시).
-    if (mvpAccountId) {
-      const { error: gErr } = await sb
-        .from("ma_account_icons")
-        .upsert([{ account_id: mvpAccountId, icon_key: "season_mvp" }], {
-          onConflict: "account_id,icon_key",
-          ignoreDuplicates: true,
-        });
-      if (gErr) console.error("시즌 MVP 아이콘 지급 실패(무시)", gErr);
+    // 2) 시즌 보상 아이콘 영구 지급 — MVP(season_mvp) + 종목별 1등(schamp:<slug>).
+    //    (중복·테이블없음은 무시. 한 사람이 여러 종목 1등이면 종목 수만큼 받는다.)
+    const grants: { account_id: string; icon_key: string }[] = [];
+    if (mvpAccountId) grants.push({ account_id: mvpAccountId, icon_key: "season_mvp" });
+    for (const r of rows) {
+      if (r.category === "champion" && r.account_id && r.game_slug) {
+        grants.push({ account_id: r.account_id, icon_key: `schamp:${r.game_slug}` });
+      }
+    }
+    if (grants.length > 0) {
+      const { error: gErr } = await sb.from("ma_account_icons").upsert(grants, {
+        onConflict: "account_id,icon_key",
+        ignoreDuplicates: true,
+      });
+      if (gErr) console.error("시즌 보상 아이콘 지급 실패(무시)", gErr);
     }
 
     // 3) 시즌 닫기.
