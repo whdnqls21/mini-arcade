@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const TABS = [
   { href: "/", label: "게임", icon: GameIcon },
@@ -10,14 +11,67 @@ const TABS = [
   { href: "/me", label: "내정보", icon: MeIcon },
 ] as const;
 
+// 게시판 '안 읽은 글' 점 — 최신 글 시각을 가볍게 받아, 마지막으로 본 시각(localStorage)보다
+// 뒤면 게시판 탭에 점을 띄운다. 게시판에 들어가면 본 시각을 갱신해 점이 사라진다.
+function useBoardUnread(pathname: string): boolean {
+  const [latestAt, setLatestAt] = useState<string | null>(null);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [unread, setUnread] = useState(false);
+
+  // 이동할 때마다 최신 글 시각을 다시 확인(글 작성·읽음 반영).
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/board/latest", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive) return;
+        setLatestAt(d?.latestAt ?? null);
+        setViewerId(d?.viewerId ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!latestAt) {
+      setUnread(false);
+      return;
+    }
+    const key = `ma_board_seen:${viewerId ?? "guest"}`;
+    const onBoard = pathname.startsWith("/board");
+    if (onBoard) {
+      try {
+        window.localStorage.setItem(key, latestAt);
+      } catch {
+        // 저장 실패해도 표시엔 영향 없음
+      }
+      setUnread(false);
+      return;
+    }
+    let seen: string | null = null;
+    try {
+      seen = window.localStorage.getItem(key);
+    } catch {
+      seen = null;
+    }
+    setUnread(!seen || latestAt > seen);
+  }, [latestAt, viewerId, pathname]);
+
+  return unread;
+}
+
 export default function BottomTabs() {
   const pathname = usePathname();
+  const boardUnread = useBoardUnread(pathname);
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30">
       <div className="mx-auto max-w-md px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-2">
         <div className="flex items-stretch justify-around rounded-2xl border border-pitch-line bg-pitch-base/90 shadow-card backdrop-blur-md">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+            const dot = href === "/board" && boardUnread;
             return (
               <Link
                 key={href}
@@ -26,7 +80,15 @@ export default function BottomTabs() {
                   active ? "text-grass" : "text-ink-faint hover:text-ink-dim"
                 }`}
               >
-                <Icon active={active} />
+                <span className="relative">
+                  <Icon active={active} />
+                  {dot && (
+                    <span
+                      aria-label="안 읽은 글"
+                      className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full border border-pitch-base bg-danger"
+                    />
+                  )}
+                </span>
                 <span className={active ? "font-medium" : ""}>{label}</span>
               </Link>
             );
