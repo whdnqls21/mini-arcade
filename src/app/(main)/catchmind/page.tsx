@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/Card";
 import { useAppState } from "@/components/StateProvider";
+import { CmComments } from "@/games/catchmind/CmComments";
 import { DrawCanvas, type DrawCanvasHandle } from "@/games/catchmind/DrawCanvas";
 import { REPORT_REASONS, type ReportReason } from "@/games/catchmind/types";
 
@@ -396,14 +397,19 @@ function Result({ quizId, onNext }: { quizId: string; onNext: () => void }) {
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
 
+  const load = useCallback(
+    () =>
+      api<QuizResult>(`/api/cm/result?quizId=${quizId}`)
+        .then((d) => {
+          setR(d);
+          setStars(d.myStars);
+        })
+        .catch((e) => setErr(e.message)),
+    [quizId]
+  );
   useEffect(() => {
-    api<QuizResult>(`/api/cm/result?quizId=${quizId}`)
-      .then((d) => {
-        setR(d);
-        setStars(d.myStars);
-      })
-      .catch((e) => setErr(e.message));
-  }, [quizId]);
+    load();
+  }, [load]);
 
   if (err) return <Card className="py-10 text-center text-sm text-danger">{err}</Card>;
   if (!r) return <Spinner />;
@@ -478,17 +484,22 @@ function Result({ quizId, onNext }: { quizId: string; onNext: () => void }) {
         </Card>
       )}
 
-      {/* 별점(품질 지표) */}
-      <Card className="flex flex-col items-center gap-2 py-3">
-        <span className="text-xs text-ink-faint">이 그림 어땠나요?</span>
-        <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map((s) => (
-            <button key={s} onClick={() => rate(s)} aria-label={`${s}점`} className="text-2xl">
-              <span className={stars != null && s <= stars ? "text-gold" : "text-ink-faint"}>★</span>
-            </button>
-          ))}
-        </div>
-      </Card>
+      {/* 별점(품질 지표) — 내 문제가 아니면 */}
+      {r.canRate && (
+        <Card className="flex flex-col items-center gap-2 py-3">
+          <span className="text-xs text-ink-faint">이 그림 어땠나요?</span>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <button key={s} onClick={() => rate(s)} aria-label={`${s}점`} className="text-2xl">
+                <span className={stars != null && s <= stars ? "text-gold" : "text-ink-faint"}>★</span>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* 댓글 — 결과 화면에서 바로 */}
+      <CmComments quizId={quizId} comments={r.comments} onChanged={load} />
 
       {/* 신고 */}
       {reported ? (

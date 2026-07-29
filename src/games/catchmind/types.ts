@@ -42,6 +42,8 @@ export interface QuizResult {
   imageUrl: string | null; // 방금 푼 그림(서명 URL)
   wrongTop3: { guess: string; count: number }[];
   myStars: number | null;
+  canRate: boolean; // 별점 가능(내 문제 아님)
+  comments: GalleryComment[]; // 결과 화면에서 바로 다는 댓글
 }
 
 // 내 통계

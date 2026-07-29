@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
   if (!quiz) return NextResponse.json({ error: "문제를 찾을 수 없습니다." }, { status: 404 });
 
-  const [wRes, gRes, rRes, authorRes] = await Promise.all([
+  const [wRes, gRes, rRes, authorRes, cRes] = await Promise.all([
     sb.from("ma_cm_words").select("text").eq("id", quiz.word_id).maybeSingle(),
     sb.from("ma_cm_guesses").select("guess").eq("quiz_id", quizId).eq("is_correct", false),
     sb
@@ -42,7 +42,41 @@ export async function GET(req: NextRequest) {
       .eq("user_id", session.id)
       .maybeSingle(),
     sb.from("ma_accounts").select("name").eq("id", quiz.author_id).maybeSingle(),
+    sb.from("ma_cm_comments").select("*").eq("quiz_id", quizId).order("created_at", { ascending: true }),
   ]);
+
+  // 댓글 + 좋아요 집계(테이블 없으면 조용히 빈 목록).
+  const comments = (cRes.data ?? []) as {
+    id: string;
+    account_id: string;
+    author_name: string;
+    body: string;
+    created_at: string;
+  }[];
+  const commentIds = comments.map((c) => c.id);
+  let cVotes: { comment_id: string; account_id: string }[] = [];
+  if (commentIds.length > 0) {
+    const { data } = await sb
+      .from("ma_cm_comment_votes")
+      .select("comment_id,account_id")
+      .in("comment_id", commentIds);
+    cVotes = (data ?? []) as { comment_id: string; account_id: string }[];
+  }
+  const likeCount = new Map<string, number>();
+  const myLikes = new Set<string>();
+  for (const v of cVotes) {
+    likeCount.set(v.comment_id, (likeCount.get(v.comment_id) ?? 0) + 1);
+    if (v.account_id === session.id) myLikes.add(v.comment_id);
+  }
+  const commentViews = comments.map((c) => ({
+    id: c.id,
+    authorName: c.author_name,
+    body: c.body,
+    mine: c.account_id === session.id,
+    likes: likeCount.get(c.id) ?? 0,
+    liked: myLikes.has(c.id),
+    createdAt: c.created_at,
+  }));
 
   // 오답 집계 TOP3.
   const counts = new Map<string, number>();
@@ -64,5 +98,7 @@ export async function GET(req: NextRequest) {
     imageUrl: drawingUrl(sb, quiz.image_path),
     wrongTop3,
     myStars: (rRes.data as { stars: number } | null)?.stars ?? null,
+    canRate: quiz.author_id !== session.id, // 내 문제엔 별점 불가
+    comments: commentViews,
   });
 }
