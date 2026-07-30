@@ -16,7 +16,8 @@ function sizeForRound(r: number): number {
   if (r < 3) return 2;
   if (r < 8) return 3;
   if (r < 14) return 4;
-  return 5;
+  if (r < 21) return 5;
+  return 6;
 }
 
 interface Puzzle {
@@ -147,7 +148,9 @@ export default function OddColorGame({ onGameOver, bestScore, submitting }: Game
 
       <div className="relative mx-auto w-full max-w-[22rem]">
         <div
-          className="grid touch-none select-none gap-2 rounded-xl bg-black/25 p-3"
+          className={`grid touch-none select-none rounded-xl bg-black/25 ${
+            puz.n >= 5 ? "gap-1.5 p-2" : "gap-2 p-3"
+          }`}
           style={{
             aspectRatio: "1 / 1",
             gridTemplateColumns: `repeat(${puz.n}, minmax(0, 1fr))`,

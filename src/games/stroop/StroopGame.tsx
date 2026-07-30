@@ -23,6 +23,7 @@ type Phase = "ready" | "playing" | "done";
 interface Prompt {
   wordIdx: number; // 글자(뜻)
   inkIdx: number; // 글자 색(정답)
+  options: number[]; // 보기 4개(정답 포함, 6색 중에서, 매번 섞임)
 }
 
 function pick(n: number, exclude: number[] = []): number {
@@ -31,11 +32,22 @@ function pick(n: number, exclude: number[] = []): number {
   return v;
 }
 
+function shuffle<T>(a: T[]): T[] {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function makePrompt(): Prompt {
   const wordIdx = pick(COLORS.length);
   // 80% 는 뜻과 색을 다르게(스트룹 효과), 20% 만 같게 — 함정을 늘려 변별력을 키운다.
   const inkIdx = Math.random() < 0.8 ? pick(COLORS.length, [wordIdx]) : wordIdx;
-  return { wordIdx, inkIdx };
+  // 6색 중 정답 포함 4개를 보기로(매번 다르게).
+  const others: number[] = [];
+  while (others.length < 3) others.push(pick(COLORS.length, [inkIdx, ...others]));
+  return { wordIdx, inkIdx, options: shuffle([inkIdx, ...others]) };
 }
 
 export default function StroopGame({ onGameOver, bestScore, submitting }: GamePlayProps) {
@@ -145,18 +157,18 @@ export default function StroopGame({ onGameOver, bestScore, submitting }: GamePl
               {COLORS[prompt.wordIdx].name}
             </span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            {COLORS.map((c, i) => (
+          <div className="grid grid-cols-2 gap-2">
+            {prompt.options.map((c, i) => (
               <button
-                key={c.name}
-                onClick={() => answer(i)}
+                key={`${c}-${i}`}
+                onClick={() => answer(c)}
                 disabled={phase !== "playing"}
-                className={`touch-none rounded-xl py-3 font-display text-base text-white transition-transform active:scale-95 ${
-                  wrong === i ? "ring-2 ring-danger ring-offset-1 ring-offset-pitch-alt" : ""
+                className={`touch-none rounded-xl py-3.5 font-display text-lg text-white transition-transform active:scale-95 ${
+                  wrong === c ? "ring-2 ring-danger ring-offset-1 ring-offset-pitch-alt" : ""
                 }`}
-                style={{ backgroundColor: c.hex }}
+                style={{ backgroundColor: COLORS[c].hex }}
               >
-                {c.name}
+                {COLORS[c].name}
               </button>
             ))}
           </div>

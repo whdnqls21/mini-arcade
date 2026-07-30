@@ -95,16 +95,16 @@ function makeProblem(level: number): Problem {
     text = `${a} ${op} ${b}`;
   }
 
-  // 보기 5개 — 정답 + 근처 오답 4개(중복·음수 배제).
+  // 보기 4개 — 정답 + 근처 오답 3개(중복·음수 배제).
   const set = new Set<number>([answer]);
   const offsets = shuffle([1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 10, -10]);
   let oi = 0;
-  while (set.size < 5 && oi < offsets.length) {
+  while (set.size < 4 && oi < offsets.length) {
     const cand = answer + offsets[oi++];
     if (cand >= 0 && !set.has(cand)) set.add(cand);
   }
   let up = answer + 1;
-  while (set.size < 5) {
+  while (set.size < 4) {
     if (!set.has(up)) set.add(up);
     up++;
   }
@@ -214,21 +214,18 @@ export default function MathSprintGame({ onGameOver, bestScore, submitting }: Ga
             <span className="tabular font-display text-3xl text-ink">{prob.text} = ?</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {prob.options.map((v, i) => {
-              const lastOdd = i === prob.options.length - 1 && prob.options.length % 2 === 1;
-              return (
-                <button
-                  key={`${v}-${i}`}
-                  onClick={() => answer(v)}
-                  disabled={phase !== "playing"}
-                  className={`tabular touch-none rounded-xl border border-pitch-line bg-black/30 py-3.5 font-display text-2xl text-ink transition-transform active:scale-95 ${
-                    lastOdd ? "col-span-2" : ""
-                  } ${wrong === v ? "border-danger ring-2 ring-danger" : ""}`}
-                >
-                  {v}
-                </button>
-              );
-            })}
+            {prob.options.map((v, i) => (
+              <button
+                key={`${v}-${i}`}
+                onClick={() => answer(v)}
+                disabled={phase !== "playing"}
+                className={`tabular touch-none rounded-xl border border-pitch-line bg-black/30 py-3.5 font-display text-2xl text-ink transition-transform active:scale-95 ${
+                  wrong === v ? "border-danger ring-2 ring-danger" : ""
+                }`}
+              >
+                {v}
+              </button>
+            ))}
           </div>
         </div>
 
