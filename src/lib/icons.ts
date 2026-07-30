@@ -64,7 +64,7 @@ const EARNED: [string, string, string, string, EarnCond][] = [
   ["champ:poop", "💩", "똥손", "똥 피하기 1위 달성", { kind: "champion", slug: "poop" }],
   ["champ:greenlight", "🚦", "반응왕", "그린라이트 1위 달성", { kind: "champion", slug: "greenlight" }],
   ["champ:2048", "🧩", "2048 마스터", "2048 1위 달성", { kind: "champion", slug: "2048" }],
-  ["champ:oddcolor", "🔎", "색 감별왕", "쿠쿠쿠브 1위 달성", { kind: "champion", slug: "oddcolor" }],
+  ["champ:oddcolor", "🔎", "색 감별왕", "Kuku Kube 1위 달성", { kind: "champion", slug: "oddcolor" }],
   ["champ:stroop", "🖍️", "스트룹 마스터", "스트룹 1위 달성", { kind: "champion", slug: "stroop" }],
   ["champ:mathsprint", "🧮", "암산왕", "암산 스프린트 1위 달성", { kind: "champion", slug: "mathsprint" }],
   ["goat", "🐐", "GOAT", "모든 게임 1위 석권", { kind: "goat" }],

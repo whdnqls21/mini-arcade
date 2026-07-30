@@ -13,7 +13,7 @@ import type { PostCategory } from "@/lib/types";
 
 // 아직 공개 전(ma_games 미등록)인 베타 게임 — 관리자만 여기서 테스트한다.
 const BETA_GAMES: { slug: string; name: string }[] = [
-  { slug: "oddcolor", name: "쿠쿠쿠브" },
+  { slug: "oddcolor", name: "Kuku Kube" },
   { slug: "stroop", name: "스트룹" },
   { slug: "mathsprint", name: "암산 스프린트" },
 ];
