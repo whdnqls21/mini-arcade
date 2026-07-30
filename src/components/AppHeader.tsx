@@ -40,6 +40,23 @@ export default function AppHeader() {
           뇌지컬 <span className="text-grass">리그</span>
         </Link>
       </div>
+
+      {/* 후원사 — 우측 정렬 */}
+      <a
+        href="https://naver.me/xk1npYv9"
+        target="_blank"
+        rel="sponsored noopener noreferrer"
+        aria-label="후원사 SCENTOF (새 창)"
+        className="group flex shrink-0 items-center gap-1.5"
+      >
+        <span className="text-[11px] font-light text-ink-faint">with</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/scentof.svg"
+          alt="SCENTOF"
+          className="h-4 w-auto opacity-80 transition-opacity group-hover:opacity-100"
+        />
+      </a>
     </header>
   );
 }
