@@ -74,7 +74,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   suika: {
     Play: SuikaGame,
     Icon: SuikaIcon,
-    tags: ["strategy"],
+    tags: ["strategy", "reflex"],
     info: {
       rows: [
         { label: "목표", text: "같은 과일끼리 닿게 해 더 큰 과일로 키우고, 마지막 수박까지 가보세요." },
@@ -89,7 +89,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   apple: {
     Play: AppleGame,
     Icon: AppleIcon,
-    tags: ["calc", "focus"],
+    tags: ["calc", "focus", "reflex"],
     info: {
       rows: [
         { label: "목표", text: "제한 시간 안에 사과를 최대한 많이 지우세요." },
@@ -104,7 +104,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   mahjong: {
     Play: MahjongGame,
     Icon: MahjongIcon,
-    tags: ["memory", "focus", "strategy"],
+    tags: ["focus", "strategy", "observe"],
     info: {
       rows: [
         { label: "목표", text: "48장을 모두 지우세요. 다 지우는 데 걸린 시간이 기록입니다." },
@@ -119,7 +119,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   memory: {
     Play: MemoryGame,
     Icon: MemoryIcon,
-    tags: ["memory"],
+    tags: ["memory", "focus"],
     info: {
       rows: [
         { label: "목표", text: "카드를 뒤집어 같은 과일 짝을 모두 맞추세요." },
@@ -133,7 +133,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   whack: {
     Play: WhackGame,
     Icon: WhackIcon,
-    tags: ["reflex"],
+    tags: ["reflex", "observe"],
     info: {
       rows: [
         { label: "목표", text: "구멍에서 튀어나오는 두더지를 제한 시간 안에 최대한 많이 잡으세요." },
@@ -148,7 +148,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   schulte: {
     Play: SchulteGame,
     Icon: SchulteIcon,
-    tags: ["reflex", "focus"],
+    tags: ["focus", "observe", "reflex"],
     info: {
       rows: [
         { label: "목표", text: "1부터 50까지 순서대로 모두 탭하세요. 걸린 시간이 기록입니다." },
@@ -163,7 +163,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   poop: {
     Play: PoopGame,
     Icon: PoopIcon,
-    tags: ["reflex"],
+    tags: ["reflex", "focus"],
     info: {
       rows: [
         { label: "목표", text: "위에서 떨어지는 똥을 피해 최대한 오래 버티세요." },
@@ -177,7 +177,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   dino: {
     Play: DinoGame,
     Icon: DinoIcon,
-    tags: ["reflex"],
+    tags: ["reflex", "focus"],
     info: {
       rows: [
         { label: "목표", text: "장애물을 뛰어넘으며 최대한 멀리 달리세요." },
@@ -207,7 +207,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   oddcolor: {
     Play: OddColorGame,
     Icon: OddColorIcon,
-    tags: ["focus", "reflex"],
+    tags: ["observe", "focus", "reflex"],
     info: {
       rows: [
         { label: "목표", text: "격자에서 살짝 색이 다른 한 칸을 찾아 탭하세요." },
@@ -222,7 +222,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   stroop: {
     Play: StroopGame,
     Icon: StroopIcon,
-    tags: ["focus"],
+    tags: ["focus", "observe", "reflex"],
     info: {
       rows: [
         { label: "목표", text: "글자의 '뜻'이 아니라 '색'을 빠르게 고르세요." },
@@ -237,7 +237,7 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
   mathsprint: {
     Play: MathSprintGame,
     Icon: MathSprintIcon,
-    tags: ["calc"],
+    tags: ["calc", "reflex"],
     info: {
       rows: [
         { label: "목표", text: "사칙연산을 최대한 빠르고 많이 푸세요." },

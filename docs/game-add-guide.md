@@ -14,7 +14,7 @@
 | **slug** | 영소문자, 예: `stroop`. **한 번 정하면 절대 안 바꾼다** — 기록이 `ma_scores.game_slug` 에 쌓인다. 표시 이름만 바꾼다. |
 | **표시 이름** | `ma_games.name`. 언제든 변경 가능(예: 쿠쿠쿠브). |
 | **점수 방식(scoring)** | `high`(고득점) · `low`(저점) · `time`(짧을수록 상위, ms) · `htime`(오래 버틸수록, ms) |
-| **태그(tags)** | `reflex·memory·focus·calc·strategy·creative` 중 1개 이상 |
+| **태그(tags)** | `reflex(순발력)·memory(기억력)·focus(집중력)·observe(눈썰미)·calc(계산)·strategy(전략)·creative(창의력)` 중 **2~3개**. 라벨/순서는 `src/app/(main)/page.tsx` 의 `TAG_LABEL·TAG_ORDER`, 타입은 `src/games/types.ts` 의 `GameTag`. 새 축이 필요하면 세 곳에 함께 추가 |
 
 `scoring` 은 `src/lib/state.ts` 의 정렬(`sortDir`)과 `src/lib/format.ts` 표시를 자동으로 탄다.
 `time·htime` 은 **밀리초(ms)로 저장**하고 표시는 `formatScore` 가 '초'로 바꾼다.

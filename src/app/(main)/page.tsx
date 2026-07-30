@@ -18,11 +18,12 @@ const TAG_LABEL: Record<GameTag, string> = {
   reflex: "순발력",
   memory: "기억력",
   focus: "집중력",
+  observe: "눈썰미",
   calc: "계산",
   strategy: "전략",
   creative: "창의력",
 };
-const TAG_ORDER: GameTag[] = ["reflex", "memory", "focus", "calc", "strategy", "creative"];
+const TAG_ORDER: GameTag[] = ["reflex", "memory", "focus", "observe", "calc", "strategy", "creative"];
 
 // 캐치마인드는 점수 모델이 달라(누적 포인트) ma_games/리더보드에 넣지 않고
 // 목록엔 전용 카드로만 노출한다(자체 라우트 /catchmind). 태그는 창의력.
