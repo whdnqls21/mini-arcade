@@ -253,29 +253,8 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <div className="flex min-w-0 flex-1 gap-1">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`relative flex-1 rounded-lg py-2 text-sm transition-colors ${
-                tab === t.key ? "bg-grass/15 text-grass" : "border border-pitch-line text-ink-faint hover:text-ink-dim"
-              }`}
-            >
-              {t.label}
-              {t.badge != null && t.badge > 0 && (
-                <span
-                  className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${
-                    t.key === "review" ? "bg-danger/20 text-danger" : "text-ink-faint"
-                  }`}
-                >
-                  {t.badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-ink-faint">아래 메뉴로 이동</span>
         <button
           onClick={() => run(() => postJSON("/api/admin/logout", {}))}
           className="shrink-0 rounded-full border border-pitch-line px-3 py-1 text-xs text-ink-dim hover:text-ink"
@@ -352,70 +331,167 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
         </Card>
       )}
 
-      {tab === "games" && (
-        <Card className="flex flex-col gap-3">
-          <h2 className="font-display text-lg text-ink">게임</h2>
-          {admin.games.map((g) => (
-            <div key={g.slug} className="flex items-center gap-2 text-sm">
-              <span className={g.active ? "text-ink" : "text-ink-faint"}>{g.name}</span>
-              <span className="text-[11px] text-ink-faint">
-                ({g.scoring}) · 기록 {g.scoreCount}개
-              </span>
-              <div className="ml-auto flex gap-1.5">
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() =>
-                      postJSON("/api/admin/action", {
-                        action: "gameActive",
-                        slug: g.slug,
-                        active: !g.active,
-                      })
-                    )
-                  }
-                  className="rounded-lg border border-pitch-line px-2.5 py-1 text-xs text-ink-dim disabled:opacity-40"
-                >
-                  {g.active ? "숨기기" : "노출"}
-                </button>
-                <button
-                  disabled={busy || g.scoreCount === 0}
-                  onClick={() => {
-                    // 되돌릴 수 없는 삭제 — 게임 이름을 그대로 입력해야 진행.
-                    const typed = prompt(
-                      `'${g.name}' 의 기록 ${g.scoreCount}개를 모두 삭제합니다.\n되돌릴 수 없습니다. 진행하려면 게임 이름을 입력하세요.`
-                    );
-                    if (typed === null) return;
-                    if (typed.trim() !== g.name) {
-                      alert("게임 이름이 일치하지 않아 취소했습니다.");
-                      return;
-                    }
-                    // 사용자에게 보여줄 사유 — 비우면 '밸런스 조정'.
-                    const note = prompt("초기화 사유 (사용자에게 표시됩니다)", "밸런스 조정");
-                    if (note === null) return; // 사유 입력을 취소하면 초기화도 취소
-                    run(() =>
-                      postJSON("/api/admin/action", {
-                        action: "gameResetScores",
-                        slug: g.slug,
-                        note: note.trim(),
-                      })
-                    );
-                  }}
-                  className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"
-                >
-                  기록 초기화
-                </button>
-              </div>
-            </div>
-          ))}
-        </Card>
-      )}
+      {tab === "games" && <GamesSection admin={admin} busy={busy} run={run} />}
 
       {tab === "seasons" && <SeasonSection admin={admin} busy={busy} run={run} />}
 
       {tab === "beta" && <BetaSection />}
 
       {tab === "review" && <ReviewSection quizzes={admin.hiddenQuizzes} busy={busy} run={run} />}
+
+      <AdminNav tab={tab} setTab={setTab} tabs={TABS} />
     </div>
+  );
+}
+
+// 관리자 하단 네비게이션 — 앱 공용 탭 대신 관리자 섹션 이동에 쓴다.
+function AdminNav({
+  tab,
+  setTab,
+  tabs,
+}: {
+  tab: Tab;
+  setTab: (t: Tab) => void;
+  tabs: { key: Tab; label: string; badge?: number }[];
+}) {
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30">
+      <div className="mx-auto max-w-md px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-2">
+        <div className="flex items-stretch justify-around rounded-2xl border border-pitch-line bg-pitch-base/90 shadow-card backdrop-blur-md">
+          {tabs.map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] transition-colors ${
+                  active ? "text-grass" : "text-ink-faint hover:text-ink-dim"
+                }`}
+              >
+                <span className={active ? "font-medium" : ""}>{t.label}</span>
+                {t.badge != null && t.badge > 0 && (
+                  <span
+                    className={`absolute right-1.5 top-1 rounded-full px-1 text-[9px] ${
+                      t.key === "review" ? "bg-danger/30 text-danger" : "bg-pitch-line text-ink-faint"
+                    }`}
+                  >
+                    {t.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// 게임 관리 — 시즌 종목/자유 종목으로 나눠 ↑↓ 로 순서(sort) 조정 + 노출·기록 초기화.
+function GamesSection({
+  admin,
+  busy,
+  run,
+}: {
+  admin: AdminState;
+  busy: boolean;
+  run: (fn: () => Promise<unknown>) => void;
+}) {
+  const activeSeason = admin.seasons.find((s) => s.status === "active") ?? null;
+  const seasonSet = new Set(activeSeason?.games ?? []);
+  const seasonGames = admin.games.filter((g) => seasonSet.has(g.slug));
+  const freeGames = admin.games.filter((g) => !seasonSet.has(g.slug));
+
+  const swap = (a: string, b: string) =>
+    run(() => postJSON("/api/admin/action", { action: "gameSwapSort", slugA: a, slugB: b }));
+
+  const gameRow = (g: AdminState["games"][number], group: AdminState["games"], i: number) => (
+    <div key={g.slug} className="flex items-center gap-2 rounded-lg border border-pitch-line bg-black/10 px-2 py-1.5 text-sm">
+      {/* 순서 조정 ↑↓ (그룹 내에서) */}
+      <div className="flex flex-col gap-0.5">
+        <button
+          disabled={busy || i === 0}
+          onClick={() => swap(g.slug, group[i - 1].slug)}
+          aria-label="위로"
+          className="rounded border border-pitch-line px-1.5 leading-none text-ink-dim disabled:opacity-25"
+        >
+          ▲
+        </button>
+        <button
+          disabled={busy || i === group.length - 1}
+          onClick={() => swap(g.slug, group[i + 1].slug)}
+          aria-label="아래로"
+          className="rounded border border-pitch-line px-1.5 leading-none text-ink-dim disabled:opacity-25"
+        >
+          ▼
+        </button>
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <span className={g.active ? "text-ink" : "text-ink-faint"}>{g.name}</span>
+        <span className="ml-1 text-[11px] text-ink-faint">
+          ({g.scoring}) · 기록 {g.scoreCount}
+        </span>
+      </div>
+
+      <div className="flex shrink-0 gap-1.5">
+        <button
+          disabled={busy}
+          onClick={() =>
+            run(() =>
+              postJSON("/api/admin/action", { action: "gameActive", slug: g.slug, active: !g.active })
+            )
+          }
+          className="rounded-lg border border-pitch-line px-2 py-1 text-xs text-ink-dim disabled:opacity-40"
+        >
+          {g.active ? "숨기기" : "노출"}
+        </button>
+        <button
+          disabled={busy || g.scoreCount === 0}
+          onClick={() => {
+            const typed = prompt(
+              `'${g.name}' 의 기록 ${g.scoreCount}개를 모두 삭제합니다.\n되돌릴 수 없습니다. 진행하려면 게임 이름을 입력하세요.`
+            );
+            if (typed === null) return;
+            if (typed.trim() !== g.name) {
+              alert("게임 이름이 일치하지 않아 취소했습니다.");
+              return;
+            }
+            const note = prompt("초기화 사유 (사용자에게 표시됩니다)", "밸런스 조정");
+            if (note === null) return;
+            run(() =>
+              postJSON("/api/admin/action", { action: "gameResetScores", slug: g.slug, note: note.trim() })
+            );
+          }}
+          className="rounded-lg border border-danger/40 px-2 py-1 text-xs text-danger disabled:opacity-40"
+        >
+          초기화
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <Card className="flex flex-col gap-3">
+      <div>
+        <h2 className="font-display text-lg text-ink">게임</h2>
+        <p className="mt-0.5 text-xs text-ink-faint">
+          ▲▼ 로 목록 순서를 바꿔요(위로 올릴수록 앞). 시즌·자유 종목 안에서 정렬됩니다.
+        </p>
+      </div>
+
+      {activeSeason && seasonGames.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs text-gold">🏆 시즌 종목</p>
+          {seasonGames.map((g, i) => gameRow(g, seasonGames, i))}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <p className="text-xs text-ink-dim">{activeSeason ? "자유 종목" : "전체 게임"}</p>
+        {freeGames.map((g, i) => gameRow(g, freeGames, i))}
+      </div>
+    </Card>
   );
 }
 

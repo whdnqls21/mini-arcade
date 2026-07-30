@@ -10,11 +10,13 @@ import BottomTabs from "@/components/BottomTabs";
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const inGame = pathname.startsWith("/games/");
+  // 관리자 화면은 자체 하단 네비게이션을 쓴다 — 앱 공용 탭은 숨긴다.
+  const inAdmin = pathname.startsWith("/admin");
 
   return (
     <>
       <main className={`flex-1 px-4 pt-2 ${inGame ? "pb-8" : "pb-28"}`}>{children}</main>
-      {!inGame && <BottomTabs />}
+      {!inGame && !inAdmin && <BottomTabs />}
     </>
   );
 }

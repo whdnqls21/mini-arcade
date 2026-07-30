@@ -86,6 +86,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, deleted: data?.length ?? 0 });
   }
 
+  // 게임 순서 조정 — 두 게임의 sort 값을 맞바꾼다(관리자 ↑↓). 목록은 sort 오름차순.
+  if (action === "gameSwapSort") {
+    const a = body?.slugA;
+    const b = body?.slugB;
+    if (typeof a !== "string" || typeof b !== "string" || a === b) {
+      return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    }
+    const { data } = await sb.from("ma_games").select("slug,sort").in("slug", [a, b]);
+    const rows = (data ?? []) as { slug: string; sort: number }[];
+    const ra = rows.find((r) => r.slug === a);
+    const rb = rows.find((r) => r.slug === b);
+    if (!ra || !rb) {
+      return NextResponse.json({ error: "게임을 찾을 수 없습니다." }, { status: 400 });
+    }
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      sb.from("ma_games").update({ sort: rb.sort }).eq("slug", a),
+      sb.from("ma_games").update({ sort: ra.sort }).eq("slug", b),
+    ]);
+    if (e1 || e2) {
+      console.error("gameSwapSort 실패", e1 || e2);
+      return NextResponse.json({ error: "순서 변경에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   // 캐치마인드 숨겨진 그림 복구 — 다시 노출 + 신고 초기화(재숨김 방지)
   if (action === "cmRestore") {
     const quizId = body?.quizId;
