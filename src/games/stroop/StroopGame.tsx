@@ -7,7 +7,7 @@ import type { GamePlayProps } from "@/games/types";
 import { sequence, tick, tone } from "@/games/sound";
 
 // 스트룹 — 글자의 '뜻'이 아니라 '색'을 빠르게 고른다. 30초 안에 맞힌 개수가 점수.
-const DURATION_MS = 30_000;
+const DURATION_MS = 45_000;
 
 const COLORS: { name: string; hex: string }[] = [
   { name: "빨강", hex: "#e5484d" },
@@ -33,8 +33,8 @@ function pick(n: number, exclude: number[] = []): number {
 
 function makePrompt(): Prompt {
   const wordIdx = pick(COLORS.length);
-  // 60% 는 뜻과 색을 다르게(스트룹 효과), 40% 는 같게.
-  const inkIdx = Math.random() < 0.6 ? pick(COLORS.length, [wordIdx]) : wordIdx;
+  // 80% 는 뜻과 색을 다르게(스트룹 효과), 20% 만 같게 — 함정을 늘려 변별력을 키운다.
+  const inkIdx = Math.random() < 0.8 ? pick(COLORS.length, [wordIdx]) : wordIdx;
   const others: number[] = [];
   while (others.length < 3) {
     const v = pick(COLORS.length, [inkIdx, ...others]);
@@ -120,7 +120,7 @@ export default function StroopGame({ onGameOver, bestScore, submitting }: GamePl
       setPrompt(makePrompt());
     } else {
       tone({ freq: 150, type: "sawtooth", gain: 0.08, dur: 0.12 });
-      endRef.current -= 1500; // 1.5초 감점
+      endRef.current -= 2000; // 2초 감점
       setWrong(idx);
       if (wrongTimer.current) clearTimeout(wrongTimer.current);
       wrongTimer.current = setTimeout(() => {

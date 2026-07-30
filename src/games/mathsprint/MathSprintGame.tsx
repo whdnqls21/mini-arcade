@@ -8,7 +8,7 @@ import { sequence, tick, tone } from "@/games/sound";
 
 // 암산 스프린트 — 60초 안에 사칙연산을 최대한 많이. 맞힌 개수가 점수(높을수록 상위).
 // 점수가 오를수록 숫자가 커진다(4지선다).
-const DURATION_MS = 60_000;
+const DURATION_MS = 45_000;
 
 type Phase = "ready" | "playing" | "done";
 
@@ -130,7 +130,8 @@ export default function MathSprintGame({ onGameOver, bestScore, submitting }: Ga
       tone({ freq: 660, type: "triangle", gain: 0.14, dur: 0.08 });
       scoreRef.current += 1;
       setScore(scoreRef.current);
-      setProb(makeProblem(Math.floor(scoreRef.current / 5)));
+      // 3문제마다 난이도 한 단계 — 잘하는 사람일수록 더 큰 수를 만나 기록이 벌어진다.
+      setProb(makeProblem(Math.floor(scoreRef.current / 3)));
     } else {
       tone({ freq: 150, type: "sawtooth", gain: 0.08, dur: 0.12 });
       endRef.current -= 2000; // 2초 감점

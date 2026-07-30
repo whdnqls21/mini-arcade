@@ -8,14 +8,14 @@ import { sequence, tick, tone } from "@/games/sound";
 
 // 같은 색 격자에서 살짝 다른 한 칸을 찾아 탭. 맞힐수록 격자가 커지고 색 차이가 미묘해진다.
 // 30초 안에 맞힌 개수가 점수(높을수록 상위).
-const DURATION_MS = 30_000;
+const DURATION_MS = 45_000;
 
 type Phase = "ready" | "playing" | "done";
 
 function sizeForRound(r: number): number {
-  if (r < 3) return 2;
-  if (r < 7) return 3;
-  if (r < 12) return 4;
+  if (r < 2) return 2;
+  if (r < 5) return 3;
+  if (r < 9) return 4;
   return 5;
 }
 
@@ -33,8 +33,8 @@ function makePuzzle(round: number): Puzzle {
   const hue = Math.floor(Math.random() * 360);
   const sat = 55 + Math.floor(Math.random() * 15);
   const light = 48 + Math.floor(Math.random() * 14);
-  // 라운드가 오를수록 밝기 차이가 줄어 어려워진다(26% → 4%).
-  const delta = Math.max(4, 26 - round * 1.4);
+  // 라운드가 오를수록 밝기 차이가 줄어 어려워진다(24% → 3%). 후반일수록 변별력이 커진다.
+  const delta = Math.max(3, 24 - round * 1.6);
   const dir = Math.random() < 0.5 ? -1 : 1;
   const oddLight = Math.min(92, Math.max(8, light + dir * delta));
   return {
@@ -119,9 +119,9 @@ export default function OddColorGame({ onGameOver, bestScore, submitting }: Game
       roundRef.current += 1;
       setPuz(makePuzzle(roundRef.current));
     } else {
-      // 오답 — 1초 감점 + 빨간 표시.
+      // 오답 — 1.5초 감점 + 빨간 표시.
       tone({ freq: 150, type: "sawtooth", gain: 0.08, dur: 0.12 });
-      endRef.current -= 1000;
+      endRef.current -= 1500;
       setWrong(i);
       if (wrongTimer.current) clearTimeout(wrongTimer.current);
       wrongTimer.current = setTimeout(() => setWrong((w) => (w === i ? null : w)), 250);
