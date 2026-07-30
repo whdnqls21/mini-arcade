@@ -15,6 +15,7 @@ const COLORS: { name: string; hex: string }[] = [
   { name: "초록", hex: "#46a758" },
   { name: "노랑", hex: "#f5c518" },
   { name: "보라", hex: "#a259e6" },
+  { name: "주황", hex: "#f2801f" },
 ];
 
 type Phase = "ready" | "playing" | "done";
@@ -22,7 +23,6 @@ type Phase = "ready" | "playing" | "done";
 interface Prompt {
   wordIdx: number; // 글자(뜻)
   inkIdx: number; // 글자 색(정답)
-  options: number[]; // 보기 색 인덱스(정답 포함, 섞임)
 }
 
 function pick(n: number, exclude: number[] = []): number {
@@ -35,17 +35,7 @@ function makePrompt(): Prompt {
   const wordIdx = pick(COLORS.length);
   // 80% 는 뜻과 색을 다르게(스트룹 효과), 20% 만 같게 — 함정을 늘려 변별력을 키운다.
   const inkIdx = Math.random() < 0.8 ? pick(COLORS.length, [wordIdx]) : wordIdx;
-  const others: number[] = [];
-  while (others.length < 3) {
-    const v = pick(COLORS.length, [inkIdx, ...others]);
-    others.push(v);
-  }
-  const options = [inkIdx, ...others];
-  for (let i = options.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [options[i], options[j]] = [options[j], options[i]];
-  }
-  return { wordIdx, inkIdx, options };
+  return { wordIdx, inkIdx };
 }
 
 export default function StroopGame({ onGameOver, bestScore, submitting }: GamePlayProps) {
@@ -155,18 +145,18 @@ export default function StroopGame({ onGameOver, bestScore, submitting }: GamePl
               {COLORS[prompt.wordIdx].name}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {prompt.options.map((c, i) => (
+          <div className="grid grid-cols-3 gap-2">
+            {COLORS.map((c, i) => (
               <button
-                key={`${c}-${i}`}
-                onClick={() => answer(c)}
+                key={c.name}
+                onClick={() => answer(i)}
                 disabled={phase !== "playing"}
-                className={`touch-none rounded-xl py-3 font-display text-lg text-white transition-transform active:scale-95 ${
-                  wrong === c ? "ring-2 ring-danger" : ""
+                className={`touch-none rounded-xl py-3 font-display text-base text-white transition-transform active:scale-95 ${
+                  wrong === i ? "ring-2 ring-danger ring-offset-1 ring-offset-pitch-alt" : ""
                 }`}
-                style={{ backgroundColor: COLORS[c].hex }}
+                style={{ backgroundColor: c.hex }}
               >
-                {COLORS[c].name}
+                {c.name}
               </button>
             ))}
           </div>

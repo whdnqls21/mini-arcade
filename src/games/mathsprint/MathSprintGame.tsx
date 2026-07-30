@@ -27,38 +27,88 @@ const shuffle = <T,>(a: T[]): T[] => {
   return a;
 };
 
+const OPS3 = ["+", "-", "×"] as const;
+
+// 곱셈(×)·나눗셈(÷) 을 덧/뺄셈보다 먼저 계산한다(연산자 우선순위).
+function evalExpr(nums: number[], ops: string[]): number {
+  const n = [...nums];
+  const o = [...ops];
+  for (let i = 0; i < o.length; ) {
+    if (o[i] === "×" || o[i] === "÷") {
+      const v = o[i] === "×" ? n[i] * n[i + 1] : n[i] / n[i + 1];
+      n.splice(i, 2, v);
+      o.splice(i, 1);
+    } else {
+      i++;
+    }
+  }
+  let acc = n[0];
+  for (let i = 0; i < o.length; i++) acc = o[i] === "+" ? acc + n[i + 1] : acc - n[i + 1];
+  return acc;
+}
+
 function makeProblem(level: number): Problem {
-  const op = (["+", "-", "×"] as const)[Math.floor(Math.random() * 3)];
-  let a: number, b: number, answer: number;
-  if (op === "+") {
-    a = randInt(2, 10 + level * 6);
-    b = randInt(2, 10 + level * 6);
-    answer = a + b;
-  } else if (op === "-") {
-    a = randInt(3, 12 + level * 6);
-    b = randInt(1, a);
-    answer = a - b;
-  } else {
-    a = randInt(2, 6 + level);
-    b = randInt(2, 9);
-    answer = a * b;
+  // 레벨 3부터 3항이 섞여 나온다(확률이 레벨에 따라 오름).
+  const wantThree = level >= 3 && Math.random() < Math.min(0.6, 0.15 + level * 0.05);
+
+  let text = "";
+  let answer = 0;
+
+  if (wantThree) {
+    // 3항 — +,-,× 만 사용(÷ 는 정수 보장이 어려워 2항에서만). ×가 먼저 계산된다.
+    for (let t = 0; t < 30; t++) {
+      const nums = [randInt(2, 9 + level), randInt(2, 9), randInt(2, 9)];
+      const ops = [OPS3[Math.floor(Math.random() * 3)], OPS3[Math.floor(Math.random() * 3)]];
+      const ans = evalExpr(nums, ops);
+      if (Number.isInteger(ans) && ans >= 0 && ans <= 999) {
+        text = `${nums[0]} ${ops[0]} ${nums[1]} ${ops[1]} ${nums[2]}`;
+        answer = ans;
+        break;
+      }
+    }
   }
 
-  // 보기 — 정답 + 근처 오답 3개(중복·음수 배제).
+  if (!text) {
+    // 2항 — 레벨 2부터 ÷(나눗셈, 정수 결과) 도 등장.
+    const pool = level >= 2 ? (["+", "-", "×", "÷"] as const) : (["+", "-", "×"] as const);
+    const op = pool[Math.floor(Math.random() * pool.length)];
+    let a: number, b: number;
+    if (op === "+") {
+      a = randInt(2, 12 + level * 6);
+      b = randInt(2, 12 + level * 6);
+      answer = a + b;
+    } else if (op === "-") {
+      a = randInt(3, 14 + level * 6);
+      b = randInt(1, a);
+      answer = a - b;
+    } else if (op === "×") {
+      a = randInt(2, 6 + level);
+      b = randInt(2, 9);
+      answer = a * b;
+    } else {
+      // ÷ — 정수 결과가 나오게 a = b×몫 으로 만든다.
+      b = randInt(2, 9);
+      const q = randInt(2, 6 + level);
+      a = b * q;
+      answer = q;
+    }
+    text = `${a} ${op} ${b}`;
+  }
+
+  // 보기 5개 — 정답 + 근처 오답 4개(중복·음수 배제).
   const set = new Set<number>([answer]);
-  const offsets = shuffle([1, -1, 2, -2, 3, -3, 5, -5, 10, -10]);
+  const offsets = shuffle([1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 10, -10]);
   let oi = 0;
-  while (set.size < 4 && oi < offsets.length) {
+  while (set.size < 5 && oi < offsets.length) {
     const cand = answer + offsets[oi++];
     if (cand >= 0 && !set.has(cand)) set.add(cand);
   }
-  // 그래도 모자라면(작은 수) 위로 채운다.
   let up = answer + 1;
-  while (set.size < 4) {
+  while (set.size < 5) {
     if (!set.has(up)) set.add(up);
     up++;
   }
-  return { text: `${a} ${op} ${b}`, answer, options: shuffle([...set]) };
+  return { text, answer, options: shuffle([...set]) };
 }
 
 export default function MathSprintGame({ onGameOver, bestScore, submitting }: GamePlayProps) {
@@ -161,21 +211,24 @@ export default function MathSprintGame({ onGameOver, bestScore, submitting }: Ga
       <div className="relative mx-auto w-full max-w-[22rem]">
         <div className="flex flex-col gap-4 rounded-xl bg-black/25 p-4">
           <div className="flex h-24 items-center justify-center">
-            <span className="tabular font-display text-4xl text-ink">{prob.text} = ?</span>
+            <span className="tabular font-display text-3xl text-ink">{prob.text} = ?</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {prob.options.map((v, i) => (
-              <button
-                key={`${v}-${i}`}
-                onClick={() => answer(v)}
-                disabled={phase !== "playing"}
-                className={`tabular touch-none rounded-xl border border-pitch-line bg-black/30 py-3.5 font-display text-2xl text-ink transition-transform active:scale-95 ${
-                  wrong === v ? "border-danger ring-2 ring-danger" : ""
-                }`}
-              >
-                {v}
-              </button>
-            ))}
+            {prob.options.map((v, i) => {
+              const lastOdd = i === prob.options.length - 1 && prob.options.length % 2 === 1;
+              return (
+                <button
+                  key={`${v}-${i}`}
+                  onClick={() => answer(v)}
+                  disabled={phase !== "playing"}
+                  className={`tabular touch-none rounded-xl border border-pitch-line bg-black/30 py-3.5 font-display text-2xl text-ink transition-transform active:scale-95 ${
+                    lastOdd ? "col-span-2" : ""
+                  } ${wrong === v ? "border-danger ring-2 ring-danger" : ""}`}
+                >
+                  {v}
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -13,9 +13,9 @@ const DURATION_MS = 45_000;
 type Phase = "ready" | "playing" | "done";
 
 function sizeForRound(r: number): number {
-  if (r < 2) return 2;
-  if (r < 5) return 3;
-  if (r < 9) return 4;
+  if (r < 3) return 2;
+  if (r < 8) return 3;
+  if (r < 14) return 4;
   return 5;
 }
 
@@ -33,8 +33,8 @@ function makePuzzle(round: number): Puzzle {
   const hue = Math.floor(Math.random() * 360);
   const sat = 55 + Math.floor(Math.random() * 15);
   const light = 48 + Math.floor(Math.random() * 14);
-  // 라운드가 오를수록 밝기 차이가 줄어 어려워진다(24% → 3%). 후반일수록 변별력이 커진다.
-  const delta = Math.max(3, 24 - round * 1.6);
+  // 밝기 차이는 '보이긴 하되 집중해야' 하는 수준으로 유지(28% → 7%). 변별력은 격자 크기·스캔 속도에서.
+  const delta = Math.max(7, 28 - round * 1.1);
   const dir = Math.random() < 0.5 ? -1 : 1;
   const oddLight = Math.min(92, Math.max(8, light + dir * delta));
   return {
