@@ -12,6 +12,9 @@ import { PoopIcon } from "./poop/PoopIcon";
 import { SchulteIcon } from "./schulte/SchulteIcon";
 import { WhackIcon } from "./whack/WhackIcon";
 import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
+import { OddColorIcon } from "./oddcolor/OddColorIcon";
+import { StroopIcon } from "./stroop/StroopIcon";
+import { MathSprintIcon } from "./mathsprint/MathSprintIcon";
 
 // 수박게임은 물리 엔진(matter.js)을 쓰므로 별도 청크로 분리하고 SSR 을 끈다.
 // 캔버스/AudioContext 는 브라우저에서만 의미가 있어 서버 렌더링할 이유가 없다.
@@ -46,6 +49,11 @@ const PoopGame = dynamic(() => import("./poop/PoopGame"), { ssr: false, loading:
 
 // 그린라이트는 타이머/랜덤 기반이라 SSR 을 끈다.
 const GreenlightGame = dynamic(() => import("./greenlight/GreenlightGame"), { ssr: false, loading: spinner });
+
+// 색 다른 타일 찾기 · 스트룹 · 암산 스프린트 — 타이머/랜덤 기반이라 SSR 을 끈다.
+const OddColorGame = dynamic(() => import("./oddcolor/OddColorGame"), { ssr: false, loading: spinner });
+const StroopGame = dynamic(() => import("./stroop/StroopGame"), { ssr: false, loading: spinner });
+const MathSprintGame = dynamic(() => import("./mathsprint/MathSprintGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -194,6 +202,51 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "종료", text: "5라운드를 마치면 합산 시간이 기록됩니다. 중간에 그만두면 기록되지 않아요." },
       ],
       tip: "초록을 '예상'하지 말고 '반응'하세요. 미리 누르려다 성급 판정만 받습니다. 손가락은 화면 근처에 대기.",
+    },
+  },
+  oddcolor: {
+    Play: OddColorGame,
+    Icon: OddColorIcon,
+    tags: ["focus", "reflex"],
+    info: {
+      rows: [
+        { label: "목표", text: "격자에서 살짝 색이 다른 한 칸을 찾아 탭하세요." },
+        { label: "조작", text: "다른 색 타일을 탭합니다. 맞히면 다음 라운드로 넘어가요." },
+        { label: "규칙", text: "맞힐수록 칸이 늘고 색 차이가 미묘해집니다. 틀리면 1초가 깎여요." },
+        { label: "점수", text: "30초 안에 맞힌 개수가 점수입니다. 높을수록 상위!" },
+        { label: "종료", text: "시작을 누른 순간부터 30초. 시간이 다 되면 점수가 기록됩니다." },
+      ],
+      tip: "한 칸만 노려보지 말고 화면 전체를 한눈에 훑으면 튀는 칸이 잘 잡힙니다.",
+    },
+  },
+  stroop: {
+    Play: StroopGame,
+    Icon: StroopIcon,
+    tags: ["focus"],
+    info: {
+      rows: [
+        { label: "목표", text: "글자의 '뜻'이 아니라 '색'을 빠르게 고르세요." },
+        { label: "조작", text: "글자 색과 같은 색 버튼을 탭. 예) 파란 글씨의 '빨강' → 파랑." },
+        { label: "규칙", text: "뜻에 낚이면 안 돼요. 틀리면 1.5초가 깎입니다." },
+        { label: "점수", text: "30초 안에 맞힌 개수가 점수입니다. 높을수록 상위!" },
+        { label: "종료", text: "시작을 누른 순간부터 30초. 시간이 다 되면 점수가 기록됩니다." },
+      ],
+      tip: "글자를 '읽으려' 하지 말고 색만 보세요. 소리 내어 색을 말해보면 덜 헷갈립니다.",
+    },
+  },
+  mathsprint: {
+    Play: MathSprintGame,
+    Icon: MathSprintIcon,
+    tags: ["calc"],
+    info: {
+      rows: [
+        { label: "목표", text: "사칙연산을 최대한 빠르고 많이 푸세요." },
+        { label: "조작", text: "정답을 4개 보기 중에서 탭합니다." },
+        { label: "규칙", text: "점수가 오를수록 숫자가 커져요. 틀리면 2초가 깎입니다." },
+        { label: "점수", text: "60초 안에 맞힌 개수가 점수입니다. 높을수록 상위!" },
+        { label: "종료", text: "시작을 누른 순간부터 60초. 시간이 다 되면 점수가 기록됩니다." },
+      ],
+      tip: "곱셈은 가까운 10의 배수로 쪼개면 빨라요. 예: 7×8 = 7×10 − 7×2.",
     },
   },
 };

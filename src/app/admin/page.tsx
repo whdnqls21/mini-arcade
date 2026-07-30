@@ -4,10 +4,19 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { Card } from "@/components/Card";
+import { Modal } from "@/components/Modal";
 import { AdminBoard } from "@/components/board/AdminBoard";
+import { GAME_REGISTRY } from "@/games/registry";
 import { postJSON } from "@/lib/client-api";
 import type { AdminState } from "@/lib/state";
 import type { PostCategory } from "@/lib/types";
+
+// 아직 공개 전(ma_games 미등록)인 베타 게임 — 관리자만 여기서 테스트한다.
+const BETA_GAMES: { slug: string; name: string }[] = [
+  { slug: "oddcolor", name: "색 다른 타일 찾기" },
+  { slug: "stroop", name: "스트룹" },
+  { slug: "mathsprint", name: "암산 스프린트" },
+];
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -215,7 +224,7 @@ function NoticeForm() {
   );
 }
 
-type Tab = "board" | "accounts" | "games" | "seasons" | "review";
+type Tab = "board" | "accounts" | "games" | "seasons" | "beta" | "review";
 
 function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -241,6 +250,7 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
     { key: "accounts", label: "계정", badge: admin.accounts.length },
     { key: "games", label: "게임" },
     { key: "seasons", label: "시즌" },
+    { key: "beta", label: "베타" },
     { key: "review", label: "검토", badge: admin.hiddenQuizzes.length },
   ];
 
@@ -404,6 +414,8 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
       )}
 
       {tab === "seasons" && <SeasonSection admin={admin} busy={busy} run={run} />}
+
+      {tab === "beta" && <BetaSection />}
 
       {tab === "review" && <ReviewSection quizzes={admin.hiddenQuizzes} busy={busy} run={run} />}
     </div>
@@ -616,6 +628,77 @@ function ddayText(endIso: string): string {
   if (diff > 0) return `D-${diff}`;
   if (diff === 0) return "D-day";
   return `${-diff}일 지남`;
+}
+
+// 베타 게임 테스트 — 아직 공개 전인 게임을 관리자만 여기서 플레이해 확인한다(기록 저장 안 함).
+function BetaSection() {
+  const [active, setActive] = useState<string | null>(null);
+  const [last, setLast] = useState<number | null>(null);
+  const [best, setBest] = useState<number | null>(null);
+
+  const g = BETA_GAMES.find((x) => x.slug === active) ?? null;
+  const entry = active ? GAME_REGISTRY[active] : null;
+  const Play = entry?.Play;
+
+  return (
+    <Card className="flex flex-col gap-3">
+      <div>
+        <h2 className="font-display text-lg text-ink">
+          베타 게임 <span className="text-sm text-ink-faint">테스트 전용</span>
+        </h2>
+        <p className="mt-0.5 text-xs text-ink-faint">
+          아직 공개 전인 게임이에요. 여기서 직접 해보고 확인하세요. 기록은 저장되지 않아요.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        {BETA_GAMES.map((x) => {
+          const Icon = GAME_REGISTRY[x.slug]?.Icon;
+          return (
+            <button
+              key={x.slug}
+              onClick={() => {
+                setActive(x.slug);
+                setLast(null);
+                setBest(null);
+              }}
+              className="flex items-center gap-2 rounded-lg border border-pitch-line bg-black/10 px-3 py-2 text-left text-sm text-ink transition-colors hover:border-grass/40"
+            >
+              {Icon && <Icon size={28} />}
+              <span className="flex-1">{x.name}</span>
+              <span className="text-xs text-grass">테스트 →</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-[11px] text-ink-faint">
+        공개하려면 준비되면 말해주세요 — ma_games 에 등록하면 목록·리더보드·시즌에 자동으로 붙어요.
+      </p>
+
+      {g && entry && Play && (
+        <Modal open onClose={() => setActive(null)} title={g.name}>
+          <div className="flex flex-col gap-3">
+            {last != null && (
+              <p className="text-center text-sm text-ink-dim">
+                이번 판 <span className="tabular text-gold">{last}</span>
+                {best != null && best !== last ? ` · 최고 ${best}` : ""}
+              </p>
+            )}
+            <Play
+              onGameOver={(s) => {
+                setLast(s);
+                setBest((b) => (b == null ? s : Math.max(b, s)));
+              }}
+              bestScore={best}
+              submitting={false}
+              accountId={null}
+            />
+          </div>
+        </Modal>
+      )}
+    </Card>
+  );
 }
 
 // 신고 누적으로 숨겨진 캐치마인드 그림 검토 — 복구 / 영구삭제.
