@@ -24,10 +24,7 @@ export function SeasonMvpRace({
       <div className="flex items-center gap-2">
         <span aria-hidden>🏁</span>
         <h2 className="font-display text-lg text-ink">MVP 레이스</h2>
-        <span className="ml-auto text-xs text-ink-faint">
-          시즌 {season.num}
-          {season.name ? ` · ${season.name}` : ""}
-        </span>
+        <span className="ml-auto text-xs text-ink-faint">현재 순위</span>
       </div>
       <p className="text-[11px] leading-relaxed text-ink-faint">
         시즌 종목 F1 포인트 합산 · 1등 10 · 2등 6 · 3등 4 · 4등 3 · 5등 2 · 나머지 1

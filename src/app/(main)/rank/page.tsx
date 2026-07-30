@@ -78,12 +78,6 @@ export default function RankPage() {
         <h1 className="font-display text-2xl text-ink">게임별 리더보드</h1>
       </div>
 
-      {/* 진행 중 시즌 MVP 레이스(없으면 렌더 안 함) */}
-      <SeasonMvpRace season={state.season} race={state.mvpRace} meId={meId} />
-
-      {/* 명예의 전당 — 종료된 시즌이 있으면 상단에(없으면 렌더 안 함) */}
-      <HallOfFame hall={state.hall} />
-
       {state.session?.solo && (
         <Card className="border-grass/30 bg-grass/5">
           <p className="text-sm leading-relaxed text-ink-dim">
@@ -95,15 +89,21 @@ export default function RankPage() {
 
       {hasSeason ? (
         <>
-          {seasonGames.length > 0 && (
-            <>
-              <div className="pt-1">
-                <h2 className="font-display text-sm text-gold">🏆 이번 시즌 종목</h2>
-                <p className="text-[11px] text-ink-faint">이번 시즌 범위의 순위예요.</p>
-              </div>
-              {seasonGames.map(renderBoard)}
-            </>
-          )}
+          <div className="pt-1">
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-sm text-gold">
+                🏆 시즌 {state.season?.num}
+                {state.season?.name ? ` · ${state.season.name}` : ""}
+              </h2>
+              {state.season && (
+                <span className="ml-auto tabular text-xs text-gold/80">{dday(state.season.endsAt)}</span>
+              )}
+            </div>
+            <p className="text-[11px] text-ink-faint">이번 시즌 범위 순위 · MVP 레이스</p>
+          </div>
+          <SeasonMvpRace season={state.season} race={state.mvpRace} meId={meId} />
+          {seasonGames.map(renderBoard)}
+
           {freeGames.length > 0 && (
             <>
               <div className="pt-1">
@@ -117,6 +117,18 @@ export default function RankPage() {
       ) : (
         state.games.map(renderBoard)
       )}
+
+      {/* 명예의 전당 — 종료된 시즌 아카이브(맨 아래) */}
+      <HallOfFame hall={state.hall} />
     </div>
   );
+}
+
+function dday(endIso: string): string {
+  const end = new Date(endIso).getTime();
+  if (Number.isNaN(end)) return "";
+  const diff = Math.ceil((end - Date.now()) / (24 * 60 * 60 * 1000));
+  if (diff > 0) return `D-${diff}`;
+  if (diff === 0) return "D-day";
+  return "마감 임박";
 }
