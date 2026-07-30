@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { Card } from "@/components/Card";
 import { IconBadge } from "@/components/IconBadge";
-import { SeasonBanner } from "@/components/SeasonBanner";
 import { TitleTag } from "@/components/TitleTag";
 import { useAppState } from "@/components/StateProvider";
 import { CatchmindIcon } from "@/games/catchmind/CatchmindIcon";
@@ -50,8 +49,6 @@ export default function GamesPage() {
           const tags = GAME_REGISTRY[g.slug]?.tags ?? [];
           return [...sel].every((t) => tags.includes(t));
         });
-
-  const gameNameBySlug = new Map(state.games.map((g) => [g.slug, g.name]));
 
   // 캐치마인드 카드는 솔로모드면 숨기고, 필터가 걸리면 창의력만 만족할 때 노출(AND).
   const showCatchmind = !solo && [...sel].every((t) => CATCHMIND_TAGS.includes(t));
@@ -158,9 +155,6 @@ export default function GamesPage() {
         <h1 className="font-display text-2xl text-ink">{state.session?.name}님, 플레이!</h1>
       </div>
 
-      {/* 진행 중 시즌 안내(없으면 렌더 안 함) */}
-      <SeasonBanner season={state.season} gameNameBySlug={gameNameBySlug} />
-
       {/* 태그 필터 — 여러 개 선택 시 모두 만족하는 게임만(AND) */}
       <div className="flex flex-wrap gap-1.5">
         <button
@@ -202,8 +196,16 @@ export default function GamesPage() {
           {seasonGames.length > 0 && (
             <>
               <div className="pt-1">
-                <h2 className="font-display text-sm text-gold">🏆 이번 시즌 종목</h2>
-                <p className="text-[11px] text-ink-faint">이 종목 기록이 시즌 순위·MVP에 반영돼요.</p>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display text-sm text-gold">
+                    🏆 시즌 {state.season?.num}
+                    {state.season?.name ? ` · ${state.season.name}` : ""}
+                  </h2>
+                  {state.season && (
+                    <span className="ml-auto tabular text-xs text-gold/80">{dday(state.season.endsAt)}</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-ink-faint">이번 시즌 종목 · 기록이 순위·MVP에 반영돼요.</p>
               </div>
               {seasonGames.map(renderGame)}
             </>
@@ -231,4 +233,13 @@ export default function GamesPage() {
       )}
     </div>
   );
+}
+
+function dday(endIso: string): string {
+  const end = new Date(endIso).getTime();
+  if (Number.isNaN(end)) return "";
+  const diff = Math.ceil((end - Date.now()) / (24 * 60 * 60 * 1000));
+  if (diff > 0) return `D-${diff}`;
+  if (diff === 0) return "D-day";
+  return "마감 임박";
 }
