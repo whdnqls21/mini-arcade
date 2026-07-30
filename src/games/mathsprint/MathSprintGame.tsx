@@ -232,7 +232,7 @@ export default function MathSprintGame({ onGameOver, bestScore, submitting }: Ga
         {phase === "ready" && (
           <StartGate
             title="암산 스프린트"
-            lines={["사칙연산을 빠르게 풀어요!", "정답을 4개 중에서 탭.", "60초 안에 최대한 많이."]}
+            lines={["사칙연산을 빠르게 풀어요!", "정답을 4개 중에서 탭.", "45초 안에 최대한 많이."]}
             onStart={start}
           />
         )}

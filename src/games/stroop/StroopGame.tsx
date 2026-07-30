@@ -177,7 +177,7 @@ export default function StroopGame({ onGameOver, bestScore, submitting }: GamePl
         {phase === "ready" && (
           <StartGate
             title="스트룹"
-            lines={["글자의 뜻이 아니라 '색'을 고르세요!", "예: 파란 글씨의 '빨강' → 파랑", "30초 안에 최대한 많이."]}
+            lines={["글자의 뜻이 아니라 '색'을 고르세요!", "예: 파란 글씨의 '빨강' → 파랑", "45초 안에 최대한 많이."]}
             onStart={start}
           />
         )}

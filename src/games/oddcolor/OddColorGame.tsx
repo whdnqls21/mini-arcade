@@ -173,8 +173,8 @@ export default function OddColorGame({ onGameOver, bestScore, submitting }: Game
 
         {phase === "ready" && (
           <StartGate
-            title="색 다른 타일 찾기"
-            lines={["살짝 색이 다른 한 칸을 탭!", "맞힐수록 칸이 늘고 색 차이가 미묘해져요.", "30초 안에 최대한 많이."]}
+            title="쿠쿠쿠브"
+            lines={["살짝 색이 다른 한 칸을 탭!", "맞힐수록 칸이 늘고 색 차이가 미묘해져요.", "45초 안에 최대한 많이."]}
             onStart={start}
           />
         )}
