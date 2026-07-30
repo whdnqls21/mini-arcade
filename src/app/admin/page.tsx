@@ -12,11 +12,8 @@ import type { AdminState } from "@/lib/state";
 import type { PostCategory } from "@/lib/types";
 
 // 아직 공개 전(ma_games 미등록)인 베타 게임 — 관리자만 여기서 테스트한다.
-const BETA_GAMES: { slug: string; name: string }[] = [
-  { slug: "oddcolor", name: "Kuku Kube" },
-  { slug: "stroop", name: "스트룹" },
-  { slug: "mathsprint", name: "암산 스프린트" },
-];
+// 공개(ma_games insert)하면 여기서 빼서 목록 중복을 막는다.
+const BETA_GAMES: { slug: string; name: string }[] = [];
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -651,30 +648,32 @@ function BetaSection() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        {BETA_GAMES.map((x) => {
-          const Icon = GAME_REGISTRY[x.slug]?.Icon;
-          return (
-            <button
-              key={x.slug}
-              onClick={() => {
-                setActive(x.slug);
-                setLast(null);
-                setBest(null);
-              }}
-              className="flex items-center gap-2 rounded-lg border border-pitch-line bg-black/10 px-3 py-2 text-left text-sm text-ink transition-colors hover:border-grass/40"
-            >
-              {Icon && <Icon size={28} />}
-              <span className="flex-1">{x.name}</span>
-              <span className="text-xs text-grass">테스트 →</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <p className="text-[11px] text-ink-faint">
-        공개하려면 준비되면 말해주세요 — ma_games 에 등록하면 목록·리더보드·시즌에 자동으로 붙어요.
-      </p>
+      {BETA_GAMES.length === 0 ? (
+        <p className="rounded-lg bg-black/15 px-3 py-4 text-center text-xs text-ink-faint">
+          지금은 테스트할 베타 게임이 없어요. 새 게임을 만들면 여기서 공개 전 확인합니다.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {BETA_GAMES.map((x) => {
+            const Icon = GAME_REGISTRY[x.slug]?.Icon;
+            return (
+              <button
+                key={x.slug}
+                onClick={() => {
+                  setActive(x.slug);
+                  setLast(null);
+                  setBest(null);
+                }}
+                className="flex items-center gap-2 rounded-lg border border-pitch-line bg-black/10 px-3 py-2 text-left text-sm text-ink transition-colors hover:border-grass/40"
+              >
+                {Icon && <Icon size={28} />}
+                <span className="flex-1">{x.name}</span>
+                <span className="text-xs text-grass">테스트 →</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {g && entry && Play && (
         <Modal open onClose={() => setActive(null)} title={g.name}>
