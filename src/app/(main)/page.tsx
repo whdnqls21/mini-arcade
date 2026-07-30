@@ -11,6 +11,7 @@ import { useAppState } from "@/components/StateProvider";
 import { CatchmindIcon } from "@/games/catchmind/CatchmindIcon";
 import { GAME_REGISTRY } from "@/games/registry";
 import { formatScore } from "@/lib/format";
+import type { GameView } from "@/lib/state";
 import type { GameTag } from "@/games/types";
 
 // 태그 한글 라벨 + 필터 칩 순서. 여러 개를 켜면 그 태그를 모두 가진 게임만 보인다(AND).
@@ -54,6 +55,101 @@ export default function GamesPage() {
 
   // 캐치마인드 카드는 솔로모드면 숨기고, 필터가 걸리면 창의력만 만족할 때 노출(AND).
   const showCatchmind = !solo && [...sel].every((t) => CATCHMIND_TAGS.includes(t));
+
+  // 진행 중 시즌이 있으면 시즌 종목/자유 종목으로 나눠 보여준다(캐치마인드는 항상 자유 종목).
+  const hasSeason = !!state.season;
+  const seasonGames = games.filter((g) => g.inSeason);
+  const freeGames = games.filter((g) => !g.inSeason);
+
+  // 게임 카드 한 장(시즌·자유 섹션이 공유).
+  const renderGame = (g: GameView) => {
+    const top = g.leaderboard[0];
+    const Icon = GAME_REGISTRY[g.slug]?.Icon;
+    return (
+      <Link key={g.slug} href={`/games/${g.slug}`}>
+        <Card className="flex flex-col gap-3 transition-colors hover:border-grass/40">
+          <div className="flex items-start gap-3">
+            {Icon && (
+              <span className="shrink-0">
+                <Icon size={44} />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <h2 className="font-display text-xl text-ink">{g.name}</h2>
+                {(GAME_REGISTRY[g.slug]?.tags ?? []).map((t) => (
+                  <span key={t} className="text-[11px] font-medium text-grass/70">
+                    #{TAG_LABEL[t]}
+                  </span>
+                ))}
+              </div>
+              {g.description && <p className="mt-0.5 text-xs text-ink-faint">{g.description}</p>}
+            </div>
+            <span className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-grass/15 px-4 text-sm font-medium text-grass">
+              플레이 →
+            </span>
+          </div>
+
+          <div
+            className={`flex items-center border-t border-pitch-line pt-3 text-xs ${
+              solo ? "justify-end" : "justify-between"
+            }`}
+          >
+            {/* 솔로모드에서는 남의 1위 기록을 숨긴다. */}
+            {!solo && (
+              <span className="text-ink-dim">
+                🏆 1위{" "}
+                {top ? (
+                  <>
+                    <IconBadge iconKey={top.icon} /> <b className="text-ink">{top.name}</b>{" "}
+                    <TitleTag titleKey={top.title} />{" "}
+                    <span className="tabular text-gold">{formatScore(g.scoring, top.best, g.slug)}</span>
+                  </>
+                ) : (
+                  <span className="text-ink-faint">아직 없음</span>
+                )}
+              </span>
+            )}
+            <span className="text-ink-dim">
+              내 기록{" "}
+              <span className="tabular text-grass">
+                {g.myBest != null ? formatScore(g.scoring, g.myBest, g.slug) : "-"}
+              </span>
+            </span>
+          </div>
+        </Card>
+      </Link>
+    );
+  };
+
+  const catchmindCard = showCatchmind ? (
+    <Link href="/catchmind">
+      <Card className="flex flex-col gap-3 transition-colors hover:border-grass/40">
+        <div className="flex items-start gap-3">
+          <span className="shrink-0">
+            <CatchmindIcon size={44} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <h2 className="font-display text-xl text-ink">캐치마인드</h2>
+              {CATCHMIND_TAGS.map((t) => (
+                <span key={t} className="text-[11px] font-medium text-grass/70">
+                  #{TAG_LABEL[t]}
+                </span>
+              ))}
+            </div>
+            <p className="mt-0.5 text-xs text-ink-faint">그림을 그려 내고, 남의 그림을 맞혀요.</p>
+          </div>
+          <span className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-grass/15 px-4 text-sm font-medium text-grass">
+            플레이 →
+          </span>
+        </div>
+        <div className="flex items-center justify-end border-t border-pitch-line pt-3 text-xs">
+          <span className="text-ink-dim">그리고 · 맞히고 · 순위 경쟁</span>
+        </div>
+      </Card>
+    </Link>
+  ) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -100,103 +196,39 @@ export default function GamesPage() {
         </Card>
       ) : null}
 
-      {showCatchmind && (
-        <Link href="/catchmind">
-          <Card className="flex flex-col gap-3 transition-colors hover:border-grass/40">
-            <div className="flex items-start gap-3">
-              <span className="shrink-0">
-                <CatchmindIcon size={44} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <h2 className="font-display text-xl text-ink">캐치마인드</h2>
-                  {CATCHMIND_TAGS.map((t) => (
-                    <span key={t} className="text-[11px] font-medium text-grass/70">
-                      #{TAG_LABEL[t]}
-                    </span>
-                  ))}
-                </div>
-                <p className="mt-0.5 text-xs text-ink-faint">그림을 그려 내고, 남의 그림을 맞혀요.</p>
+      {hasSeason ? (
+        <>
+          {/* 이번 시즌 종목 — 순위·MVP 반영 */}
+          {seasonGames.length > 0 && (
+            <>
+              <div className="pt-1">
+                <h2 className="font-display text-sm text-gold">🏆 이번 시즌 종목</h2>
+                <p className="text-[11px] text-ink-faint">이 종목 기록이 시즌 순위·MVP에 반영돼요.</p>
               </div>
-              <span className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-grass/15 px-4 text-sm font-medium text-grass">
-                플레이 →
-              </span>
-            </div>
-            <div className="flex items-center justify-end border-t border-pitch-line pt-3 text-xs">
-              <span className="text-ink-dim">그리고 · 맞히고 · 순위 경쟁</span>
-            </div>
-          </Card>
-        </Link>
+              {seasonGames.map(renderGame)}
+            </>
+          )}
+
+          {/* 자유 종목 — 올타임(시즌 점수 미반영) + 캐치마인드 */}
+          {(freeGames.length > 0 || catchmindCard) && (
+            <>
+              <div className="pt-1">
+                <h2 className="font-display text-sm text-ink-dim">자유 종목</h2>
+                <p className="text-[11px] text-ink-faint">
+                  올타임 기록으로 즐겨요. 이번 시즌 점수엔 안 들어가요.
+                </p>
+              </div>
+              {catchmindCard}
+              {freeGames.map(renderGame)}
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {catchmindCard}
+          {games.map(renderGame)}
+        </>
       )}
-
-      {games.map((g) => {
-        const top = g.leaderboard[0];
-        const Icon = GAME_REGISTRY[g.slug]?.Icon;
-        return (
-          <Link key={g.slug} href={`/games/${g.slug}`}>
-            <Card className="flex flex-col gap-3 transition-colors hover:border-grass/40">
-              <div className="flex items-start gap-3">
-                {Icon && (
-                  <span className="shrink-0">
-                    <Icon size={44} />
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  {/* 제목 + 태그를 한 줄에 */}
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <h2 className="font-display text-xl text-ink">{g.name}</h2>
-                    {g.inSeason && (
-                      <span className="rounded-full bg-gold/15 px-1.5 py-0.5 text-[10px] font-medium text-gold">
-                        시즌
-                      </span>
-                    )}
-                    {(GAME_REGISTRY[g.slug]?.tags ?? []).map((t) => (
-                      <span key={t} className="text-[11px] font-medium text-grass/70">
-                        #{TAG_LABEL[t]}
-                      </span>
-                    ))}
-                  </div>
-                  {g.description && (
-                    <p className="mt-0.5 text-xs text-ink-faint">{g.description}</p>
-                  )}
-                </div>
-                <span className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-grass/15 px-4 text-sm font-medium text-grass">
-                  플레이 →
-                </span>
-              </div>
-
-              <div
-                className={`flex items-center border-t border-pitch-line pt-3 text-xs ${
-                  solo ? "justify-end" : "justify-between"
-                }`}
-              >
-                {/* 솔로모드에서는 남의 1위 기록을 숨긴다. */}
-                {!solo && (
-                  <span className="text-ink-dim">
-                    🏆 1위{" "}
-                    {top ? (
-                      <>
-                        <IconBadge iconKey={top.icon} />{" "}
-                        <b className="text-ink">{top.name}</b>{" "}
-                        <TitleTag titleKey={top.title} />{" "}
-                        <span className="tabular text-gold">{formatScore(g.scoring, top.best, g.slug)}</span>
-                      </>
-                    ) : (
-                      <span className="text-ink-faint">아직 없음</span>
-                    )}
-                  </span>
-                )}
-                <span className="text-ink-dim">
-                  내 기록{" "}
-                  <span className="tabular text-grass">
-                    {g.myBest != null ? formatScore(g.scoring, g.myBest, g.slug) : "-"}
-                  </span>
-                </span>
-              </div>
-            </Card>
-          </Link>
-        );
-      })}
     </div>
   );
 }
