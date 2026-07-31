@@ -29,6 +29,14 @@ export interface TtComment {
   createdAt: string;
 }
 
+// 홈 화면 통계(참여 개수 — 순위/점수 아님).
+export interface TtStats {
+  galleryCount: number; // 갤러리 전체 사진 수
+  photoCount: number; // 내가 올린 사진 수
+  titleCount: number; // 내가 단 제목 수
+  votesReceived: number; // 내 제목이 받은 총 득표
+}
+
 // 갤러리 사진 한 장(제목·투표·댓글까지 한 번에).
 export interface TtPhoto {
   photoId: string;

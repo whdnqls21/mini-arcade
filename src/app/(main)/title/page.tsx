@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Card } from "@/components/Card";
 import { useAppState } from "@/components/StateProvider";
 import { TtComments } from "@/games/title/TtComments";
-import { TT_REPORT_REASONS, type TtPhoto, type TtReportReason } from "@/games/title/types";
+import { TT_REPORT_REASONS, type TtPhoto, type TtReportReason, type TtStats } from "@/games/title/types";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { cache: "no-store", ...init });
@@ -81,8 +81,114 @@ async function fileToDataUrl(file: File): Promise<string> {
   return webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/jpeg", 0.85);
 }
 
+type View = "home" | "gallery" | "upload";
+
 export default function TitlePage() {
   const { state } = useAppState();
+  const [view, setView] = useState<View>("home");
+
+  if (!state) return null;
+  if (state.session?.solo) {
+    return (
+      <Wrap onHome={() => setView("home")} showBack={false}>
+        <Card className="py-10 text-center text-sm text-ink-dim">
+          제목 학원은 함께 제목을 짓고 투표하는 게임이라 솔로모드에서는 이용할 수 없어요.
+          <br />내정보에서 솔로모드를 끄면 참여할 수 있습니다.
+        </Card>
+      </Wrap>
+    );
+  }
+
+  return (
+    <Wrap onHome={() => setView("home")} showBack={view !== "home"}>
+      {view === "home" && <Home onUpload={() => setView("upload")} onGallery={() => setView("gallery")} />}
+      {view === "upload" && <UploadView onDone={() => setView("gallery")} />}
+      {view === "gallery" && <Gallery onUpload={() => setView("upload")} />}
+    </Wrap>
+  );
+}
+
+function Wrap({
+  children,
+  onHome,
+  showBack,
+}: {
+  children: React.ReactNode;
+  onHome: () => void;
+  showBack: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between pt-1">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-grass">제목 학원</p>
+          <h1 className="font-display text-2xl text-ink">사진에 제목을</h1>
+        </div>
+        {showBack ? (
+          <button onClick={onHome} className="rounded-lg border border-pitch-line px-3 py-2 text-sm text-ink-dim hover:text-ink">
+            홈으로
+          </button>
+        ) : (
+          <Link href="/social" className="rounded-lg border border-pitch-line px-3 py-2 text-sm text-ink-dim hover:text-ink">
+            소셜
+          </Link>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── 홈 ────────────────────────────────────────────────────────────────
+function Home({ onUpload, onGallery }: { onUpload: () => void; onGallery: () => void }) {
+  const [stats, setStats] = useState<TtStats | null>(null);
+  useEffect(() => {
+    api<TtStats>("/api/tt/me").then(setStats).catch(() => setStats(null));
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-3">
+        <BigButton onClick={onUpload} title="사진 올리기" desc="재밌는 사진을 공유해요" />
+        <BigButton
+          onClick={onGallery}
+          title="갤러리"
+          desc={stats ? `사진 ${stats.galleryCount}장` : "제목 달고 투표해요"}
+        />
+      </div>
+      {stats && (
+        <p className="text-center text-xs text-ink-faint">
+          내가 올린 사진 {stats.photoCount}장 · 단 제목 {stats.titleCount}개 · 받은 표 {stats.votesReceived}표
+        </p>
+      )}
+    </div>
+  );
+}
+
+function BigButton({ onClick, title, desc }: { onClick: () => void; title: string; desc: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1 rounded-2xl border border-pitch-line bg-pitch-card py-7 transition-colors hover:border-grass/40"
+    >
+      <span className="font-display text-xl text-ink">{title}</span>
+      <span className="text-xs text-ink-faint">{desc}</span>
+    </button>
+  );
+}
+
+// ── 업로드 화면 ────────────────────────────────────────────────────────
+function UploadView({ onDone }: { onDone: () => void }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-ink-dim">사진을 골라 올리면 갤러리에서 다 같이 제목을 달아요.</p>
+      <Uploader onUploaded={onDone} />
+    </div>
+  );
+}
+
+// ── 갤러리 ────────────────────────────────────────────────────────────
+function Gallery({ onUpload }: { onUpload: () => void }) {
   const [photos, setPhotos] = useState<TtPhoto[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -95,26 +201,18 @@ export default function TitlePage() {
       setErr(e instanceof Error ? e.message : "불러오지 못했어요.");
     }
   }, []);
-
   useEffect(() => {
     load();
   }, [load]);
 
-  if (!state) return null;
-  if (state.session?.solo) {
-    return (
-      <Wrap>
-        <Card className="py-10 text-center text-sm text-ink-dim">
-          제목 학원은 함께 제목을 짓고 투표하는 게임이라 솔로모드에서는 이용할 수 없어요.
-          <br />내정보에서 솔로모드를 끄면 참여할 수 있습니다.
-        </Card>
-      </Wrap>
-    );
-  }
-
   return (
-    <Wrap>
-      <Uploader onUploaded={load} />
+    <div className="flex flex-col gap-4">
+      <button
+        onClick={onUpload}
+        className="rounded-xl border border-dashed border-pitch-line py-3 text-sm font-medium text-ink-dim hover:border-grass/40 hover:text-ink"
+      >
+        📷 사진 올리기
+      </button>
       {err && <Card className="py-8 text-center text-sm text-danger">{err}</Card>}
       {!photos && !err && <Spinner />}
       {photos && photos.length === 0 && (
@@ -126,23 +224,6 @@ export default function TitlePage() {
       {photos?.map((p) => (
         <PhotoCard key={p.photoId} photo={p} onChanged={load} />
       ))}
-    </Wrap>
-  );
-}
-
-function Wrap({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between pt-1">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-grass">제목 학원</p>
-          <h1 className="font-display text-2xl text-ink">사진에 제목을</h1>
-        </div>
-        <Link href="/social" className="rounded-lg border border-pitch-line px-3 py-2 text-sm text-ink-dim hover:text-ink">
-          소셜
-        </Link>
-      </div>
-      {children}
     </div>
   );
 }
