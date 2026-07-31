@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAccountSession, isAdmin } from "./auth";
 import { drawingUrl } from "./catchmind/server";
+import { photoUrl } from "./title/server";
 import { EARN_COND } from "./icons";
 import { F1_POINTS, fetchActiveSeason } from "./season";
 import { createServiceClient } from "./supabase/server";
@@ -744,18 +745,34 @@ export interface AdminSeason {
   status: "active" | "closed";
   closed_at: string | null;
 }
+// 신고 누적으로 숨겨진 제목 학원 사진(검토용).
+export interface AdminHiddenPhoto {
+  id: string;
+  authorName: string;
+  reportCount: number;
+  reasons: string[]; // 신고 사유(한글 라벨)
+  imageUrl: string | null;
+  createdAt: string;
+}
 export interface AdminState {
   adminPinSet: boolean;
   accounts: AdminAccount[];
   games: AdminGame[];
   seasons: AdminSeason[];
   hiddenQuizzes: AdminHiddenQuiz[];
+  hiddenPhotos: AdminHiddenPhoto[];
 }
 
 const CM_REASON_LABEL: Record<string, string> = {
   lazy: "성의없음",
   inappropriate: "부적절",
   answer_leak: "정답유출",
+};
+
+const TT_REASON_LABEL: Record<string, string> = {
+  inappropriate: "부적절",
+  privacy: "사생활침해",
+  spam: "장난도배",
 };
 
 // 신고 누적으로 숨겨진(미삭제) 그림들을 검토용으로 모은다. 테이블이 없으면 []（error 무시).
@@ -809,6 +826,46 @@ async function buildHiddenQuizzes(
   return out;
 }
 
+// 신고 누적으로 숨겨진(미삭제) 제목 학원 사진들. 테이블이 없으면 []（error 무시).
+async function buildHiddenPhotos(
+  sb: SupabaseClient,
+  nameById: Map<string, string>
+): Promise<AdminHiddenPhoto[]> {
+  const { data } = await sb
+    .from("ma_tt_photos")
+    .select("id,author_id,image_path,report_count,created_at")
+    .eq("is_hidden", true)
+    .eq("is_deleted", false)
+    .order("report_count", { ascending: false });
+  const photos = (data ?? []) as {
+    id: string;
+    author_id: string;
+    image_path: string;
+    report_count: number;
+    created_at: string;
+  }[];
+  if (photos.length === 0) return [];
+
+  const photoIds = photos.map((p) => p.id);
+  const { data: rRows } = await sb.from("ma_tt_reports").select("photo_id,reason").in("photo_id", photoIds);
+  const reasonsByPhoto = new Map<string, string[]>();
+  for (const r of (rRows ?? []) as { photo_id: string; reason: string | null }[]) {
+    const label = r.reason ? TT_REASON_LABEL[r.reason] ?? r.reason : "기타";
+    const arr = reasonsByPhoto.get(r.photo_id) ?? [];
+    arr.push(label);
+    reasonsByPhoto.set(r.photo_id, arr);
+  }
+
+  return photos.map((p) => ({
+    id: p.id,
+    authorName: nameById.get(p.author_id) ?? "(탈퇴)",
+    reportCount: p.report_count,
+    reasons: reasonsByPhoto.get(p.id) ?? [],
+    imageUrl: photoUrl(sb, p.image_path),
+    createdAt: p.created_at,
+  }));
+}
+
 export async function buildAdminState(): Promise<AdminState> {
   const sb = createServiceClient();
   const [setRes, aRes, agg, gRes, sRes] = await Promise.all([
@@ -830,7 +887,10 @@ export async function buildAdminState(): Promise<AdminState> {
   }
 
   const nameById = new Map(accounts.map((a) => [a.id, a.name]));
-  const hiddenQuizzes = await buildHiddenQuizzes(sb, nameById);
+  const [hiddenQuizzes, hiddenPhotos] = await Promise.all([
+    buildHiddenQuizzes(sb, nameById),
+    buildHiddenPhotos(sb, nameById),
+  ]);
 
   // 시즌 테이블이 아직 없으면(마이그레이션 전) sRes.error → 빈 목록으로 조용히 폴백.
   const seasons = sRes.error ? [] : ((sRes.data ?? []) as AdminSeason[]);
@@ -850,5 +910,6 @@ export async function buildAdminState(): Promise<AdminState> {
     })),
     seasons,
     hiddenQuizzes,
+    hiddenPhotos,
   };
 }

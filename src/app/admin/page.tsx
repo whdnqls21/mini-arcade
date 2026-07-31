@@ -227,8 +227,9 @@ type Tab = "board" | "accounts" | "games" | "seasons" | "beta" | "review";
 function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // 검토할 그림이 있으면 그 탭부터 연다.
-  const [tab, setTab] = useState<Tab>(admin.hiddenQuizzes.length > 0 ? "review" : "board");
+  // 검토할 그림·사진이 있으면 그 탭부터 연다.
+  const reviewCount = admin.hiddenQuizzes.length + admin.hiddenPhotos.length;
+  const [tab, setTab] = useState<Tab>(reviewCount > 0 ? "review" : "board");
 
   async function run(fn: () => Promise<unknown>) {
     setBusy(true);
@@ -249,7 +250,7 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
     { key: "games", label: "게임", icon: NavGamesIcon },
     { key: "seasons", label: "시즌", icon: NavSeasonsIcon },
     { key: "beta", label: "베타", icon: NavBetaIcon },
-    { key: "review", label: "검토", badge: admin.hiddenQuizzes.length, icon: NavReviewIcon },
+    { key: "review", label: "검토", badge: reviewCount, icon: NavReviewIcon },
   ];
 
   return (
@@ -338,7 +339,9 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
 
       {tab === "beta" && <BetaSection />}
 
-      {tab === "review" && <ReviewSection quizzes={admin.hiddenQuizzes} busy={busy} run={run} />}
+      {tab === "review" && (
+        <ReviewSection quizzes={admin.hiddenQuizzes} photos={admin.hiddenPhotos} busy={busy} run={run} />
+      )}
 
       <AdminNav tab={tab} setTab={setTab} tabs={TABS} />
     </div>
@@ -893,22 +896,27 @@ function BetaSection() {
   );
 }
 
-// 신고 누적으로 숨겨진 캐치마인드 그림 검토 — 복구 / 영구삭제.
+// 신고 누적으로 숨겨진 캐치마인드 그림·제목 학원 사진 검토 — 복구 / 영구삭제.
 function ReviewSection({
   quizzes,
+  photos,
   busy,
   run,
 }: {
   quizzes: AdminState["hiddenQuizzes"];
+  photos: AdminState["hiddenPhotos"];
   busy: boolean;
   run: (fn: () => Promise<unknown>) => void;
 }) {
-  if (quizzes.length === 0) {
+  if (quizzes.length === 0 && photos.length === 0) {
     return (
-      <Card className="py-10 text-center text-sm text-ink-dim">검토할 숨겨진 그림이 없어요.</Card>
+      <Card className="py-10 text-center text-sm text-ink-dim">검토할 숨겨진 그림·사진이 없어요.</Card>
     );
   }
   return (
+    <div className="flex flex-col gap-4">
+      {photos.length > 0 && <PhotoReview photos={photos} busy={busy} run={run} />}
+      {quizzes.length > 0 && (
     <Card className="flex flex-col gap-3">
       <div>
         <h2 className="font-display text-lg text-ink">
@@ -964,6 +972,80 @@ function ReviewSection({
                 onClick={() => {
                   if (confirm(`'${q.word}' 그림을 영구 삭제할까요? 되돌릴 수 없습니다.`)) {
                     run(() => postJSON("/api/admin/action", { action: "cmDelete", quizId: q.id }));
+                  }
+                }}
+                className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"
+              >
+                영구삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </Card>
+      )}
+    </div>
+  );
+}
+
+// 제목 학원 숨겨진 사진 검토 — 복구 / 영구삭제.
+function PhotoReview({
+  photos,
+  busy,
+  run,
+}: {
+  photos: AdminState["hiddenPhotos"];
+  busy: boolean;
+  run: (fn: () => Promise<unknown>) => void;
+}) {
+  return (
+    <Card className="flex flex-col gap-3">
+      <div>
+        <h2 className="font-display text-lg text-ink">
+          숨겨진 사진 <span className="text-sm text-ink-faint">{photos.length}건</span>
+        </h2>
+        <p className="mt-0.5 text-xs text-ink-faint">
+          신고가 누적돼 자동 숨김된 사진이에요. 확인 후 복구하거나 영구 삭제하세요.
+        </p>
+      </div>
+      {photos.map((p) => (
+        <div key={p.id} className="flex gap-3 rounded-lg border border-pitch-line bg-black/10 p-3">
+          {p.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={p.imageUrl}
+              alt="신고된 사진"
+              className="h-24 w-24 shrink-0 rounded-lg border border-pitch-line bg-black/20 object-contain"
+            />
+          ) : (
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-pitch-line bg-black/20 text-[11px] text-ink-faint">
+              이미지 없음
+            </div>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="text-[11px] text-ink-faint">
+              {p.authorName} · 신고 {p.reportCount}회
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {reasonChips(p.reasons).map((r) => (
+                <span key={r} className="rounded-full bg-danger/15 px-2 py-0.5 text-[10px] text-danger">
+                  {r}
+                </span>
+              ))}
+            </div>
+            <div className="mt-auto flex gap-1.5 pt-1">
+              <button
+                disabled={busy}
+                onClick={() => run(() => postJSON("/api/admin/action", { action: "ttRestore", photoId: p.id }))}
+                className="rounded-lg border border-pitch-line px-2.5 py-1 text-xs text-ink-dim disabled:opacity-40"
+              >
+                복구
+              </button>
+              <button
+                disabled={busy}
+                onClick={() => {
+                  if (confirm("이 사진을 영구 삭제할까요? 되돌릴 수 없습니다.")) {
+                    run(() => postJSON("/api/admin/action", { action: "ttDelete", photoId: p.id }));
                   }
                 }}
                 className="rounded-lg border border-danger/40 px-2.5 py-1 text-xs text-danger disabled:opacity-40"

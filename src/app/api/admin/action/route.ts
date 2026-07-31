@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isAdmin } from "@/lib/auth";
 import { CM_BUCKET } from "@/lib/catchmind/server";
+import { TT_BUCKET } from "@/lib/title/server";
 import { computeSeasonSnapshot, fetchScheduledOrActiveSeason } from "@/lib/season";
 import { createServiceClient } from "@/lib/supabase/server";
 
@@ -145,6 +146,50 @@ export async function POST(req: NextRequest) {
       .eq("id", quizId);
     if (error) {
       console.error("cmDelete 실패", error);
+      return NextResponse.json({ error: "삭제에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  // 제목 학원 숨겨진 사진 복구 — 다시 노출 + 신고 초기화(재숨김 방지)
+  if (action === "ttRestore") {
+    const photoId = body?.photoId;
+    if (typeof photoId !== "string") {
+      return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    }
+    await sb.from("ma_tt_reports").delete().eq("photo_id", photoId);
+    const { error } = await sb
+      .from("ma_tt_photos")
+      .update({ is_hidden: false, report_count: 0 })
+      .eq("id", photoId);
+    if (error) {
+      console.error("ttRestore 실패", error);
+      return NextResponse.json({ error: "복구에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  // 제목 학원 사진 영구 삭제 — soft delete + Storage 이미지 제거
+  if (action === "ttDelete") {
+    const photoId = body?.photoId;
+    if (typeof photoId !== "string") {
+      return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    }
+    const { data: photo } = await sb
+      .from("ma_tt_photos")
+      .select("image_path")
+      .eq("id", photoId)
+      .maybeSingle();
+    if (photo?.image_path) {
+      const { error: rmErr } = await sb.storage.from(TT_BUCKET).remove([photo.image_path]);
+      if (rmErr) console.error("ttDelete 이미지 제거 실패", rmErr); // 파일 제거 실패해도 숨김 처리는 진행
+    }
+    const { error } = await sb
+      .from("ma_tt_photos")
+      .update({ is_deleted: true, is_hidden: true })
+      .eq("id", photoId);
+    if (error) {
+      console.error("ttDelete 실패", error);
       return NextResponse.json({ error: "삭제에 실패했습니다." }, { status: 500 });
     }
     return NextResponse.json({ ok: true });
