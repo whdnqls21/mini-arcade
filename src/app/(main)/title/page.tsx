@@ -15,38 +15,68 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-const OK_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIDE = 1280;
 
-// 실사진 → 긴 변 1280px 로 축소 + webp(불가 시 jpeg) 인코딩. EXIF 회전은 브라우저가 보정.
-async function fileToDataUrl(file: File): Promise<string> {
-  if (!OK_TYPES.includes(file.type)) {
-    throw new Error("JPEG·PNG·WEBP 사진만 올릴 수 있어요. (아이폰 HEIC은 지원 안 돼요)");
-  }
-  let bitmap: ImageBitmap;
+// 소스 포맷은 상관없다 — 캔버스로 다시 그려 webp/jpeg 로 재인코딩하므로,
+// 브라우저가 '디코딩'만 하면 된다(아이폰 Safari 는 HEIC 도 네이티브로 디코딩됨).
+// 디코딩을 여러 방법으로 시도하고, 다 실패하면(예: 크롬의 HEIC) 그때만 안내한다.
+async function decodeImage(
+  file: File
+): Promise<{ src: CanvasImageSource; width: number; height: number; cleanup: () => void }> {
+  // 1) createImageBitmap — EXIF 회전 보정(옵션 미지원이면 옵션 없이).
   try {
-    // 세로 사진 EXIF 회전을 브라우저가 보정. 옵션 미지원 브라우저는 옵션 없이 재시도.
-    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    return { src: bmp, width: bmp.width, height: bmp.height, cleanup: () => bmp.close() };
   } catch {
-    try {
-      bitmap = await createImageBitmap(file);
-    } catch {
-      throw new Error("이 사진을 열 수 없어요. 다른 사진을 시도해 주세요.");
-    }
+    /* 다음 방법 */
   }
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const w = Math.max(1, Math.round(bitmap.width * scale));
-  const h = Math.max(1, Math.round(bitmap.height * scale));
+  try {
+    const bmp = await createImageBitmap(file);
+    return { src: bmp, width: bmp.width, height: bmp.height, cleanup: () => bmp.close() };
+  } catch {
+    /* 다음 방법 */
+  }
+  // 2) <img> 폴백 — createImageBitmap 이 없거나 실패하는 브라우저용.
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error("decode"));
+      im.src = url;
+    });
+    return {
+      src: img,
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+      cleanup: () => URL.revokeObjectURL(url),
+    };
+  } catch {
+    URL.revokeObjectURL(url);
+    throw new Error("이 사진은 이 기기에서 열 수 없어요. 다른 사진으로 시도해 주세요.");
+  }
+}
+
+// 실사진 → 긴 변 1280px 로 축소 + webp(불가 시 jpeg) 인코딩.
+async function fileToDataUrl(file: File): Promise<string> {
+  const { src, width, height, cleanup } = await decodeImage(file);
+  if (!width || !height) {
+    cleanup();
+    throw new Error("이 사진은 이 기기에서 열 수 없어요. 다른 사진으로 시도해 주세요.");
+  }
+  const scale = Math.min(1, MAX_SIDE / Math.max(width, height));
+  const w = Math.max(1, Math.round(width * scale));
+  const h = Math.max(1, Math.round(height * scale));
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
   if (!ctx) {
-    bitmap.close();
+    cleanup();
     throw new Error("사진을 처리할 수 없어요.");
   }
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  bitmap.close();
+  ctx.drawImage(src, 0, 0, w, h);
+  cleanup();
   const webp = canvas.toDataURL("image/webp", 0.85);
   return webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/jpeg", 0.85);
 }
@@ -160,7 +190,7 @@ function Uploader({ onUploaded }: { onUploaded: () => Promise<void> | void }) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         className="hidden"
         onChange={(e) => pick(e.target.files?.[0])}
       />
