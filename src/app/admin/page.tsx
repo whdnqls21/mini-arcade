@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 import { Card } from "@/components/Card";
 import { Modal } from "@/components/Modal";
@@ -242,13 +243,13 @@ function Dashboard({ admin, reload }: { admin: AdminState; reload: () => void })
     }
   }
 
-  const TABS: { key: Tab; label: string; badge?: number }[] = [
-    { key: "board", label: "게시판" },
-    { key: "accounts", label: "계정", badge: admin.accounts.length },
-    { key: "games", label: "게임" },
-    { key: "seasons", label: "시즌" },
-    { key: "beta", label: "베타" },
-    { key: "review", label: "검토", badge: admin.hiddenQuizzes.length },
+  const TABS: { key: Tab; label: string; badge?: number; icon: (p: { active?: boolean }) => ReactNode }[] = [
+    { key: "board", label: "게시판", icon: NavBoardIcon },
+    { key: "accounts", label: "계정", badge: admin.accounts.length, icon: NavAccountsIcon },
+    { key: "games", label: "게임", icon: NavGamesIcon },
+    { key: "seasons", label: "시즌", icon: NavSeasonsIcon },
+    { key: "beta", label: "베타", icon: NavBetaIcon },
+    { key: "review", label: "검토", badge: admin.hiddenQuizzes.length, icon: NavReviewIcon },
   ];
 
   return (
@@ -352,7 +353,7 @@ function AdminNav({
 }: {
   tab: Tab;
   setTab: (t: Tab) => void;
-  tabs: { key: Tab; label: string; badge?: number }[];
+  tabs: { key: Tab; label: string; badge?: number; icon: (p: { active?: boolean }) => ReactNode }[];
 }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30">
@@ -360,14 +361,18 @@ function AdminNav({
         <div className="flex items-stretch justify-around rounded-2xl border border-pitch-line bg-pitch-base/90 shadow-card backdrop-blur-md">
           {tabs.map((t) => {
             const active = tab === t.key;
+            const Icon = t.icon;
             return (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] transition-colors ${
+                className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] transition-colors ${
                   active ? "text-grass" : "text-ink-faint hover:text-ink-dim"
                 }`}
               >
+                <span className="relative">
+                  <Icon active={active} />
+                </span>
                 <span className={active ? "font-medium" : ""}>{t.label}</span>
                 {t.badge != null && t.badge > 0 && (
                   <span
@@ -384,6 +389,77 @@ function AdminNav({
         </div>
       </div>
     </nav>
+  );
+}
+
+// 하단 네비 아이콘 — 앱 공용 BottomTabs 와 같은 22px SVG 로 높이를 맞춘다.
+type NavIconProps = { active?: boolean };
+function navSvg(children: ReactNode, active?: boolean) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? 2.2 : 1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {children}
+    </svg>
+  );
+}
+function NavBoardIcon({ active }: NavIconProps) {
+  return navSvg(
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="3" />
+      <path d="M8 9h8M8 13h8M8 17h5" />
+    </>,
+    active
+  );
+}
+function NavAccountsIcon({ active }: NavIconProps) {
+  return navSvg(
+    <>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5" />
+      <path d="M16 5.5a3 3 0 0 1 0 5.8M18 20c0-2.6-1-4.3-3-5" />
+    </>,
+    active
+  );
+}
+function NavGamesIcon({ active }: NavIconProps) {
+  return navSvg(
+    <>
+      <rect x="2" y="6" width="20" height="12" rx="4" />
+      <path d="M7 12h3M8.5 10.5v3M15 11h.01M18 13h.01" />
+    </>,
+    active
+  );
+}
+function NavSeasonsIcon({ active }: NavIconProps) {
+  return navSvg(
+    <path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 21l-4.9 2.6.9-5.5-4-3.9 5.5-.8z" />,
+    active
+  );
+}
+function NavBetaIcon({ active }: NavIconProps) {
+  return navSvg(
+    <>
+      <path d="M9 3h6M10 3v5l-4.5 8.5A2 2 0 0 0 7.3 20h9.4a2 2 0 0 0 1.8-3.5L14 8V3" />
+      <path d="M8 14h8" />
+    </>,
+    active
+  );
+}
+function NavReviewIcon({ active }: NavIconProps) {
+  return navSvg(
+    <>
+      <circle cx="11" cy="11" r="6" />
+      <path d="M20 20l-4-4" />
+    </>,
+    active
   );
 }
 
