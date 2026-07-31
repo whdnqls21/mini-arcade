@@ -387,7 +387,9 @@ function AdminNav({
   );
 }
 
-// 게임 관리 — 시즌 종목/자유 종목으로 나눠 ↑↓ 로 순서(sort) 조정 + 노출·기록 초기화.
+// 게임 관리 — 시즌 종목/자유 종목으로 나눠 ▲▼ 로 순서 조정(로컬) 후 '순서 저장' 으로 한 번에 반영.
+// 노출·기록 초기화는 즉시 반영(순서 미저장 상태에선 잠근다 — 저장 안 한 순서가 초기화되는 걸 막음).
+type AdminGame = AdminState["games"][number];
 function GamesSection({
   admin,
   busy,
@@ -398,28 +400,52 @@ function GamesSection({
   run: (fn: () => Promise<unknown>) => void;
 }) {
   const activeSeason = admin.seasons.find((s) => s.status === "active") ?? null;
-  const seasonSet = new Set(activeSeason?.games ?? []);
-  const seasonGames = admin.games.filter((g) => seasonSet.has(g.slug));
-  const freeGames = admin.games.filter((g) => !seasonSet.has(g.slug));
 
-  const swap = (a: string, b: string) =>
-    run(() => postJSON("/api/admin/action", { action: "gameSwapSort", slugA: a, slugB: b }));
+  const [seasonOrder, setSeasonOrder] = useState<AdminGame[]>([]);
+  const [freeOrder, setFreeOrder] = useState<AdminGame[]>([]);
+  const [dirty, setDirty] = useState(false);
 
-  const gameRow = (g: AdminState["games"][number], group: AdminState["games"], i: number) => (
+  // admin.games 가 바뀌면(로드/저장 후) 로컬 순서를 서버 순서로 재설정.
+  useEffect(() => {
+    const s = admin.seasons.find((x) => x.status === "active");
+    const set = new Set(s?.games ?? []);
+    setSeasonOrder(admin.games.filter((g) => set.has(g.slug)));
+    setFreeOrder(admin.games.filter((g) => !set.has(g.slug)));
+    setDirty(false);
+  }, [admin]);
+
+  const move = (list: AdminGame[], setList: (v: AdminGame[]) => void, i: number, dir: number) => {
+    const j = i + dir;
+    if (j < 0 || j >= list.length) return;
+    const next = list.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    setList(next);
+    setDirty(true);
+  };
+
+  const saveOrder = () =>
+    run(() =>
+      postJSON("/api/admin/action", {
+        action: "gameSetOrder",
+        slugs: [...seasonOrder, ...freeOrder].map((g) => g.slug),
+      })
+    );
+
+  const gameRow = (g: AdminGame, list: AdminGame[], setList: (v: AdminGame[]) => void, i: number) => (
     <div key={g.slug} className="flex items-center gap-2 rounded-lg border border-pitch-line bg-black/10 px-2 py-1.5 text-sm">
-      {/* 순서 조정 ↑↓ (그룹 내에서) */}
+      {/* 순서 조정 ▲▼ (로컬만 — 저장 전까지 서버 반영 안 함) */}
       <div className="flex flex-col gap-0.5">
         <button
           disabled={busy || i === 0}
-          onClick={() => swap(g.slug, group[i - 1].slug)}
+          onClick={() => move(list, setList, i, -1)}
           aria-label="위로"
           className="rounded border border-pitch-line px-1.5 leading-none text-ink-dim disabled:opacity-25"
         >
           ▲
         </button>
         <button
-          disabled={busy || i === group.length - 1}
-          onClick={() => swap(g.slug, group[i + 1].slug)}
+          disabled={busy || i === list.length - 1}
+          onClick={() => move(list, setList, i, 1)}
           aria-label="아래로"
           className="rounded border border-pitch-line px-1.5 leading-none text-ink-dim disabled:opacity-25"
         >
@@ -436,7 +462,7 @@ function GamesSection({
 
       <div className="flex shrink-0 gap-1.5">
         <button
-          disabled={busy}
+          disabled={busy || dirty}
           onClick={() =>
             run(() =>
               postJSON("/api/admin/action", { action: "gameActive", slug: g.slug, active: !g.active })
@@ -447,7 +473,7 @@ function GamesSection({
           {g.active ? "숨기기" : "노출"}
         </button>
         <button
-          disabled={busy || g.scoreCount === 0}
+          disabled={busy || dirty || g.scoreCount === 0}
           onClick={() => {
             const typed = prompt(
               `'${g.name}' 의 기록 ${g.scoreCount}개를 모두 삭제합니다.\n되돌릴 수 없습니다. 진행하려면 게임 이름을 입력하세요.`
@@ -473,24 +499,39 @@ function GamesSection({
 
   return (
     <Card className="flex flex-col gap-3">
-      <div>
-        <h2 className="font-display text-lg text-ink">게임</h2>
-        <p className="mt-0.5 text-xs text-ink-faint">
-          ▲▼ 로 목록 순서를 바꿔요(위로 올릴수록 앞). 시즌·자유 종목 안에서 정렬됩니다.
-        </p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="font-display text-lg text-ink">게임</h2>
+          <p className="mt-0.5 text-xs text-ink-faint">
+            ▲▼ 로 순서를 바꾸고 <b className="text-ink-dim">순서 저장</b>을 눌러 반영해요. 시즌·자유 종목 안에서 정렬.
+          </p>
+        </div>
+        <button
+          disabled={busy || !dirty}
+          onClick={saveOrder}
+          className="shrink-0 rounded-lg bg-grass px-3 py-1.5 font-display text-sm text-pitch-base disabled:opacity-30"
+        >
+          순서 저장
+        </button>
       </div>
 
-      {activeSeason && seasonGames.length > 0 && (
+      {activeSeason && seasonOrder.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-xs text-gold">🏆 시즌 종목</p>
-          {seasonGames.map((g, i) => gameRow(g, seasonGames, i))}
+          {seasonOrder.map((g, i) => gameRow(g, seasonOrder, setSeasonOrder, i))}
         </div>
       )}
 
       <div className="flex flex-col gap-1.5">
         <p className="text-xs text-ink-dim">{activeSeason ? "자유 종목" : "전체 게임"}</p>
-        {freeGames.map((g, i) => gameRow(g, freeGames, i))}
+        {freeOrder.map((g, i) => gameRow(g, freeOrder, setFreeOrder, i))}
       </div>
+
+      {dirty && (
+        <p className="text-[11px] text-gold">
+          순서가 바뀌었어요. ‘순서 저장’을 눌러 반영하세요. (저장 전엔 노출·초기화가 잠깁니다)
+        </p>
+      )}
     </Card>
   );
 }
