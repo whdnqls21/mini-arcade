@@ -119,8 +119,7 @@ export default function ProfilePage() {
       {/* 캐치마인드 */}
       <Card className="flex flex-col gap-2">
         <h2 className="font-display text-lg text-ink">캐치마인드</h2>
-        <div className="grid grid-cols-3 gap-2">
-          <Stat label="총점" value={String(p.catchmind.points)} />
+        <div className="grid grid-cols-2 gap-2">
           <Stat label="정답" value={String(p.catchmind.solved)} />
           <Stat label="출제" value={String(p.catchmind.authored)} />
         </div>

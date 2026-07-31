@@ -46,27 +46,11 @@ export interface QuizResult {
   comments: GalleryComment[]; // 결과 화면에서 바로 다는 댓글
 }
 
-// 내 통계
+// 내 통계 (참여 개수만 — 순위/점수는 없앴다)
 export interface CmStats {
-  total: number;
-  solvePoints: number;
-  authorPoints: number;
   solvedCount: number;
   quizCount: number;
   unsolvedCount: number; // 아직 안 푼(맞출 수 있는) 문제 수
-}
-
-// 순위 한 줄
-export interface CmRankRow {
-  name: string;
-  points: number;
-  rank: number;
-}
-
-export interface CmRank {
-  total: CmRankRow[];
-  solver: CmRankRow[];
-  author: CmRankRow[];
 }
 
 // ── 갤러리 ──────────────────────────────────────────────────────────────

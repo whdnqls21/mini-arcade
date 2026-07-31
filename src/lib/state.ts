@@ -633,7 +633,7 @@ export interface PublicProfile {
   summary: { champions: number; totalPlays: number; iconCount: number };
   games: PublicProfileGame[];
   ownedIcons: string[]; // 영구 획득한 아이콘 키(도감)
-  catchmind: { points: number; solved: number; authored: number };
+  catchmind: { solved: number; authored: number };
 }
 
 // 특정 계정의 공개 프로필을 조립한다. 없거나 비활성이면 null.
@@ -642,7 +642,7 @@ export async function buildPublicProfile(
   targetId: string,
   viewerId: string | null
 ): Promise<PublicProfile | null> {
-  const [tRes, gRes, agg, aRes, owned, cmPoints, cmSolved, cmAuthored] = await Promise.all([
+  const [tRes, gRes, agg, aRes, owned, cmSolved, cmAuthored] = await Promise.all([
     sb
       .from("ma_accounts")
       .select("id,name,solo,active,created_at,icon,title,bio")
@@ -652,7 +652,6 @@ export async function buildPublicProfile(
     fetchScoreAgg(sb),
     sb.from("ma_accounts").select("id,solo").eq("active", true),
     fetchGrantedIcons(sb, targetId),
-    sb.from("ma_cm_point_logs").select("amount").eq("user_id", targetId),
     sb.from("ma_cm_attempts").select("id", { count: "exact", head: true }).eq("user_id", targetId).eq("is_correct", true),
     sb.from("ma_cm_quizzes").select("id", { count: "exact", head: true }).eq("author_id", targetId).eq("is_deleted", false),
   ]);
@@ -696,7 +695,6 @@ export async function buildPublicProfile(
   });
 
   const totalPlays = agg.filter((r) => r.account_id === targetId).reduce((s, r) => s + r.plays, 0);
-  const points = ((cmPoints.data ?? []) as { amount: number }[]).reduce((s, r) => s + r.amount, 0);
 
   return {
     id: t.id,
@@ -710,7 +708,7 @@ export async function buildPublicProfile(
     summary: { champions, totalPlays, iconCount: owned.length },
     games: gamesOut,
     ownedIcons: owned,
-    catchmind: { points, solved: cmSolved.count ?? 0, authored: cmAuthored.count ?? 0 },
+    catchmind: { solved: cmSolved.count ?? 0, authored: cmAuthored.count ?? 0 },
   };
 }
 

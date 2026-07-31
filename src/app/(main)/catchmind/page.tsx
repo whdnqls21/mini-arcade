@@ -20,7 +20,6 @@ const Gallery = dynamic(() => import("@/games/catchmind/Gallery").then((m) => m.
   ),
 });
 import type {
-  CmRank,
   CmStats,
   GuessResult,
   PlayQuiz,
@@ -28,7 +27,7 @@ import type {
   WordPick,
 } from "@/games/catchmind/types";
 
-type View = "home" | "pick" | "draw" | "guess" | "result" | "rank" | "gallery";
+type View = "home" | "pick" | "draw" | "guess" | "result" | "gallery";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { cache: "no-store", ...init });
@@ -65,7 +64,6 @@ export default function CatchmindPage() {
         <Home
           onPick={() => setView("pick")}
           onGuess={() => setView("guess")}
-          onRank={() => setView("rank")}
           onGallery={() => setView("gallery")}
         />
       )}
@@ -73,7 +71,6 @@ export default function CatchmindPage() {
       {view === "draw" && <Draw word={pickHolder.current} onDone={() => setView("home")} />}
       {view === "guess" && <Guess onFinished={goResult} onEmpty={() => setView("pick")} />}
       {view === "result" && resultQuizId && <Result quizId={resultQuizId} onNext={() => setView("guess")} />}
-      {view === "rank" && <Rank />}
       {view === "gallery" && <Gallery />}
     </Wrap>
   );
@@ -117,12 +114,10 @@ function Wrap({
 function Home({
   onPick,
   onGuess,
-  onRank,
   onGallery,
 }: {
   onPick: () => void;
   onGuess: () => void;
-  onRank: () => void;
   onGallery: () => void;
 }) {
   const [stats, setStats] = useState<CmStats | null>(null);
@@ -132,14 +127,6 @@ function Home({
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex items-center justify-around gap-2 py-4">
-        <Stat label="총점" value={stats?.total ?? 0} accent />
-        <Divider />
-        <Stat label="눈썰미" value={stats?.solvePoints ?? 0} />
-        <Divider />
-        <Stat label="손재주" value={stats?.authorPoints ?? 0} />
-      </Card>
-
       <div className="grid grid-cols-2 gap-3">
         <BigButton
           onClick={onGuess}
@@ -149,14 +136,9 @@ function Home({
         <BigButton onClick={onPick} title="문제출제" desc="제시어를 그려요" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <button onClick={onGallery} className="rounded-xl border border-pitch-line py-3 text-sm text-ink-dim hover:text-ink">
-          🖼️ 갤러리
-        </button>
-        <button onClick={onRank} className="rounded-xl border border-pitch-line py-3 text-sm text-ink-dim hover:text-ink">
-          🏆 순위
-        </button>
-      </div>
+      <button onClick={onGallery} className="rounded-xl border border-pitch-line py-3 text-sm text-ink-dim hover:text-ink">
+        🖼️ 갤러리
+      </button>
 
       {stats && (
         <p className="text-center text-xs text-ink-faint">
@@ -453,11 +435,6 @@ function Result({ quizId, onNext }: { quizId: string; onNext: () => void }) {
         <p className="text-xs text-ink-faint">
           그린 사람 <span className="text-ink-dim">{r.authorName}</span>
         </p>
-        {r.correct && (
-          <p className="text-sm text-gold">
-            +{r.myScore}점 획득
-          </p>
-        )}
       </Card>
 
       {r.imageUrl && (
@@ -533,74 +510,7 @@ function Result({ quizId, onNext }: { quizId: string; onNext: () => void }) {
   );
 }
 
-// ── 순위 ──────────────────────────────────────────────────────────────
-function Rank() {
-  const [rank, setRank] = useState<CmRank | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [tab, setTab] = useState<keyof CmRank>("total");
-
-  useEffect(() => {
-    api<CmRank>("/api/cm/rank").then(setRank).catch((e) => setErr(e.message));
-  }, []);
-
-  if (err) return <Card className="py-10 text-center text-sm text-danger">{err}</Card>;
-  if (!rank) return <Spinner />;
-
-  const TABS: { key: keyof CmRank; label: string }[] = [
-    { key: "total", label: "총점" },
-    { key: "solver", label: "눈썰미" },
-    { key: "author", label: "손재주" },
-  ];
-  const rows = rank[tab];
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex gap-1.5">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex-1 rounded-lg py-2 text-sm transition-colors ${
-              tab === t.key ? "bg-grass/15 text-grass" : "border border-pitch-line text-ink-faint"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      {rows.length === 0 ? (
-        <Card className="py-10 text-center text-sm text-ink-dim">아직 기록이 없어요.</Card>
-      ) : (
-        <Card className="flex flex-col gap-1 py-2">
-          {rows.map((r) => (
-            <div key={`${r.rank}-${r.name}`} className="flex items-center justify-between py-1.5 text-sm">
-              <span className="flex items-center gap-2">
-                <span className={`w-6 text-center font-display ${r.rank <= 3 ? "text-gold" : "text-ink-faint"}`}>
-                  {r.rank}
-                </span>
-                <span className="text-ink">{r.name}</span>
-              </span>
-              <span className="tabular text-grass">{r.points}점</span>
-            </div>
-          ))}
-        </Card>
-      )}
-    </div>
-  );
-}
-
 // ── 공통 소품 ──────────────────────────────────────────────────────────
-function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
-  return (
-    <div className="flex flex-col items-center">
-      <span className="text-[11px] text-ink-faint">{label}</span>
-      <span className={`font-display text-xl ${accent ? "text-gold" : "text-ink"}`}>{value}</span>
-    </div>
-  );
-}
-function Divider() {
-  return <span className="h-8 w-px bg-pitch-line" />;
-}
 function Spinner() {
   return (
     <div className="flex h-40 items-center justify-center">
