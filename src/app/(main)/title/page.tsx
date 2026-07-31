@@ -149,13 +149,21 @@ function Home({ onUpload, onGallery }: { onUpload: () => void; onGallery: () => 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
-        <BigButton onClick={onUpload} title="사진 올리기" desc="재밌는 사진을 공유해요" />
         <BigButton
           onClick={onGallery}
-          title="갤러리"
-          desc={stats ? `사진 ${stats.galleryCount}장` : "제목 달고 투표해요"}
+          title="제목 달기"
+          desc={stats ? `사진 ${stats.galleryCount}장` : "남의 사진에 제목을"}
         />
+        <BigButton onClick={onUpload} title="사진 올리기" desc="재밌는 사진을 공유해요" />
       </div>
+
+      <button
+        onClick={onGallery}
+        className="rounded-xl border border-pitch-line py-3 text-sm text-ink-dim transition-colors hover:text-ink"
+      >
+        🖼️ 갤러리 둘러보기
+      </button>
+
       {stats && (
         <p className="text-center text-xs text-ink-faint">
           내가 올린 사진 {stats.photoCount}장 · 단 제목 {stats.titleCount}개 · 받은 표 {stats.votesReceived}표
