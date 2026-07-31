@@ -138,8 +138,8 @@ function Wrap({ children }: { children: React.ReactNode }) {
           <p className="text-xs uppercase tracking-[0.2em] text-grass">제목 학원</p>
           <h1 className="font-display text-2xl text-ink">사진에 제목을</h1>
         </div>
-        <Link href="/" className="rounded-lg border border-pitch-line px-3 py-2 text-sm text-ink-dim hover:text-ink">
-          게임 목록
+        <Link href="/social" className="rounded-lg border border-pitch-line px-3 py-2 text-sm text-ink-dim hover:text-ink">
+          소셜
         </Link>
       </div>
       {children}

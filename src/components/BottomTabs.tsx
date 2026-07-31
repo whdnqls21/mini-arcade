@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 const TABS = [
   { href: "/", label: "게임", icon: GameIcon },
+  { href: "/social", label: "소셜", icon: SocialIcon, also: ["/catchmind", "/title"] },
   { href: "/rank", label: "순위", icon: RankIcon },
   { href: "/board", label: "게시판", icon: BoardIcon },
   { href: "/me", label: "내정보", icon: MeIcon },
@@ -69,8 +70,13 @@ export default function BottomTabs() {
     <nav className="fixed inset-x-0 bottom-0 z-30">
       <div className="mx-auto max-w-md px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-2">
         <div className="flex items-stretch justify-around rounded-2xl border border-pitch-line bg-pitch-base/90 shadow-card backdrop-blur-md">
-          {TABS.map(({ href, label, icon: Icon }) => {
-            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          {TABS.map((tab) => {
+            const { href, label, icon: Icon } = tab;
+            const also = "also" in tab ? tab.also : undefined;
+            const active =
+              href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(href) || (also?.some((p) => pathname.startsWith(p)) ?? false);
             const dot = href === "/board" && boardUnread;
             return (
               <Link
@@ -105,6 +111,15 @@ function GameIcon({ active }: IconProps) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="6" width="20" height="12" rx="4" />
       <path d="M7 12h3M8.5 10.5v3M15 11h.01M18 13h.01" />
+    </svg>
+  );
+}
+function SocialIcon({ active }: IconProps) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="9" r="3.2" />
+      <path d="M2.8 19c0-3.2 2.8-5 6.2-5s6.2 1.8 6.2 5" />
+      <path d="M16.5 6.2a2.8 2.8 0 0 1 0 5.4M17.5 19c0-2.5-1-4.2-3-5" />
     </svg>
   );
 }

@@ -7,8 +7,6 @@ import { Card } from "@/components/Card";
 import { IconBadge } from "@/components/IconBadge";
 import { TitleTag } from "@/components/TitleTag";
 import { useAppState } from "@/components/StateProvider";
-import { CatchmindIcon } from "@/games/catchmind/CatchmindIcon";
-import { TitleIcon } from "@/games/title/TitleIcon";
 import { GAME_REGISTRY } from "@/games/registry";
 import { formatScore } from "@/lib/format";
 import type { GameView } from "@/lib/state";
@@ -24,12 +22,9 @@ const TAG_LABEL: Record<GameTag, string> = {
   strategy: "전략",
   creative: "창의력",
 };
-const TAG_ORDER: GameTag[] = ["reflex", "memory", "focus", "observe", "calc", "strategy", "creative"];
-
-// 캐치마인드·제목 학원은 점수/순위 없는 소셜 게임이라 ma_games/리더보드에 넣지 않고
-// 목록엔 전용 카드로만 노출한다(자체 라우트 /catchmind · /title). 태그는 창의력.
-const CATCHMIND_TAGS: GameTag[] = ["creative"];
-const TITLE_TAGS: GameTag[] = ["creative"];
+// creative(창의력)는 소셜 게임(캐치마인드·제목 학원) 전용 태그라 하단 '소셜' 탭으로 빠졌다.
+// 여기 기록 게임 목록엔 creative 종목이 없어 필터 칩에서도 제외한다.
+const TAG_ORDER: GameTag[] = ["reflex", "memory", "focus", "observe", "calc", "strategy"];
 
 export default function GamesPage() {
   const { state } = useAppState();
@@ -53,11 +48,7 @@ export default function GamesPage() {
           return [...sel].every((t) => tags.includes(t));
         });
 
-  // 소셜 카드(캐치마인드·제목 학원)는 솔로모드면 숨기고, 필터가 걸리면 창의력만 만족할 때 노출(AND).
-  const showCatchmind = !solo && [...sel].every((t) => CATCHMIND_TAGS.includes(t));
-  const showTitle = !solo && [...sel].every((t) => TITLE_TAGS.includes(t));
-
-  // 진행 중 시즌이 있으면 시즌 종목/자유 종목으로 나눠 보여준다(캐치마인드는 항상 자유 종목).
+  // 진행 중 시즌이 있으면 시즌 종목/자유 종목으로 나눠 보여준다.
   const hasSeason = !!state.season;
   const seasonGames = games.filter((g) => g.inSeason);
   const freeGames = games.filter((g) => !g.inSeason);
@@ -123,64 +114,6 @@ export default function GamesPage() {
     );
   };
 
-  const catchmindCard = showCatchmind ? (
-    <Link href="/catchmind">
-      <Card className="flex flex-col gap-3 transition-colors hover:border-grass/40">
-        <div className="flex items-start gap-3">
-          <span className="shrink-0">
-            <CatchmindIcon size={44} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <h2 className="font-display text-xl text-ink">캐치마인드</h2>
-              {CATCHMIND_TAGS.map((t) => (
-                <span key={t} className="text-[11px] font-medium text-grass/70">
-                  #{TAG_LABEL[t]}
-                </span>
-              ))}
-            </div>
-            <p className="mt-0.5 text-xs text-ink-faint">그림을 그려 내고, 남의 그림을 맞혀요.</p>
-          </div>
-          <span className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-grass/15 px-4 text-sm font-medium text-grass">
-            플레이 →
-          </span>
-        </div>
-        <div className="flex items-center justify-end border-t border-pitch-line pt-3 text-xs">
-          <span className="text-ink-dim">그리고 · 맞히고 · 함께 즐겨요</span>
-        </div>
-      </Card>
-    </Link>
-  ) : null;
-
-  const titleCard = showTitle ? (
-    <Link href="/title">
-      <Card className="flex flex-col gap-3 transition-colors hover:border-grass/40">
-        <div className="flex items-start gap-3">
-          <span className="shrink-0">
-            <TitleIcon size={44} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <h2 className="font-display text-xl text-ink">제목 학원</h2>
-              {TITLE_TAGS.map((t) => (
-                <span key={t} className="text-[11px] font-medium text-grass/70">
-                  #{TAG_LABEL[t]}
-                </span>
-              ))}
-            </div>
-            <p className="mt-0.5 text-xs text-ink-faint">사진을 올리고, 재치있는 제목을 달고 투표해요.</p>
-          </div>
-          <span className="flex shrink-0 items-center justify-center self-stretch rounded-lg bg-grass/15 px-4 text-sm font-medium text-grass">
-            플레이 →
-          </span>
-        </div>
-        <div className="flex items-center justify-end border-t border-pitch-line pt-3 text-xs">
-          <span className="text-ink-dim">올리고 · 제목 달고 · 투표해요</span>
-        </div>
-      </Card>
-    </Link>
-  ) : null;
-
   return (
     <div className="flex flex-col gap-4">
       <div className="pt-1">
@@ -217,7 +150,7 @@ export default function GamesPage() {
 
       {state.games.length === 0 ? (
         <Card className="py-10 text-center text-sm text-ink-dim">아직 열린 게임이 없어요.</Card>
-      ) : games.length === 0 && !showCatchmind && !showTitle ? (
+      ) : games.length === 0 ? (
         <Card className="py-10 text-center text-sm text-ink-dim">
           선택한 태그를 모두 가진 게임이 없어요.
         </Card>
@@ -244,8 +177,8 @@ export default function GamesPage() {
             </>
           )}
 
-          {/* 자유 종목 — 올타임(시즌 점수 미반영) + 소셜(캐치마인드·제목 학원) */}
-          {(freeGames.length > 0 || catchmindCard || titleCard) && (
+          {/* 자유 종목 — 올타임(시즌 점수 미반영) */}
+          {freeGames.length > 0 && (
             <>
               <div className="pt-1">
                 <h2 className="font-display text-sm text-ink-dim">자유 종목</h2>
@@ -253,18 +186,12 @@ export default function GamesPage() {
                   올타임 기록으로 즐겨요. 이번 시즌 점수엔 안 들어가요.
                 </p>
               </div>
-              {catchmindCard}
-              {titleCard}
               {freeGames.map(renderGame)}
             </>
           )}
         </>
       ) : (
-        <>
-          {catchmindCard}
-          {titleCard}
-          {games.map(renderGame)}
-        </>
+        games.map(renderGame)
       )}
     </div>
   );
