@@ -26,6 +26,9 @@ export type EarnCond =
   | { kind: "cmAuthored"; count: number } // 캐치마인드 출제 수
   | { kind: "cmSolved"; count: number } // 캐치마인드 정답 수
   | { kind: "cmAuthorSolves"; count: number } // 내 문제가 맞혀진 횟수
+  | { kind: "ttPhotos"; count: number } // 제목 학원 사진 업로드 수
+  | { kind: "ttTitled"; count: number } // 제목 학원 제목 작성 수
+  | { kind: "ttVotesReceived"; count: number } // 내 제목이 받은 총 득표
   | { kind: "likesReceived"; count: number } // 게시판에서 받은 좋아요 수
   | { kind: "boardActivity"; count: number }; // 게시판 글+댓글 수
 
@@ -79,6 +82,10 @@ const EARNED: [string, string, string, string, EarnCond][] = [
   ["painter", "🎨", "화가", "캐치마인드 문제 10개 출제", { kind: "cmAuthored", count: 10 }],
   ["sharp", "🧠", "눈썰미", "캐치마인드 정답 30개", { kind: "cmSolved", count: 30 }],
   ["handy", "🖌️", "손재주", "내가 낸 문제가 30번 맞혀짐", { kind: "cmAuthorSolves", count: 30 }],
+  // 제목 학원형(소셜 — 순위 아닌 참여 개수)
+  ["ttphoto", "📸", "사진작가", "제목 학원에 사진 10장 올리기", { kind: "ttPhotos", count: 10 }],
+  ["ttname", "🏷️", "작명가", "제목 학원에서 제목 20개 달기", { kind: "ttTitled", count: 20 }],
+  ["ttstar", "💡", "인기 제목", "내 제목이 총 30표 받기", { kind: "ttVotesReceived", count: 30 }],
   // 활동형
   ["popular", "❤️", "인기왕", "게시판에서 좋아요 5개 받기", { kind: "likesReceived", count: 5 }],
   ["chatty", "💬", "수다쟁이", "게시판 글·댓글 8개 작성", { kind: "boardActivity", count: 8 }],

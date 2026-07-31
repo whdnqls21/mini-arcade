@@ -269,6 +269,9 @@ export interface AccountStats {
   cmAuthored: number; // 캐치마인드 출제 수
   cmSolved: number; // 캐치마인드 정답 수
   cmAuthorSolves: number; // 내 문제가 맞혀진 횟수
+  ttPhotos: number; // 제목 학원 사진 업로드 수
+  ttTitled: number; // 제목 학원 제목 작성 수
+  ttVotesReceived: number; // 내 제목이 받은 총 득표
   likesReceived: number; // 게시판에서 받은 좋아요 수
   boardActivity: number; // 게시판 글+댓글 수
 }
@@ -276,6 +279,9 @@ const EMPTY_STATS: AccountStats = {
   cmAuthored: 0,
   cmSolved: 0,
   cmAuthorSolves: 0,
+  ttPhotos: 0,
+  ttTitled: 0,
+  ttVotesReceived: 0,
   likesReceived: 0,
   boardActivity: 0,
 };
@@ -283,16 +289,22 @@ const EMPTY_STATS: AccountStats = {
 // 한 계정의 활동 집계. 테이블이 없거나 오류면 그 항목만 0(조용히).
 export async function computeAccountStats(sb: SupabaseClient, accountId: string): Promise<AccountStats> {
   const head = { count: "exact" as const, head: true };
-  const [authored, solved, authorSolved, myPosts, myComments] = await Promise.all([
+  const [authored, solved, authorSolved, ttPhotos, myTitles, myPosts, myComments] = await Promise.all([
     sb.from("ma_cm_quizzes").select("id", head).eq("author_id", accountId).eq("is_deleted", false),
     sb.from("ma_cm_attempts").select("id", head).eq("user_id", accountId).eq("is_correct", true),
     sb.from("ma_cm_point_logs").select("id", head).eq("user_id", accountId).eq("reason", "author_solved"),
+    sb.from("ma_tt_photos").select("id", head).eq("author_id", accountId).eq("is_deleted", false),
+    sb.from("ma_tt_titles").select("id").eq("author_id", accountId),
     sb.from("ma_posts").select("id").eq("account_id", accountId),
     sb.from("ma_post_comments").select("id").eq("account_id", accountId),
   ]);
+  const titleIds = ((myTitles.data ?? []) as { id: string }[]).map((r) => r.id);
   const postIds = ((myPosts.data ?? []) as { id: string }[]).map((r) => r.id);
   const commentIds = ((myComments.data ?? []) as { id: string }[]).map((r) => r.id);
-  const [postLikes, commentLikes] = await Promise.all([
+  const [ttVotes, postLikes, commentLikes] = await Promise.all([
+    titleIds.length
+      ? sb.from("ma_tt_votes").select("photo_id", head).in("title_id", titleIds)
+      : Promise.resolve({ count: 0 }),
     postIds.length
       ? sb.from("ma_post_votes").select("post_id", head).in("post_id", postIds)
       : Promise.resolve({ count: 0 }),
@@ -304,6 +316,9 @@ export async function computeAccountStats(sb: SupabaseClient, accountId: string)
     cmAuthored: authored.count ?? 0,
     cmSolved: solved.count ?? 0,
     cmAuthorSolves: authorSolved.count ?? 0,
+    ttPhotos: ttPhotos.count ?? 0,
+    ttTitled: titleIds.length,
+    ttVotesReceived: ttVotes.count ?? 0,
     likesReceived: (postLikes.count ?? 0) + (commentLikes.count ?? 0),
     boardActivity: postIds.length + commentIds.length,
   };
@@ -384,6 +399,15 @@ export function eligibleIcons(input: {
         break;
       case "cmAuthorSolves":
         ok = stats.cmAuthorSolves >= cond.count;
+        break;
+      case "ttPhotos":
+        ok = stats.ttPhotos >= cond.count;
+        break;
+      case "ttTitled":
+        ok = stats.ttTitled >= cond.count;
+        break;
+      case "ttVotesReceived":
+        ok = stats.ttVotesReceived >= cond.count;
         break;
       case "likesReceived":
         ok = stats.likesReceived >= cond.count;
