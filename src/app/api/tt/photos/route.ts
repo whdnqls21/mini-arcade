@@ -45,8 +45,9 @@ export async function POST(req: NextRequest) {
   const up = await uploadPhoto(sb, path, decoded.buffer, decoded.contentType);
   if (up.error) {
     console.error("사진 업로드 실패", up.error);
+    // Supabase 원본 메시지를 그대로 노출해 원인 파악을 돕는다(예: "Bucket not found").
     return NextResponse.json(
-      { error: "사진 업로드에 실패했어요. Storage 버킷(title-photos) 설정을 확인하세요." },
+      { error: `사진 업로드 실패: ${up.error} — Storage 버킷 'title-photos'(Public)가 있는지 확인하세요.` },
       { status: 500 }
     );
   }
