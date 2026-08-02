@@ -193,6 +193,8 @@ function Gallery({ onUpload }: { onUpload: () => void }) {
   const [photos, setPhotos] = useState<TtPhoto[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  const [sel, setSel] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     try {
       const d = await api<{ items: TtPhoto[] }>("/api/tt/photos");
@@ -206,6 +208,23 @@ function Gallery({ onUpload }: { onUpload: () => void }) {
     load();
   }, [load]);
 
+  if (err) return <Card className="py-8 text-center text-sm text-danger">{err}</Card>;
+  if (!photos) return <Spinner />;
+
+  // ── 상세 — 사진 하나를 눌러 들어온 화면(제목 달기·투표·댓글) ──
+  const selected = sel ? photos.find((p) => p.photoId === sel) ?? null : null;
+  if (selected) {
+    return (
+      <div className="flex flex-col gap-3">
+        <button onClick={() => setSel(null)} className="self-start text-sm text-ink-dim hover:text-ink">
+          ← 갤러리
+        </button>
+        <PhotoCard photo={selected} onChanged={load} />
+      </div>
+    );
+  }
+
+  // ── 그리드 — 액자형 썸네일(캐치마인드 갤러리와 동일) ──
   return (
     <div className="flex flex-col gap-4">
       <button
@@ -214,17 +233,50 @@ function Gallery({ onUpload }: { onUpload: () => void }) {
       >
         📷 사진 올리기
       </button>
-      {err && <Card className="py-8 text-center text-sm text-danger">{err}</Card>}
-      {!photos && !err && <Spinner />}
-      {photos && photos.length === 0 && (
+      {photos.length === 0 ? (
         <Card className="py-10 text-center text-sm text-ink-dim">
           아직 올라온 사진이 없어요.
           <br />첫 사진을 올려 제목 대결을 시작해 보세요!
         </Card>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {photos.map((p) => (
+            <button
+              key={p.photoId}
+              onClick={() => setSel(p.photoId)}
+              className="flex flex-col gap-1.5 rounded-xl border border-pitch-line bg-pitch-card p-2 transition-colors hover:border-grass/40"
+            >
+              <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.imageUrl}
+                  alt="사진"
+                  className="w-full rounded-lg border border-pitch-line object-cover"
+                  style={{ aspectRatio: "1 / 1" }}
+                />
+                {p.mine && (
+                  <span className="absolute left-1 top-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[10px] text-gold">
+                    내 사진
+                  </span>
+                )}
+                {p.comments.length > 0 && (
+                  <span className="absolute bottom-1 left-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-ink-dim">
+                    💬 {p.comments.length}
+                  </span>
+                )}
+                {p.topTitle && (
+                  <span className="absolute bottom-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-gold">
+                    🏆 {p.topTitle.votes}
+                  </span>
+                )}
+              </div>
+              <span className="truncate text-center text-xs text-ink-dim">
+                {p.topTitle ? p.topTitle.body : p.titles.length ? `제목 ${p.titles.length}개` : "제목 없음"}
+              </span>
+            </button>
+          ))}
+        </div>
       )}
-      {photos?.map((p) => (
-        <PhotoCard key={p.photoId} photo={p} onChanged={load} />
-      ))}
     </div>
   );
 }
