@@ -8,7 +8,7 @@ import { IconBadge } from "@/components/IconBadge";
 import { TitleTag } from "@/components/TitleTag";
 import { useAppState } from "@/components/StateProvider";
 import { GAME_REGISTRY } from "@/games/registry";
-import { formatScore } from "@/lib/format";
+import { ddayLabel, formatScore } from "@/lib/format";
 import type { GameView } from "@/lib/state";
 import type { GameTag } from "@/games/types";
 
@@ -198,10 +198,5 @@ export default function GamesPage() {
 }
 
 function dday(endIso: string): string {
-  const end = new Date(endIso).getTime();
-  if (Number.isNaN(end)) return "";
-  const diff = Math.ceil((end - Date.now()) / (24 * 60 * 60 * 1000));
-  if (diff > 0) return `D-${diff}`;
-  if (diff === 0) return "D-day";
-  return "마감 임박";
+  return ddayLabel(endIso);
 }

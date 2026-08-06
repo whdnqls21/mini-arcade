@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { IconBadge } from "@/components/IconBadge";
 import { Modal } from "@/components/Modal";
 import { useAppState } from "@/components/StateProvider";
+import { ddayLabel } from "@/lib/format";
 
 // 시즌 시작 축하 — 새 활성 시즌이 열리면 앱 열 때 딱 한 번 모달(종목·기간 + 지난 MVP 도전).
 // 사용자·시즌별 localStorage 플래그로 한 번만 노출. 종료 축하와 겹치지 않게 순서를 양보한다.
@@ -113,10 +114,5 @@ function fmt(iso: string): string {
   return `${d.getMonth() + 1}. ${d.getDate()}.`;
 }
 function dday(endIso: string): string {
-  const end = new Date(endIso).getTime();
-  if (Number.isNaN(end)) return "";
-  const diff = Math.ceil((end - Date.now()) / (24 * 60 * 60 * 1000));
-  if (diff > 0) return `D-${diff}`;
-  if (diff === 0) return "D-day";
-  return "마감 임박";
+  return ddayLabel(endIso);
 }

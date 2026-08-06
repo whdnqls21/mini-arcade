@@ -34,3 +34,17 @@ export function timeAgo(iso: string): string {
   const d = new Date(iso);
   return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}.`;
 }
+
+// D-day 표기 — 시각이 아니라 '달력 날짜'로 센다. 종료일이 오늘이면 D-day,
+// 내일이면 D-1. 지난 뒤 문구는 past()로 바꿀 수 있다(기본 "마감 임박").
+export function ddayLabel(endIso: string, opts?: { past?: (daysAgo: number) => string }): string {
+  const end = new Date(endIso);
+  if (Number.isNaN(end.getTime())) return "";
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+  const diff = Math.round((endDay - startOfToday) / (24 * 60 * 60 * 1000));
+  if (diff > 0) return `D-${diff}`;
+  if (diff === 0) return "D-day";
+  return opts?.past ? opts.past(-diff) : "마감 임박";
+}

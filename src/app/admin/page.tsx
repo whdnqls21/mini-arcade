@@ -9,6 +9,7 @@ import { Modal } from "@/components/Modal";
 import { AdminBoard } from "@/components/board/AdminBoard";
 import { GAME_REGISTRY } from "@/games/registry";
 import { postJSON } from "@/lib/client-api";
+import { ddayLabel } from "@/lib/format";
 import type { AdminState } from "@/lib/state";
 import type { PostCategory } from "@/lib/types";
 
@@ -815,12 +816,7 @@ function toLocalInput(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 function ddayText(endIso: string): string {
-  const end = new Date(endIso).getTime();
-  if (Number.isNaN(end)) return "";
-  const diff = Math.ceil((end - Date.now()) / (24 * 60 * 60 * 1000));
-  if (diff > 0) return `D-${diff}`;
-  if (diff === 0) return "D-day";
-  return `${-diff}일 지남`;
+  return ddayLabel(endIso, { past: (n) => `${n}일 지남` });
 }
 
 // 베타 게임 테스트 — 아직 공개 전인 게임을 관리자만 여기서 플레이해 확인한다(기록 저장 안 함).
