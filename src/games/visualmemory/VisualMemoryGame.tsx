@@ -34,9 +34,11 @@ export default function VisualMemoryGame({ onGameOver, bestScore, submitting }: 
   const [found, setFound] = useState<Set<number>>(new Set());
   const [wrong, setWrong] = useState<number | null>(null);
   const [lives, setLives] = useState(LIVES);
+  const [points, setPoints] = useState(0);
 
   const livesRef = useRef(LIVES);
   const levelRef = useRef(1);
+  const pointsRef = useRef(0);
   const reported = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrongTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,7 +69,9 @@ export default function VisualMemoryGame({ onGameOver, bestScore, submitting }: 
   const start = useCallback(() => {
     reported.current = false;
     livesRef.current = LIVES;
+    pointsRef.current = 0;
     setLives(LIVES);
+    setPoints(0);
     startLevel(1);
   }, [startLevel]);
 
@@ -77,7 +81,7 @@ export default function VisualMemoryGame({ onGameOver, bestScore, submitting }: 
     clearTimers();
     setPhase("done");
     tone({ freq: 120, type: "sawtooth", gain: 0.1, dur: 0.3 });
-    onGameOver(levelRef.current - 1, { game: "visualmemory" }); // 클리어한 레벨 수
+    onGameOver(pointsRef.current, { game: "visualmemory" }); // 깊이 가중 점수
   }, [onGameOver]);
 
   function tap(i: number) {
@@ -87,7 +91,9 @@ export default function VisualMemoryGame({ onGameOver, bestScore, submitting }: 
       setFound(nf);
       tone({ freq: 620, type: "triangle", gain: 0.1, dur: 0.06 });
       if (nf.size === targets.size) {
-        // 이번 레벨 클리어 → 다음.
+        // 이번 레벨 클리어 → 깊이 가중 점수(레벨×10) 적립 후 다음.
+        pointsRef.current += levelRef.current * 10;
+        setPoints(pointsRef.current);
         sequence([{ freq: 523, dur: 0.09, type: "triangle", gain: 0.14 }, { freq: 784, dur: 0.12, type: "triangle", gain: 0.15 }], 0.06);
         timer.current = setTimeout(() => startLevel(levelRef.current + 1), 480);
       }
@@ -116,7 +122,7 @@ export default function VisualMemoryGame({ onGameOver, bestScore, submitting }: 
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-2">
-          <Stat label="레벨" value={String(level)} width="4rem" accent />
+          <Stat label="점수" value={String(points)} width="4.5rem" accent />
           <Stat label="베스트" value={bestScore != null ? String(bestScore) : "-"} width="4.5rem" />
         </div>
         <div className="flex items-center gap-1 text-lg" aria-label={`라이프 ${lives}`}>
@@ -173,15 +179,20 @@ export default function VisualMemoryGame({ onGameOver, bestScore, submitting }: 
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/80">
             <p className="font-display text-2xl text-ink">게임 끝!</p>
             <p className="text-sm text-ink-dim">
-              <span className="tabular text-gold">{Math.max(0, level - 1)}</span>레벨 클리어
+              점수 <span className="tabular text-gold">{points}</span>
             </p>
+            <p className="text-xs text-ink-faint">{Math.max(0, level - 1)}레벨 클리어</p>
             <RetryButton submitting={submitting} onRetry={start} />
           </div>
         )}
       </div>
 
       <p className="text-center text-xs text-ink-faint">
-        {phase === "show" ? "잘 보세요…" : phase === "input" ? `켜졌던 ${targets.size}칸을 찾으세요 (${found.size}/${targets.size})` : ""}
+        {phase === "show"
+          ? `레벨 ${level} · 잘 보세요…`
+          : phase === "input"
+            ? `레벨 ${level} · 켜졌던 ${targets.size}칸 (${found.size}/${targets.size})`
+            : ""}
       </p>
     </div>
   );
