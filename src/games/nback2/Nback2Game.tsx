@@ -129,7 +129,7 @@ export default function Nback2Game({ onGameOver, bestScore, submitting }: GamePl
         <span className="ml-auto text-xs text-ink-faint">두 개 전과 같으면 일치!</span>
       </div>
 
-      <div className="relative mx-auto flex aspect-square w-full max-w-[18rem] items-center justify-center rounded-2xl bg-black/25">
+      <div className="relative mx-auto flex aspect-square w-full max-w-[22rem] items-center justify-center rounded-2xl bg-black/25">
         <span className="select-none text-7xl">{phase === "playing" && !blank && current != null ? SYMBOLS[current] : ""}</span>
 
         {phase === "ready" && (
