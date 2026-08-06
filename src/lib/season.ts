@@ -33,14 +33,70 @@ async function fetchActiveRow(sb: SupabaseClient, runningOnly: boolean): Promise
 
 // 현재 '진행 중'인 시즌(status active + 시작 시각 도래). 유저 화면·기록 부착용.
 // 시작 일시가 미래인 '예정' 시즌은 아직 진행 중이 아니므로 null(오프시즌 취급).
-// NOTE: 종료일(ends_at)이 지나도 자동 종료하지 않는다 — 관리자가 '지금 종료'를 누를 때까지 유지.
-export function fetchActiveSeason(sb: SupabaseClient): Promise<Season | null> {
-  return fetchActiveRow(sb, true);
+// 종료일(ends_at)이 지난 시즌은 여기서 자동 마감한다 — 스케줄러가 없으므로,
+// 종료 후 앱을 여는(또는 점수를 내는) 첫 요청이 마감을 대신 실행하는 lazy 방식.
+export async function fetchActiveSeason(sb: SupabaseClient): Promise<Season | null> {
+  const s = await fetchActiveRow(sb, true);
+  if (!s) return null;
+  if (new Date(s.ends_at).getTime() <= Date.now()) {
+    await closeSeasonIfExpired(sb, s);
+    return null; // 방금 마감됨 → 오프시즌
+  }
+  return s;
 }
 
 // status='active' 인 시즌(시작 전 '예정' 포함). 관리자 종료/취소·중복 검사용.
 export function fetchScheduledOrActiveSeason(sb: SupabaseClient): Promise<Season | null> {
   return fetchActiveRow(sb, false);
+}
+
+// 종료일이 지난 '진행 중' 시즌이 있으면 자동 마감. 어디서 불러도 안전(만료 안 됐으면 no-op).
+// 관리자 화면 등 fetchActiveSeason 을 거치지 않는 경로에서 자가 치유용으로 호출한다.
+export async function autoCloseExpiredSeason(sb: SupabaseClient): Promise<void> {
+  const s = await fetchActiveRow(sb, true);
+  if (s && new Date(s.ends_at).getTime() <= Date.now()) {
+    await closeSeasonIfExpired(sb, s);
+  }
+}
+
+// 종료 시각이 지난 시즌을 마감한다. 동시 요청 안전 — status active→closed 를 원자적으로
+// 선점(조건부 update)해 '이긴' 요청만 스냅샷/보상을 기록한다(중복 스냅샷 방지).
+export async function closeSeasonIfExpired(sb: SupabaseClient, season: Season): Promise<void> {
+  if (new Date(season.ends_at).getTime() > Date.now()) return; // 아직 종료 전
+  const { data: claimed } = await sb
+    .from("ma_seasons")
+    .update({ status: "closed", closed_at: new Date().toISOString() })
+    .eq("id", season.id)
+    .eq("status", "active")
+    .select("id");
+  if (!claimed || claimed.length === 0) return; // 다른 요청이 이미 닫음
+  await finalizeSeason(sb, season);
+}
+
+// 종료 스냅샷 저장 + 시즌 보상 아이콘 지급(MVP·종목별 1등). 상태 변경은 호출부 책임.
+// 관리자 수동 종료(seasonEnd)와 동일한 결과를 남긴다.
+export async function finalizeSeason(sb: SupabaseClient, season: Season): Promise<void> {
+  const { rows, mvpAccountId } = await computeSeasonSnapshot(sb, season);
+  if (rows.length > 0) {
+    const { error } = await sb.from("ma_season_results").insert(rows);
+    if (error) {
+      console.error("시즌 자동 마감 스냅샷 저장 실패", error);
+      return; // 결과 테이블이 없으면 보상도 건너뜀(이미 닫힌 상태는 유지)
+    }
+  }
+  const grants: { account_id: string; icon_key: string }[] = [];
+  if (mvpAccountId) grants.push({ account_id: mvpAccountId, icon_key: "season_mvp" });
+  for (const r of rows) {
+    if (r.category === "champion" && r.account_id && r.game_slug) {
+      grants.push({ account_id: r.account_id, icon_key: `schamp:${r.game_slug}` });
+    }
+  }
+  if (grants.length > 0) {
+    const { error } = await sb
+      .from("ma_account_icons")
+      .upsert(grants, { onConflict: "account_id,icon_key", ignoreDuplicates: true });
+    if (error) console.error("시즌 보상 아이콘 지급 실패(무시)", error);
+  }
 }
 
 // ── 시즌 종료 스냅샷(F1 MVP + 종목별 1등) ────────────────────────────

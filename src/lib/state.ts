@@ -4,7 +4,7 @@ import { getAccountSession, isAdmin } from "./auth";
 import { drawingUrl } from "./catchmind/server";
 import { photoUrl } from "./title/server";
 import { EARN_COND } from "./icons";
-import { F1_POINTS, fetchActiveSeason } from "./season";
+import { F1_POINTS, autoCloseExpiredSeason, fetchActiveSeason } from "./season";
 import { createServiceClient } from "./supabase/server";
 import type { Account, Game, Score, Scoring } from "./types";
 
@@ -892,6 +892,8 @@ async function buildHiddenPhotos(
 
 export async function buildAdminState(): Promise<AdminState> {
   const sb = createServiceClient();
+  // 종료일이 지난 시즌은 관리자 화면을 열 때도 자동 마감(스케줄러 없음 → lazy).
+  await autoCloseExpiredSeason(sb);
   const [setRes, aRes, agg, gRes, sRes] = await Promise.all([
     sb.from("ma_settings").select("admin_pin_hash").eq("id", 1).maybeSingle(),
     sb.from("ma_accounts").select("id,name,active,created_at").order("created_at"),
