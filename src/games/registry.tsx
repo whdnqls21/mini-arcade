@@ -17,6 +17,7 @@ import { StroopIcon } from "./stroop/StroopIcon";
 import { MathSprintIcon } from "./mathsprint/MathSprintIcon";
 import { VisualMemoryIcon } from "./visualmemory/VisualMemoryIcon";
 import { FifteenIcon } from "./fifteen/FifteenIcon";
+import { Nback2Icon } from "./nback2/Nback2Icon";
 
 // 수박게임은 물리 엔진(matter.js)을 쓰므로 별도 청크로 분리하고 SSR 을 끈다.
 // 캔버스/AudioContext 는 브라우저에서만 의미가 있어 서버 렌더링할 이유가 없다.
@@ -60,6 +61,7 @@ const MathSprintGame = dynamic(() => import("./mathsprint/MathSprintGame"), { ss
 // 위치 기억·슬라이드 퍼즐 — 랜덤/타이머 기반이라 SSR 을 끈다.
 const VisualMemoryGame = dynamic(() => import("./visualmemory/VisualMemoryGame"), { ssr: false, loading: spinner });
 const FifteenGame = dynamic(() => import("./fifteen/FifteenGame"), { ssr: false, loading: spinner });
+const Nback2Game = dynamic(() => import("./nback2/Nback2Game"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -253,6 +255,20 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "종료", text: "시작을 누른 순간부터 45초. 시간이 다 되면 점수가 기록됩니다." },
       ],
       tip: "곱셈은 가까운 10의 배수로 쪼개면 빨라요. 예: 7×8 = 7×10 − 7×2.",
+    },
+  },
+  nback2: {
+    Play: Nback2Game,
+    Icon: Nback2Icon,
+    tags: ["memory", "focus"],
+    info: {
+      rows: [
+        { label: "목표", text: "그림이 하나씩 지나가요. 지금 그림이 '두 개 전'에 나온 그림과 같으면 '일치'를 누르세요." },
+        { label: "조작", text: "같다고 확신할 때만 일치 버튼을 탭. 안 누르면 '아니다'로 처리돼요." },
+        { label: "규칙", text: "머릿속으로 항상 최근 두 개를 굴려야 해요. 처음 두 개는 비교 대상이 없어 점수에 안 들어가요." },
+        { label: "점수", text: "맞게 잡은 일치 수에서 헛누름을 뺀 값이 점수(찍기 방지). 높을수록 상위!" },
+      ],
+      tip: "'지금 = 두 칸 전?'만 계속 되뇌세요. 소리 내어 최근 두 개를 읊으면 덜 헷갈립니다.",
     },
   },
   visualmemory: {
