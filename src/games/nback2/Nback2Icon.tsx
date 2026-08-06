@@ -1,4 +1,4 @@
-// 2-백 아이콘 — 흐름 속의 '두 칸 전' 되짚기.
+// 2-Back 아이콘 — 흐름 속의 '두 칸 전' 되짚기.
 export function Nback2Icon({ size = 40 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden>

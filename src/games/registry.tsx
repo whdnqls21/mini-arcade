@@ -58,7 +58,7 @@ const OddColorGame = dynamic(() => import("./oddcolor/OddColorGame"), { ssr: fal
 const StroopGame = dynamic(() => import("./stroop/StroopGame"), { ssr: false, loading: spinner });
 const MathSprintGame = dynamic(() => import("./mathsprint/MathSprintGame"), { ssr: false, loading: spinner });
 
-// 위치 기억·슬라이드 퍼즐 — 랜덤/타이머 기반이라 SSR 을 끈다.
+// 플래시 메모리·슬라이드 퍼즐·2-Back — 랜덤/타이머 기반이라 SSR 을 끈다.
 const VisualMemoryGame = dynamic(() => import("./visualmemory/VisualMemoryGame"), { ssr: false, loading: spinner });
 const FifteenGame = dynamic(() => import("./fifteen/FifteenGame"), { ssr: false, loading: spinner });
 const Nback2Game = dynamic(() => import("./nback2/Nback2Game"), { ssr: false, loading: spinner });

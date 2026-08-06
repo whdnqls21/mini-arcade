@@ -1,4 +1,4 @@
-// 위치 기억 아이콘 — 격자에서 켜진 칸.
+// 플래시 메모리 아이콘 — 격자에서 켜진 칸.
 export function VisualMemoryIcon({ size = 40 }: { size?: number }) {
   const cells = [
     [8, 8, false], [19, 8, true], [30, 8, false],

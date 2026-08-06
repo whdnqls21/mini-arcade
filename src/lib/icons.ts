@@ -70,9 +70,9 @@ const EARNED: [string, string, string, string, EarnCond][] = [
   ["champ:oddcolor", "🔎", "색 감별왕", "Kuku Kube 1위 달성", { kind: "champion", slug: "oddcolor" }],
   ["champ:stroop", "🖍️", "스트룹 마스터", "스트룹 1위 달성", { kind: "champion", slug: "stroop" }],
   ["champ:mathsprint", "🧮", "암산왕", "암산 스프린트 1위 달성", { kind: "champion", slug: "mathsprint" }],
-  ["champ:visualmemory", "🗺️", "위치 기억왕", "위치 기억 1위 달성", { kind: "champion", slug: "visualmemory" }],
+  ["champ:visualmemory", "🔆", "플래시 마스터", "플래시 메모리 1위 달성", { kind: "champion", slug: "visualmemory" }],
   ["champ:fifteen", "🔀", "슬라이드 마스터", "슬라이드 퍼즐 1위 달성", { kind: "champion", slug: "fifteen" }],
-  ["champ:nback2", "🔁", "2-백 마스터", "2-백 1위 달성", { kind: "champion", slug: "nback2" }],
+  ["champ:nback2", "🔁", "2-Back 마스터", "2-Back 1위 달성", { kind: "champion", slug: "nback2" }],
   ["goat", "🐐", "GOAT", "모든 게임 1위 석권", { kind: "goat" }],
   ["play100", "🔥", "열정", "누적 100판 플레이", { kind: "plays", count: 100 }],
   // 실력/등급형
@@ -118,9 +118,9 @@ const SEASON_CHAMP: [string, string, string][] = [
   ["schamp:oddcolor", "🔎", "시즌 색 감별왕"],
   ["schamp:stroop", "🖍️", "시즌 스트룹 마스터"],
   ["schamp:mathsprint", "🧮", "시즌 암산왕"],
-  ["schamp:visualmemory", "🗺️", "시즌 위치 기억왕"],
+  ["schamp:visualmemory", "🔆", "시즌 플래시 마스터"],
   ["schamp:fifteen", "🔀", "시즌 슬라이드 마스터"],
-  ["schamp:nback2", "🔁", "시즌 2-백 마스터"],
+  ["schamp:nback2", "🔁", "시즌 2-Back 마스터"],
 ];
 
 export const BASIC_ICONS: IconDef[] = BASIC.map(([key, emoji, label]) => ({

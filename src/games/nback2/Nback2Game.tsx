@@ -134,7 +134,7 @@ export default function Nback2Game({ onGameOver, bestScore, submitting }: GamePl
 
         {phase === "ready" && (
           <StartGate
-            title="2-백"
+            title="2-Back"
             lines={["그림이 하나씩 나와요.", "지금 그림이 '두 개 전'과 같으면 일치 버튼!", "헛누르면 감점 — 확실할 때만."]}
             onStart={start}
           />

@@ -6,7 +6,7 @@ import { RetryButton, StartGate } from "@/games/shared";
 import type { GamePlayProps } from "@/games/types";
 import { sequence, tone } from "@/games/sound";
 
-// 위치 기억 — 잠깐 켜진 칸들을 기억해 그대로 탭. 레벨마다 칸 수·격자가 커지고, 라이프 3개.
+// 플래시 메모리 — 잠깐 켜진 칸들을 기억해 그대로 탭. 레벨마다 칸 수·격자가 커지고, 라이프 3개.
 // 폭(span)이 아니라 '면적'이 커져서 점수가 넓게 퍼진다.
 type Phase = "ready" | "show" | "input" | "done";
 const LIVES = 3;
@@ -169,7 +169,7 @@ export default function VisualMemoryGame({ onGameOver, bestScore, submitting }: 
 
         {phase === "ready" && (
           <StartGate
-            title="위치 기억"
+            title="플래시 메모리"
             lines={["잠깐 켜지는 칸들을 기억해요.", "꺼지면 그 칸들을 모두 탭!", "틀리면 한 번 더 보여줘요. 실수 3번이면 끝."]}
             onStart={start}
           />
