@@ -7,14 +7,16 @@ import type { GamePlayProps } from "@/games/types";
 import { sequence, tone } from "@/games/sound";
 
 // 2-back — 가운데 그림이 '두 개 전' 그림과 같으면 '일치'. 찍기 방지: 헛누름은 감점.
-// 점수 = 잡은 일치(hit) − 헛누름(false alarm), 0 미만은 0.
+// 점수 = 잡은 일치 ×10 − 헛누름 ×5, 0 미만은 0.
 type Phase = "ready" | "playing" | "done";
 
 const SYMBOLS = ["🍎", "🍋", "🍇", "🥝", "🍑", "🫐"];
 const TRIALS = 36;
 const SHOW_MS = 1500; // 그림 보이는 시간
-const TRIAL_MS = 2300; // 한 판(그림 + 빈 순간)
+const TRIAL_MS = 2500; // 한 판(그림 + 빈 순간)
 const TARGET_PROB = 0.32;
+const HIT_PTS = 10;
+const FA_PTS = 5;
 
 function genSeq(): number[] {
   const s: number[] = [];
@@ -57,7 +59,7 @@ export default function Nback2Game({ onGameOver, bestScore, submitting }: GamePl
     reported.current = true;
     clearTimers();
     const targets = seqRef.current.filter((v, i) => i >= 2 && v === seqRef.current[i - 2]).length;
-    const score = Math.max(0, hitsRef.current - faRef.current);
+    const score = Math.max(0, hitsRef.current * HIT_PTS - faRef.current * FA_PTS);
     setResult({ hits: hitsRef.current, targets, fa: faRef.current, score });
     setPhase("done");
     sequence(
