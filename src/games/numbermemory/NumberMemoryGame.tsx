@@ -20,6 +20,7 @@ export default function NumberMemoryGame({ onGameOver, bestScore, submitting }: 
   const [phase, setPhase] = useState<Phase>("ready");
   const [level, setLevel] = useState(START_LEVEL);
   const [num, setNum] = useState("");
+  const [revealIdx, setRevealIdx] = useState(-1); // show 단계에서 지금 보이는 자리(-1=빈 순간)
   const [entry, setEntry] = useState("");
   const [score, setScore] = useState(0);
   const [answer, setAnswer] = useState<string | null>(null);
@@ -35,17 +36,36 @@ export default function NumberMemoryGame({ onGameOver, bestScore, submitting }: 
   };
   useEffect(() => () => clearTimer(), []);
 
-  const showRound = useCallback((lv: number) => {
-    const n = genNumber(lv);
-    numRef.current = n;
-    setNum(n);
-    setEntry("");
-    setLevel(lv);
-    setPhase("show");
-    tone({ freq: 440, type: "sine", gain: 0.08, dur: 0.08 });
-    clearTimer();
-    timer.current = setTimeout(() => setPhase("input"), 900 + lv * 250);
+  // 한 자리씩 순차로 보여준다(다시 훑어보기 불가 → 자릿수 변별력↑). 자릿수가 늘수록 살짝 빨라진다.
+  const revealStep = useCallback((n: string, idx: number, lv: number) => {
+    if (idx >= n.length) {
+      setRevealIdx(-1);
+      setPhase("input");
+      return;
+    }
+    setRevealIdx(idx);
+    tone({ freq: 500, type: "sine", gain: 0.06, dur: 0.05 });
+    const onMs = Math.max(340, 560 - lv * 15);
+    timer.current = setTimeout(() => {
+      setRevealIdx(-1); // 자리 사이 빈 순간(같은 숫자 연속도 구분)
+      timer.current = setTimeout(() => revealStep(n, idx + 1, lv), 130);
+    }, onMs);
   }, []);
+
+  const showRound = useCallback(
+    (lv: number) => {
+      const n = genNumber(lv);
+      numRef.current = n;
+      setNum(n);
+      setEntry("");
+      setLevel(lv);
+      setRevealIdx(-1);
+      setPhase("show");
+      clearTimer();
+      timer.current = setTimeout(() => revealStep(n, 0, lv), 350);
+    },
+    [revealStep]
+  );
 
   const start = useCallback(() => {
     reported.current = false;
@@ -108,7 +128,19 @@ export default function NumberMemoryGame({ onGameOver, bestScore, submitting }: 
 
       <div className="relative flex min-h-[7rem] items-center justify-center rounded-2xl bg-black/25 p-4">
         {phase === "show" ? (
-          <p className="font-display text-4xl tracking-[0.2em] text-ink">{num}</p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="font-display text-5xl text-ink">{revealIdx >= 0 ? num[revealIdx] : " "}</p>
+            <div className="flex gap-1">
+              {Array.from({ length: level }, (_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    i < revealIdx ? "bg-grass" : i === revealIdx ? "bg-gold" : "bg-pitch-line"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
         ) : phase === "input" ? (
           <div className="flex gap-1.5">
             {Array.from({ length: level }, (_, i) => (
@@ -129,7 +161,7 @@ export default function NumberMemoryGame({ onGameOver, bestScore, submitting }: 
         {phase === "ready" && (
           <StartGate
             title="숫자 기억"
-            lines={["잠깐 보이는 숫자를 외워요.", "사라지면 그대로 입력!", "맞힐수록 한 자리씩 늘어나요."]}
+            lines={["숫자가 한 자리씩 스쳐 지나가요.", "순서대로 외웠다가 입력!", "맞힐수록 한 자리씩 늘어나요."]}
             onStart={start}
           />
         )}

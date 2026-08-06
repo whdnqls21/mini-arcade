@@ -1,5 +1,5 @@
-// 15 퍼즐 규칙 엔진(화면과 분리 — 노드로 검증). 0 = 빈칸, 완성 = [1..15, 0].
-export const SIZE = 4;
+// 슬라이드 퍼즐 규칙 엔진(화면과 분리 — 노드로 검증). 0 = 빈칸, 완성 = [1..N²-1, 0].
+export const SIZE = 3;
 export const CELLS = SIZE * SIZE;
 
 export type Board = number[];

@@ -43,16 +43,16 @@ export default function SimonGame({ onGameOver, bestScore, submitting }: GamePla
     (s: number[]) => {
       setPhase("showing");
       clearTimers();
-      const dur = Math.max(260, 560 - s.length * 16);
-      const gap = dur + 170;
+      const dur = Math.max(200, 440 - s.length * 14);
+      const gap = dur + 110;
       s.forEach((pad, i) => {
-        timers.current.push(setTimeout(() => flash(pad, dur), i * gap + 450));
+        timers.current.push(setTimeout(() => flash(pad, dur), i * gap + 350));
       });
       timers.current.push(
         setTimeout(() => {
           inputIdx.current = 0;
           setPhase("input");
-        }, s.length * gap + 450)
+        }, s.length * gap + 350)
       );
     },
     [flash]

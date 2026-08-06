@@ -18,7 +18,7 @@ import type { PostCategory } from "@/lib/types";
 const BETA_GAMES: { slug: string; name: string }[] = [
   { slug: "simon", name: "사이먼" },
   { slug: "numbermemory", name: "숫자 기억" },
-  { slug: "fifteen", name: "15 퍼즐" },
+  { slug: "fifteen", name: "슬라이드 퍼즐" },
 ];
 
 export default function AdminPage() {

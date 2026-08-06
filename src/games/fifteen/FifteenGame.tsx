@@ -106,7 +106,7 @@ export default function FifteenGame({ onGameOver, bestScore, submitting }: GameP
                 key={i}
                 onClick={() => tap(i)}
                 disabled={phase !== "playing"}
-                className="flex touch-none items-center justify-center rounded-lg bg-gradient-to-b from-grass/80 to-grass/60 font-display text-xl text-pitch-base transition-transform active:scale-95 disabled:opacity-90"
+                className="flex touch-none items-center justify-center rounded-lg bg-gradient-to-b from-grass/80 to-grass/60 font-display text-3xl text-pitch-base transition-transform active:scale-95 disabled:opacity-90"
               >
                 {n}
               </button>
@@ -116,8 +116,8 @@ export default function FifteenGame({ onGameOver, bestScore, submitting }: GameP
 
         {phase === "ready" && (
           <StartGate
-            title="15 퍼즐"
-            lines={["1~15를 순서대로 맞춰요.", "빈칸 옆 타일을 눌러 밀어요.", "다 맞추는 데 걸린 시간이 기록!"]}
+            title="슬라이드 퍼즐"
+            lines={["1~8을 순서대로 맞춰요.", "빈칸 옆 타일을 눌러 밀어요.", "다 맞추는 데 걸린 시간이 기록!"]}
             onStart={start}
           />
         )}
