@@ -17,13 +17,16 @@ const PADS = [
 ];
 
 export default function SimonGame({ onGameOver, bestScore, submitting }: GamePlayProps) {
+  const LIVES = 3;
   const [phase, setPhase] = useState<Phase>("ready");
   const [seq, setSeq] = useState<number[]>([]);
   const [lit, setLit] = useState<number | null>(null);
   const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(LIVES);
 
   const inputIdx = useRef(0);
   const scoreRef = useRef(0);
+  const livesRef = useRef(LIVES);
   const reported = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -43,8 +46,8 @@ export default function SimonGame({ onGameOver, bestScore, submitting }: GamePla
     (s: number[]) => {
       setPhase("showing");
       clearTimers();
-      const dur = Math.max(200, 440 - s.length * 14);
-      const gap = dur + 110;
+      const dur = Math.max(170, 460 - s.length * 22);
+      const gap = dur + 90;
       s.forEach((pad, i) => {
         timers.current.push(setTimeout(() => flash(pad, dur), i * gap + 350));
       });
@@ -61,7 +64,9 @@ export default function SimonGame({ onGameOver, bestScore, submitting }: GamePla
   const start = useCallback(() => {
     reported.current = false;
     scoreRef.current = 0;
+    livesRef.current = LIVES;
     setScore(0);
+    setLives(LIVES);
     const first = [Math.floor(Math.random() * 4)];
     setSeq(first);
     playSeq(first);
@@ -96,7 +101,15 @@ export default function SimonGame({ onGameOver, bestScore, submitting }: GamePla
         );
       }
     } else {
-      finish();
+      // 오답 — 라이프 하나 잃고, 남아 있으면 같은 순서를 다시 보여준다(두 번째 기회).
+      tone({ freq: 150, type: "sawtooth", gain: 0.09, dur: 0.16 });
+      livesRef.current -= 1;
+      setLives(livesRef.current);
+      if (livesRef.current <= 0) {
+        finish();
+      } else {
+        timers.current.push(setTimeout(() => playSeq(seq), 720));
+      }
     }
   }
 
@@ -109,9 +122,13 @@ export default function SimonGame({ onGameOver, bestScore, submitting }: GamePla
           <Stat label="라운드" value={String(score)} width="4.5rem" accent />
           <Stat label="베스트" value={bestScore != null ? String(bestScore) : "-"} width="4.5rem" />
         </div>
-        <span className="text-xs text-ink-faint">
-          {phase === "showing" ? "잘 보세요…" : phase === "input" ? "따라 누르세요!" : ""}
-        </span>
+        <div className="flex items-center gap-1 text-lg" aria-label={`라이프 ${lives}`}>
+          {Array.from({ length: LIVES }, (_, i) => (
+            <span key={i} className={i < lives ? "" : "opacity-25 grayscale"}>
+              💚
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="relative mx-auto w-full max-w-[20rem]">
@@ -131,7 +148,7 @@ export default function SimonGame({ onGameOver, bestScore, submitting }: GamePla
         {phase === "ready" && (
           <StartGate
             title="사이먼"
-            lines={["색이 반짝이는 순서를 기억해요.", "그대로 따라 누르면 다음 라운드!", "순서가 점점 길어져요."]}
+            lines={["색이 반짝이는 순서를 기억해요.", "그대로 따라 누르면 다음 라운드!", "순서가 길어지고 빨라져요. 실수 3번이면 끝!"]}
             onStart={start}
           />
         )}
@@ -148,6 +165,10 @@ export default function SimonGame({ onGameOver, bestScore, submitting }: GamePla
 
         {showing && <div className="pointer-events-none absolute inset-0" />}
       </div>
+
+      <p className="text-center text-xs text-ink-faint">
+        {phase === "showing" ? "잘 보세요…" : phase === "input" ? "순서대로 따라 누르세요!" : ""}
+      </p>
     </div>
   );
 }

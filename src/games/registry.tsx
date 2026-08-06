@@ -16,7 +16,7 @@ import { OddColorIcon } from "./oddcolor/OddColorIcon";
 import { StroopIcon } from "./stroop/StroopIcon";
 import { MathSprintIcon } from "./mathsprint/MathSprintIcon";
 import { SimonIcon } from "./simon/SimonIcon";
-import { NumberMemoryIcon } from "./numbermemory/NumberMemoryIcon";
+import { VisualMemoryIcon } from "./visualmemory/VisualMemoryIcon";
 import { FifteenIcon } from "./fifteen/FifteenIcon";
 
 // 수박게임은 물리 엔진(matter.js)을 쓰므로 별도 청크로 분리하고 SSR 을 끈다.
@@ -60,7 +60,7 @@ const MathSprintGame = dynamic(() => import("./mathsprint/MathSprintGame"), { ss
 
 // 사이먼·숫자 기억·15 퍼즐 — 랜덤/타이머 기반이라 SSR 을 끈다.
 const SimonGame = dynamic(() => import("./simon/SimonGame"), { ssr: false, loading: spinner });
-const NumberMemoryGame = dynamic(() => import("./numbermemory/NumberMemoryGame"), { ssr: false, loading: spinner });
+const VisualMemoryGame = dynamic(() => import("./visualmemory/VisualMemoryGame"), { ssr: false, loading: spinner });
 const FifteenGame = dynamic(() => import("./fifteen/FifteenGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
@@ -265,24 +265,24 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
       rows: [
         { label: "목표", text: "색이 반짝이는 순서를 외워 그대로 따라 누르세요." },
         { label: "조작", text: "먼저 순서를 보여주고, 끝나면 같은 순서로 패드를 탭합니다." },
-        { label: "규칙", text: "한 라운드를 통과하면 순서가 한 칸 길어져요. 하나라도 틀리면 끝납니다." },
+        { label: "규칙", text: "통과하면 순서가 한 칸 길어지고 조금씩 빨라져요. 틀리면 라이프가 줄고(3개), 다 잃으면 끝납니다." },
         { label: "점수", text: "따라 누르는 데 성공한 가장 긴 순서 길이가 점수입니다. 높을수록 상위!" },
       ],
       tip: "색과 함께 나는 소리를 같이 외우면 훨씬 오래 기억할 수 있어요.",
     },
   },
-  numbermemory: {
-    Play: NumberMemoryGame,
-    Icon: NumberMemoryIcon,
-    tags: ["memory", "focus"],
+  visualmemory: {
+    Play: VisualMemoryGame,
+    Icon: VisualMemoryIcon,
+    tags: ["memory", "observe"],
     info: {
       rows: [
-        { label: "목표", text: "한 자리씩 스쳐 지나가는 숫자를 순서대로 외워 입력하세요." },
-        { label: "조작", text: "숫자가 다 지나가면 아래 키패드로 입력합니다. 자릿수를 다 채우면 자동 확인." },
-        { label: "규칙", text: "다시 훑어볼 수 없어요. 맞히면 자릿수가 하나 늘어나고(3자리 시작), 틀리면 끝납니다." },
-        { label: "점수", text: "맞힌 가장 긴 숫자의 자릿수가 점수입니다. 높을수록 상위!" },
+        { label: "목표", text: "잠깐 켜졌던 칸들의 위치를 기억해 그대로 모두 탭하세요." },
+        { label: "조작", text: "불이 꺼지면 켜졌던 칸을 하나씩 눌러요. 다 찾으면 다음 레벨." },
+        { label: "규칙", text: "레벨마다 칸 수와 격자가 커져요(3×3부터). 엉뚱한 칸을 누르면 라이프가 줄고, 3번 틀리면 끝." },
+        { label: "점수", text: "클리어한 레벨 수가 점수입니다. 높을수록 상위!" },
       ],
-      tip: "숫자를 2~3개씩 덩어리로 끊어 외우면 더 많이 기억할 수 있어요.",
+      tip: "칸 하나하나보다 전체 모양(삼각형·줄 등)으로 덩어리 지어 기억하면 더 오래갑니다.",
     },
   },
   fifteen: {
