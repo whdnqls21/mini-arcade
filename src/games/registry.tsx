@@ -15,7 +15,6 @@ import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
 import { OddColorIcon } from "./oddcolor/OddColorIcon";
 import { StroopIcon } from "./stroop/StroopIcon";
 import { MathSprintIcon } from "./mathsprint/MathSprintIcon";
-import { SimonIcon } from "./simon/SimonIcon";
 import { VisualMemoryIcon } from "./visualmemory/VisualMemoryIcon";
 import { FifteenIcon } from "./fifteen/FifteenIcon";
 
@@ -58,8 +57,7 @@ const OddColorGame = dynamic(() => import("./oddcolor/OddColorGame"), { ssr: fal
 const StroopGame = dynamic(() => import("./stroop/StroopGame"), { ssr: false, loading: spinner });
 const MathSprintGame = dynamic(() => import("./mathsprint/MathSprintGame"), { ssr: false, loading: spinner });
 
-// 사이먼·숫자 기억·15 퍼즐 — 랜덤/타이머 기반이라 SSR 을 끈다.
-const SimonGame = dynamic(() => import("./simon/SimonGame"), { ssr: false, loading: spinner });
+// 위치 기억·슬라이드 퍼즐 — 랜덤/타이머 기반이라 SSR 을 끈다.
 const VisualMemoryGame = dynamic(() => import("./visualmemory/VisualMemoryGame"), { ssr: false, loading: spinner });
 const FifteenGame = dynamic(() => import("./fifteen/FifteenGame"), { ssr: false, loading: spinner });
 
@@ -255,20 +253,6 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "종료", text: "시작을 누른 순간부터 45초. 시간이 다 되면 점수가 기록됩니다." },
       ],
       tip: "곱셈은 가까운 10의 배수로 쪼개면 빨라요. 예: 7×8 = 7×10 − 7×2.",
-    },
-  },
-  simon: {
-    Play: SimonGame,
-    Icon: SimonIcon,
-    tags: ["memory", "focus"],
-    info: {
-      rows: [
-        { label: "목표", text: "색이 반짝이는 순서를 외워 그대로 따라 누르세요." },
-        { label: "조작", text: "먼저 순서를 보여주고, 끝나면 같은 순서로 패드를 탭합니다." },
-        { label: "규칙", text: "통과하면 순서가 한 칸 길어지고 조금씩 빨라져요. 틀리면 라이프가 줄고(3개), 다 잃으면 끝납니다." },
-        { label: "점수", text: "따라 누르는 데 성공한 가장 긴 순서 길이가 점수입니다. 높을수록 상위!" },
-      ],
-      tip: "색과 함께 나는 소리를 같이 외우면 훨씬 오래 기억할 수 있어요.",
     },
   },
   visualmemory: {

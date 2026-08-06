@@ -16,7 +16,6 @@ import type { PostCategory } from "@/lib/types";
 // 아직 공개 전(ma_games 미등록)인 베타 게임 — 관리자만 여기서 테스트한다.
 // 공개(ma_games insert)하면 여기서 빼서 목록 중복을 막는다.
 const BETA_GAMES: { slug: string; name: string }[] = [
-  { slug: "simon", name: "사이먼" },
   { slug: "visualmemory", name: "위치 기억" },
   { slug: "fifteen", name: "슬라이드 퍼즐" },
 ];
