@@ -92,14 +92,21 @@ export default function VisualMemoryGame({ onGameOver, bestScore, submitting }: 
         timer.current = setTimeout(() => startLevel(levelRef.current + 1), 480);
       }
     } else {
-      // 오답 — 라이프 감소 + 빨간 표시. 0이면 종료.
+      // 오답 — 라이프 감소 + 빨간 표시. 0이면 종료, 남으면 패턴을 한 번 더 보여준다.
       tone({ freq: 160, type: "sawtooth", gain: 0.09, dur: 0.14 });
       setWrong(i);
       if (wrongTimer.current) clearTimeout(wrongTimer.current);
       wrongTimer.current = setTimeout(() => setWrong((w) => (w === i ? null : w)), 260);
       livesRef.current -= 1;
       setLives(livesRef.current);
-      if (livesRef.current <= 0) finish();
+      if (livesRef.current <= 0) {
+        finish();
+      } else {
+        // 다시 보기 — show 단계를 재사용(맞힌 칸은 그대로 유지).
+        setPhase("show");
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(() => setPhase("input"), 500 + targets.size * 70);
+      }
     }
   }
 
@@ -157,7 +164,7 @@ export default function VisualMemoryGame({ onGameOver, bestScore, submitting }: 
         {phase === "ready" && (
           <StartGate
             title="위치 기억"
-            lines={["잠깐 켜지는 칸들을 기억해요.", "꺼지면 그 칸들을 모두 탭!", "레벨마다 칸이 늘어요. 실수 3번이면 끝."]}
+            lines={["잠깐 켜지는 칸들을 기억해요.", "꺼지면 그 칸들을 모두 탭!", "틀리면 한 번 더 보여줘요. 실수 3번이면 끝."]}
             onStart={start}
           />
         )}
