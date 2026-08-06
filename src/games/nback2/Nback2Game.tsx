@@ -11,9 +11,9 @@ import { sequence, tone } from "@/games/sound";
 type Phase = "ready" | "playing" | "done";
 
 const SYMBOLS = ["🍎", "🍋", "🍇", "🥝", "🍑", "🫐"];
-const TRIALS = 36;
-const SHOW_MS = 1500; // 그림 보이는 시간
-const TRIAL_MS = 2500; // 한 판(그림 + 빈 순간)
+const TRIALS = 30;
+const SHOW_MS = 1400; // 그림 보이는 시간
+const TRIAL_MS = 2000; // 한 판(그림 + 빈 순간)
 const TARGET_PROB = 0.32;
 const HIT_PTS = 10;
 const FA_PTS = 5;
