@@ -15,6 +15,9 @@ import { FruitChain, SuikaIcon } from "./suika/FruitIcon";
 import { OddColorIcon } from "./oddcolor/OddColorIcon";
 import { StroopIcon } from "./stroop/StroopIcon";
 import { MathSprintIcon } from "./mathsprint/MathSprintIcon";
+import { SimonIcon } from "./simon/SimonIcon";
+import { NumberMemoryIcon } from "./numbermemory/NumberMemoryIcon";
+import { FifteenIcon } from "./fifteen/FifteenIcon";
 
 // 수박게임은 물리 엔진(matter.js)을 쓰므로 별도 청크로 분리하고 SSR 을 끈다.
 // 캔버스/AudioContext 는 브라우저에서만 의미가 있어 서버 렌더링할 이유가 없다.
@@ -54,6 +57,11 @@ const GreenlightGame = dynamic(() => import("./greenlight/GreenlightGame"), { ss
 const OddColorGame = dynamic(() => import("./oddcolor/OddColorGame"), { ssr: false, loading: spinner });
 const StroopGame = dynamic(() => import("./stroop/StroopGame"), { ssr: false, loading: spinner });
 const MathSprintGame = dynamic(() => import("./mathsprint/MathSprintGame"), { ssr: false, loading: spinner });
+
+// 사이먼·숫자 기억·15 퍼즐 — 랜덤/타이머 기반이라 SSR 을 끈다.
+const SimonGame = dynamic(() => import("./simon/SimonGame"), { ssr: false, loading: spinner });
+const NumberMemoryGame = dynamic(() => import("./numbermemory/NumberMemoryGame"), { ssr: false, loading: spinner });
+const FifteenGame = dynamic(() => import("./fifteen/FifteenGame"), { ssr: false, loading: spinner });
 
 // slug → 플레이 컴포넌트 + 설명. 새 게임은 여기 등록.
 export const GAME_REGISTRY: Record<string, GameEntry> = {
@@ -247,6 +255,48 @@ export const GAME_REGISTRY: Record<string, GameEntry> = {
         { label: "종료", text: "시작을 누른 순간부터 45초. 시간이 다 되면 점수가 기록됩니다." },
       ],
       tip: "곱셈은 가까운 10의 배수로 쪼개면 빨라요. 예: 7×8 = 7×10 − 7×2.",
+    },
+  },
+  simon: {
+    Play: SimonGame,
+    Icon: SimonIcon,
+    tags: ["memory", "focus"],
+    info: {
+      rows: [
+        { label: "목표", text: "색이 반짝이는 순서를 외워 그대로 따라 누르세요." },
+        { label: "조작", text: "먼저 순서를 보여주고, 끝나면 같은 순서로 패드를 탭합니다." },
+        { label: "규칙", text: "한 라운드를 통과하면 순서가 한 칸 길어져요. 하나라도 틀리면 끝납니다." },
+        { label: "점수", text: "따라 누르는 데 성공한 가장 긴 순서 길이가 점수입니다. 높을수록 상위!" },
+      ],
+      tip: "색과 함께 나는 소리를 같이 외우면 훨씬 오래 기억할 수 있어요.",
+    },
+  },
+  numbermemory: {
+    Play: NumberMemoryGame,
+    Icon: NumberMemoryIcon,
+    tags: ["memory", "focus"],
+    info: {
+      rows: [
+        { label: "목표", text: "잠깐 보이는 숫자를 외웠다가 그대로 입력하세요." },
+        { label: "조작", text: "숫자가 사라지면 아래 키패드로 입력합니다. 자릿수를 다 채우면 자동 확인." },
+        { label: "규칙", text: "맞히면 자릿수가 하나 늘어나요(3자리부터 시작). 틀리면 끝납니다." },
+        { label: "점수", text: "맞힌 가장 긴 숫자의 자릿수가 점수입니다. 높을수록 상위!" },
+      ],
+      tip: "숫자를 2~3개씩 덩어리로 끊어 외우면 더 많이 기억할 수 있어요.",
+    },
+  },
+  fifteen: {
+    Play: FifteenGame,
+    Icon: FifteenIcon,
+    tags: ["strategy", "focus"],
+    info: {
+      rows: [
+        { label: "목표", text: "타일을 밀어 1부터 15까지 순서대로 맞추세요." },
+        { label: "조작", text: "빈칸에 붙어 있는 타일을 탭하면 그 자리로 밀려 들어갑니다." },
+        { label: "기록", text: "다 맞추는 데 걸린 시간이 기록입니다. 짧을수록 상위!" },
+        { label: "종료", text: "1~15가 제자리에 오면 끝나요. 중간에 그만두면 기록되지 않습니다." },
+      ],
+      tip: "윗줄부터(1·2·3·4) 차례로 완성하고, 마지막 두 줄은 한꺼번에 맞춘다고 생각하면 쉬워요.",
     },
   },
 };
